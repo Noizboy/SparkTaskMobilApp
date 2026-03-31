@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Spark Task",
+    "slug": "sparktaskmobil",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#044728"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sparktask.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#044728"
+      },
+      "package": "com.sparktask.mobile"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Spark Task to access your photos to upload job documentation.",
+          "cameraPermission": "Allow Spark Task to use the camera for job photo documentation."
+        }
+      ],
+      "expo-font"
+    ]
+  }
+}
