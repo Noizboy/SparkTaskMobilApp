@@ -583,10 +583,14 @@ export function ChecklistScreen() {
           </Text>
         </TouchableOpacity>
         <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.swipeCancelRow, swipeAnimStyle]}>
-            <ChevronsLeft size={16} color={COLORS.error} />
-            <Text style={styles.swipeCancelText}>Swipe left to cancel job</Text>
-          </Animated.View>
+          <View style={styles.swipeCancelTrack}>
+            <ChevronsLeft size={13} color={COLORS.error} style={{ opacity: 0.3 }} />
+            <ChevronsLeft size={13} color={COLORS.error} style={{ opacity: 0.55 }} />
+            <Text style={styles.swipeCancelLabel}>Cancel Job</Text>
+            <Animated.View style={[styles.swipeCancelThumb, swipeAnimStyle]}>
+              <ChevronsLeft size={22} color={COLORS.white} />
+            </Animated.View>
+          </View>
         </GestureDetector>
       </View>
 
@@ -1198,17 +1202,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.white,
   },
-  swipeCancelRow: {
+  swipeCancelTrack: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
     marginTop: 10,
-    paddingVertical: 8,
+    height: 52,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.errorLight,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    paddingLeft: SPACING.md,
+    paddingRight: 4,
+    overflow: 'hidden',
+    gap: 2,
   },
-  swipeCancelText: {
-    fontFamily: FONTS.medium,
-    fontSize: 13,
+  swipeCancelLabel: {
+    flex: 1,
+    fontFamily: FONTS.semibold,
+    fontSize: 14,
     color: COLORS.error,
+    textAlign: 'center',
+  },
+  swipeCancelThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
