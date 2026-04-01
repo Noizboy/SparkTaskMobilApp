@@ -74,6 +74,8 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 13,
     color: COLORS.mutedForeground,
+    lineHeight: 13,
+    includeFontPadding: false,
   },
   dateRow: {
     flexDirection: 'row',

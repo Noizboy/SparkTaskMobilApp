@@ -58,6 +58,7 @@ export type RootStackParamList = {
   Checklist: { jobId: string };
   OrderDetails: { jobId: string };
   DayJobs: { date: string };
+  AllUpcomingJobs: undefined;
   PhotoGallery: { photos: string[]; label: string; sectionName: string };
 };
 

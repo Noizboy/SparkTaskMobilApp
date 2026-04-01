@@ -1,56 +1,81 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Clock, MapPin, ChevronRight } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import { Timer } from 'lucide-react-native';
 import { Job } from '../types';
 import { COLORS, FONTS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { formatFullDate } from '../utils/dateUtils';
 
 interface InProgressJobCardProps {
   job: Job;
   onPress: () => void;
-  color?: string;
 }
 
-export function InProgressJobCard({ job, onPress, color = COLORS.pastelGreen }: InProgressJobCardProps) {
+function formatElapsed(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export function InProgressJobCard({ job, onPress }: InProgressJobCardProps) {
   const totalTodos = job.sections.reduce((acc, s) => acc + s.todos.length, 0);
   const completedTodos = job.sections.reduce(
     (acc, s) => acc + s.todos.filter((t) => t.completed).length,
     0
   );
   const progress = totalTodos > 0 ? completedTodos / totalTodos : 0;
+  const percentage = Math.round(progress * 100);
+
+  const [elapsed, setElapsed] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.card, { backgroundColor: color }]} activeOpacity={0.9}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.label}>In Progress</Text>
-          <Text style={styles.orderNum}>Order #{job.orderNumber}</Text>
+    <TouchableOpacity onPress={onPress} style={styles.card} activeOpacity={0.88}>
+      <ImageBackground
+        source={require('../images/inprogressbg.png')}
+        style={styles.bgImage}
+        resizeMode="cover"
+      />
+
+      <View style={styles.body}>
+        {/* Left column */}
+        <View style={styles.left}>
+          <Text style={styles.title}>{job.serviceType}</Text>
+          <Text style={styles.status}>ORDER #: {job.orderNumber}</Text>
+          <Text style={styles.scheduled}>Scheduled for: {formatFullDate(job.date)}, {job.time}</Text>
+
+          <View style={styles.progressInfo}>
+              <Text style={styles.percentage}>{percentage}%</Text>
+              <View>
+                <Text style={styles.overallLabel}>Overall Progress:</Text>
+                <Text style={styles.tasksText}>{completedTodos} of {totalTodos} tasks completed</Text>
+              </View>
+            </View>
         </View>
-        <View style={styles.chevronWrap}>
-          <ChevronRight size={18} color={COLORS.primary} />
+
+        {/* Timer pill */}
+        <View style={styles.timerPill}>
+          <Timer size={20} color={COLORS.foreground} />
+          <Text style={styles.timerLabel}>Time elapsed:</Text>
+          <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
         </View>
       </View>
 
-      <View style={styles.meta}>
-        <View style={styles.metaRow}>
-          <Clock size={13} color={COLORS.primary} />
-          <Text style={styles.metaText}>{job.time}</Text>
-        </View>
-        {job.status !== 'completed' && (
-          <View style={styles.metaRow}>
-            <MapPin size={13} color={COLORS.primary} />
-            <Text style={styles.metaText} numberOfLines={1}>{job.address}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Progress bar */}
-      <View style={styles.progressWrap}>
+      {/* Full width progress bar */}
+      <View style={styles.progressBarWrap}>
         <View style={styles.progressBg}>
-          <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+          <View style={[styles.progressFill, { width: `${percentage}%` }]} />
         </View>
-        <Text style={styles.progressText}>
-          {completedTodos}/{totalTodos} tasks
-        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -58,71 +83,109 @@ export function InProgressJobCard({ job, onPress, color = COLORS.pastelGreen }: 
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.xxl,
-    padding: SPACING.xl,
-    ...SHADOWS.sm,
+    overflow: 'hidden',
+    ...SHADOWS.md,
   },
-  header: {
+  bgImage: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    opacity: 0.2,
+  },
+  body: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    padding: SPACING.xl,
+    gap: 12,
   },
-  label: {
-    fontFamily: FONTS.medium,
-    fontSize: 11,
-    color: COLORS.primary,
-    opacity: 0.8,
+  left: {
+    flex: 1,
+    gap: 2,
+  },
+  title: {
+    fontFamily: FONTS.bold,
+    fontSize: 20,
+    color: COLORS.white,
+    lineHeight: 26,
     marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  orderNum: {
-    fontFamily: FONTS.semibold,
-    fontSize: 16,
-    color: COLORS.foreground,
+  status: {
+    fontFamily: FONTS.bold,
+    fontSize: 13,
+    color: '#c9b96e',
+    letterSpacing: 0.3,
+    marginBottom: 2,
   },
-  chevronWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  meta: {
-    gap: 4,
-    marginBottom: 14,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  metaText: {
+  scheduled: {
     fontFamily: FONTS.regular,
     fontSize: 13,
-    color: COLORS.primary,
-    flex: 1,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 14,
   },
-  progressWrap: {
-    gap: 6,
+  progressBarWrap: {
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.xl,
+  },
+  progressInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  percentage: {
+    fontFamily: FONTS.bold,
+    fontSize: 36,
+    color: COLORS.white,
+    includeFontPadding: false,
+    lineHeight: 40,
+  },
+  overallLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    lineHeight: 16,
+  },
+  tasksText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.65)',
+    lineHeight: 16,
   },
   progressBg: {
-    height: 6,
-    backgroundColor: 'rgba(4, 71, 40, 0.15)',
+    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: RADIUS.full,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     borderRadius: RADIUS.full,
   },
-  progressText: {
-    fontFamily: FONTS.medium,
+  timerPill: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.xl,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 2,
+    minWidth: 90,
+    ...SHADOWS.sm,
+  },
+  timerLabel: {
+    fontFamily: FONTS.regular,
     fontSize: 11,
-    color: COLORS.primary,
-    opacity: 0.75,
+    color: COLORS.mutedForeground,
+    marginTop: 2,
+  },
+  timerText: {
+    fontFamily: FONTS.bold,
+    fontSize: 22,
+    color: COLORS.foreground,
+    letterSpacing: 1,
+    includeFontPadding: false,
   },
 });

@@ -17,7 +17,7 @@ import { useApp } from '../context/AppContext';
 import { WeekCalendarStrip } from '../components/WeekCalendarStrip';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { InProgressJobCard } from '../components/InProgressJobCard';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS, PASTEL_COLORS } from '../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList, MainTabParamList } from '../types';
 import { toDateString, isFutureOrToday } from '../utils/dateUtils';
 
@@ -28,7 +28,7 @@ export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const tabNavigation = useNavigation<TabNav>();
   const insets = useSafeAreaInsets();
-  const { jobs, profileImage, resetAllJobs } = useApp();
+  const { jobs, profileImage } = useApp();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -70,7 +70,7 @@ export function HomeScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            <Text style={styles.name}>Welcome, Sarah 👋</Text>
+            <Text style={styles.name}>Welcome, Sarah</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -92,21 +92,13 @@ export function HomeScreen() {
         {/* In Progress */}
         {inProgressJobs.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>In Progress</Text>
-              {inProgressJobs.length > 0 && (
-                <TouchableOpacity onPress={resetAllJobs} style={styles.resetBtn}>
-                  <Text style={styles.resetText}>Reset All</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            <Text style={styles.sectionTitle}>In Progress</Text>
             <View style={styles.cardList}>
-              {inProgressJobs.map((job, i) => (
+              {inProgressJobs.map((job) => (
                 <InProgressJobCard
                   key={job.id}
                   job={job}
                   onPress={() => handleJobPress(job.id)}
-                  color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
                 />
               ))}
             </View>
@@ -115,14 +107,19 @@ export function HomeScreen() {
 
         {/* Upcoming */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Jobs</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Jobs</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AllUpcomingJobs')} activeOpacity={0.7}>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
           {upcomingJobs.length === 0 ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIcon}>
                 <Calendar size={28} color={COLORS.gray400} />
               </View>
-              <Text style={styles.emptyTitle}>No upcoming jobs</Text>
-              <Text style={styles.emptyText}>Your schedule is clear for now.</Text>
+              <Text style={styles.emptyTitle}>No upcoming jobs at the moment</Text>
+              <Text style={styles.emptyText}>You've completed your assigned schedule for today.</Text>
             </View>
           ) : (
             <View style={styles.cardList}>
@@ -244,6 +241,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
     fontSize: 12,
     color: COLORS.gray600,
+  },
+  viewAllText: {
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: COLORS.primary,
   },
   cardList: {
     gap: 10,
