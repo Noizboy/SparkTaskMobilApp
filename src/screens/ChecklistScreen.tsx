@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,12 +20,17 @@ import {
   X,
   Ban,
   ChevronsLeft,
+  Clock,
 } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
+  withSequence,
   runOnJS,
+  interpolateColor,
+  Easing,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,12 +38,10 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useApp } from '../context/AppContext';
-import { StatusBadge } from '../components/StatusBadge';
 import { Section, AddOn } from '../types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
-import { formatDate } from '../utils/dateUtils';
 
 type Route = RouteProp<RootStackParamList, 'Checklist'>;
 type TabFilter = 'pending' | 'in-progress' | 'completed';
@@ -103,6 +106,59 @@ function SkipModal({ visible, sectionName, onConfirm, onCancel }: SkipModalProps
   );
 }
 
+interface TodoRowProps {
+  todo: { id: string; text: string; completed: boolean };
+  jobId: string;
+  sectionId: string;
+}
+
+function TodoRow({ todo, jobId, sectionId }: TodoRowProps) {
+  const { toggleTodo } = useApp();
+  const scale = useSharedValue(1);
+  const prevCompleted = useRef(todo.completed);
+
+  useEffect(() => {
+    if (todo.completed && !prevCompleted.current) {
+      scale.value = withSequence(
+        withTiming(1.35, { duration: 140, easing: Easing.out(Easing.quad) }),
+        withTiming(0.9,  { duration: 110, easing: Easing.in(Easing.quad) }),
+        withTiming(1.2,  { duration: 120, easing: Easing.out(Easing.quad) }),
+        withTiming(1,    { duration: 100, easing: Easing.in(Easing.quad) }),
+      );
+    }
+    prevCompleted.current = todo.completed;
+  }, [todo.completed]);
+
+  const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <TouchableOpacity
+      onPress={() => toggleTodo(jobId, sectionId, todo.id)}
+      style={sectionStyles.todoRow}
+      activeOpacity={0.7}
+    >
+      <Animated.View style={iconStyle}>
+        {todo.completed ? (
+          <CheckCircle2 size={22} color={COLORS.primary} />
+        ) : (
+          <Circle size={22} color={COLORS.gray300} />
+        )}
+      </Animated.View>
+      <Text style={[sectionStyles.todoText, todo.completed && sectionStyles.todoTextDone]}>
+        {todo.text}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+function getSectionStatus(section: Section): TabFilter {
+  if (section.skipReason) return 'completed';
+  const done = section.todos.filter((t) => t.completed).length;
+  if (done === 0) return 'pending';
+  if (done === section.todos.length) return 'completed';
+  return 'in-progress';
+}
+
 interface SectionCardProps {
   section: Section;
   jobId: string;
@@ -113,7 +169,7 @@ interface SectionCardProps {
 type SectionNav = NativeStackNavigationProp<RootStackParamList>;
 
 function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCardProps) {
-  const { toggleTodo, markAllDone, photosChange, updateSkipReason } = useApp();
+  const { markAllDone, photosChange, updateSkipReason } = useApp();
   const navigation = useNavigation<SectionNav>();
   const [photoType, setPhotoType] = useState<'before' | 'after'>('before');
   const [skipModalVisible, setSkipModalVisible] = useState(false);
@@ -121,6 +177,26 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
   const completedCount = section.todos.filter((t) => t.completed).length;
   const totalCount = section.todos.length;
   const allDone = completedCount === totalCount;
+
+  const glowAnim = useSharedValue(0);
+  const prevAllDone = useRef(allDone);
+
+  useEffect(() => {
+    if (allDone && !prevAllDone.current && !section.skipReason) {
+      glowAnim.value = withSequence(
+        withTiming(1, { duration: 220 }),
+        withTiming(0, { duration: 220 }),
+        withTiming(1, { duration: 220 }),
+        withTiming(0, { duration: 220 }),
+      );
+    }
+    prevAllDone.current = allDone;
+  }, [allDone]);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    borderWidth: 2,
+    borderColor: interpolateColor(glowAnim.value, [0, 1], [COLORS.gray200, COLORS.primary]),
+  }));
 
   const pickPhoto = async (type: 'before' | 'after') => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -174,7 +250,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
   };
 
   return (
-    <View style={[sectionStyles.card, section.skipReason ? sectionStyles.cardSkipped : null]}>
+    <Animated.View style={[sectionStyles.card, section.skipReason ? sectionStyles.cardSkipped : null, glowStyle]}>
       {/* Card header */}
       <TouchableOpacity onPress={onToggleExpand} style={sectionStyles.header} activeOpacity={0.75}>
         {/* Round check button */}
@@ -214,24 +290,18 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
 
       {isExpanded && !section.skipReason && (
         <View style={sectionStyles.body}>
+          {/* Estimated time */}
+          {section.estimatedTime && (
+            <View style={sectionStyles.estimatedRow}>
+              <Clock size={13} color={COLORS.primary} />
+              <Text style={sectionStyles.estimatedTime}>Estimated time: {section.estimatedTime}</Text>
+            </View>
+          )}
+
           {/* Todo list */}
           <View style={sectionStyles.todos}>
             {section.todos.map((todo) => (
-              <TouchableOpacity
-                key={todo.id}
-                onPress={() => toggleTodo(jobId, section.id, todo.id)}
-                style={sectionStyles.todoRow}
-                activeOpacity={0.7}
-              >
-                {todo.completed ? (
-                  <CheckCircle2 size={22} color={COLORS.primary} />
-                ) : (
-                  <Circle size={22} color={COLORS.gray300} />
-                )}
-                <Text style={[sectionStyles.todoText, todo.completed && sectionStyles.todoTextDone]}>
-                  {todo.text}
-                </Text>
-              </TouchableOpacity>
+              <TodoRow key={todo.id} todo={todo} jobId={jobId} sectionId={section.id} />
             ))}
           </View>
 
@@ -300,7 +370,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
         }}
         onCancel={() => setSkipModalVisible(false)}
       />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -382,36 +452,62 @@ export function ChecklistScreen() {
   const { jobs, completeJob, cancelJob } = useApp();
 
   const job = jobs.find((j) => j.id === route.params.jobId);
+
+  // Compute percentage before hooks so it's available in effects/deps
+  const totalAddOns = job?.addOns?.length ?? 0;
+  const doneAddOns = job?.addOns?.filter((a) => a.selected).length ?? 0;
+  const totalTodos = (job?.sections.reduce((a, s) => a + s.todos.length, 0) ?? 0) + totalAddOns;
+  const doneTodos = (job?.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0) ?? 0) + doneAddOns;
+  const progress = totalTodos > 0 ? doneTodos / totalTodos : 0;
+  const percentage = Math.round(progress * 100);
+
   const [expandedSection, setExpandedSection] = useState<string | null>(job?.sections[0]?.id ?? null);
   const [completeModalVisible, setCompleteModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<TabFilter | null>(null);
+  const [, forceUpdate] = useState(0);
+
+  // Refs so we can mutate during render without causing extra renders
+  const delayedSectionIds = useRef<Set<string>>(new Set());
+  const prevSectionStatuses = useRef<Record<string, TabFilter>>({});
 
   const swipeX = useSharedValue(0);
   const swipeAnimStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: swipeX.value }],
   }));
 
+  const [barContainerWidth, setBarContainerWidth] = useState(0);
+  const progressWidthAnim = useSharedValue(0);
+  useEffect(() => {
+    if (barContainerWidth > 0) {
+      progressWidthAnim.value = withTiming(barContainerWidth * percentage / 100, { duration: 500 });
+    }
+  }, [percentage, barContainerWidth]);
+  const progressBarAnimStyle = useAnimatedStyle(() => ({
+    width: progressWidthAnim.value,
+  }));
+
   if (!job) return null;
 
-  const totalAddOns = job.addOns?.length ?? 0;
-  const doneAddOns = job.addOns?.filter((a) => a.selected).length ?? 0;
-  const totalTodos = job.sections.reduce((a, s) => a + s.todos.length, 0) + totalAddOns;
-  const doneTodos = job.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0) + doneAddOns;
-  const progress = totalTodos > 0 ? doneTodos / totalTodos : 0;
-  const percentage = Math.round(progress * 100);
-
-  // Filter sections by tab
-  const getSectionStatus = (section: Section): TabFilter => {
-    if (section.skipReason) return 'completed';
-    const done = section.todos.filter((t) => t.completed).length;
-    if (done === 0) return 'pending';
-    if (done === section.todos.length) return 'completed';
-    return 'in-progress';
-  };
+  // Detect transitions to 'completed' during render — before filteredSections is computed.
+  // Using refs ensures the mutation is visible to filteredSections in the same render.
+  for (const s of job.sections) {
+    const newStatus = getSectionStatus(s);
+    const prevStatus = prevSectionStatuses.current[s.id];
+    if (prevStatus && prevStatus !== 'completed' && newStatus === 'completed') {
+      if (!delayedSectionIds.current.has(s.id)) {
+        delayedSectionIds.current.add(s.id);
+        setTimeout(() => {
+          delayedSectionIds.current.delete(s.id);
+          forceUpdate((n) => n + 1);
+        }, 1500);
+      }
+    }
+    prevSectionStatuses.current[s.id] = newStatus;
+  }
 
   const filteredSections = activeTab === null
     ? job.sections
-    : job.sections.filter((s) => getSectionStatus(s) === activeTab);
+    : job.sections.filter((s) => getSectionStatus(s) === activeTab || delayedSectionIds.current.has(s.id));
 
   const tabCounts = {
     pending: job.sections.filter((s) => getSectionStatus(s) === 'pending').length,
@@ -469,10 +565,7 @@ export function ChecklistScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
-        <View style={styles.topCenter}>
-          <Text style={styles.topOrder}>#{job.orderNumber}</Text>
-          <StatusBadge status={job.status} />
-        </View>
+        <Text style={styles.topOrder}>Order #{job.orderNumber}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -488,8 +581,11 @@ export function ChecklistScreen() {
         </View>
       </View>
       <View style={styles.progressBarWrap}>
-        <View style={styles.progressBg}>
-          <View style={[styles.progressFill, { width: `${percentage}%` }]} />
+        <View
+          style={styles.progressBg}
+          onLayout={(e) => setBarContainerWidth(e.nativeEvent.layout.width)}
+        >
+          <Animated.View style={[styles.progressFill, progressBarAnimStyle]} />
         </View>
       </View>
 
@@ -517,23 +613,6 @@ export function ChecklistScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
-        {/* Job header */}
-        <View style={styles.jobHeader}>
-          {job.status !== 'completed' && (
-            <>
-              <Text style={styles.clientName}>{job.clientName}</Text>
-              <Text style={styles.address}>{job.address}</Text>
-            </>
-          )}
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>{formatDate(job.date)}</Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText}>{job.time}</Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText}>{job.duration}</Text>
-          </View>
-        </View>
-
         {/* Section cards + add-ons */}
         <View style={styles.sections}>
           {filteredSections.length === 0 && !showAddOns ? (
@@ -830,6 +909,21 @@ const sectionStyles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.mutedForeground,
   },
+  estimatedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: COLORS.primaryContainer,
+    borderRadius: RADIUS.md,
+    alignSelf: 'flex-start',
+  },
+  estimatedTime: {
+    fontFamily: FONTS.medium,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
   skipBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -980,11 +1074,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOWS.sm,
   },
-  topCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   topOrder: {
     fontFamily: FONTS.semibold,
     fontSize: 15,
@@ -1101,36 +1190,6 @@ const styles = StyleSheet.create({
   },
   tabBadgeTextActive: {
     color: COLORS.white,
-  },
-  jobHeader: {
-    paddingHorizontal: SPACING.xxl,
-    paddingBottom: SPACING.lg,
-    gap: 3,
-  },
-  clientName: {
-    fontFamily: FONTS.semibold,
-    fontSize: 17,
-    color: COLORS.foreground,
-  },
-  address: {
-    fontFamily: FONTS.regular,
-    fontSize: 13,
-    color: COLORS.mutedForeground,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
-  },
-  metaText: {
-    fontFamily: FONTS.regular,
-    fontSize: 12,
-    color: COLORS.mutedForeground,
-  },
-  metaDot: {
-    color: COLORS.gray300,
-    fontSize: 12,
   },
   sections: {
     paddingHorizontal: SPACING.xxl,

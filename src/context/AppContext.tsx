@@ -106,6 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     await storage.remove(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
     await storage.remove(AUTH_CONFIG.STORAGE_KEYS.ONBOARDING_COMPLETED);
+    await storage.remove('cleanerJobs');
     setIsAuthenticated(false);
     setShowOnboarding(false);
     setJobs([]);
