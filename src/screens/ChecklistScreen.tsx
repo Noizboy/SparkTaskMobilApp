@@ -19,7 +19,6 @@ import {
   Camera,
   X,
   Ban,
-  CheckCheck,
   ChevronsLeft,
 } from 'lucide-react-native';
 import Animated, {
@@ -215,17 +214,6 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
 
       {isExpanded && !section.skipReason && (
         <View style={sectionStyles.body}>
-          {/* Mark all button */}
-          {!allDone && (
-            <TouchableOpacity
-              onPress={() => markAllDone(jobId, section.id)}
-              style={sectionStyles.markAllBtn}
-            >
-              <CheckCheck size={14} color={COLORS.white} />
-              <Text style={sectionStyles.markAllText}>Mark all done</Text>
-            </TouchableOpacity>
-          )}
-
           {/* Todo list */}
           <View style={sectionStyles.todos}>
             {section.todos.map((todo) => (
@@ -863,21 +851,6 @@ const sectionStyles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.lg,
     gap: 14,
-  },
-  markAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-  },
-  markAllText: {
-    fontFamily: FONTS.medium,
-    fontSize: 12,
-    color: COLORS.white,
   },
   todos: {
     gap: 10,
