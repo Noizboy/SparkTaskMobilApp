@@ -1,11 +1,24 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Job } from '../types';
+import { Job, AppNotification } from '../types';
 import { mockJobs } from '../data/mockJobs';
 import { storage } from '../utils/storage';
 import { AUTH_CONFIG } from '../config/auth';
 
+const MOCK_NOTIFICATIONS: AppNotification[] = [
+  { id: '1', type: 'upcoming', title: 'Job Starting Soon', message: 'Job #2847 will start in 2 hours at 456 Maple Drive', time: '10 min ago', isRead: false },
+  { id: '2', type: 'new_job', title: 'New Job Assigned', message: 'Job #2851 has been added to your schedule for today at 2:00 PM', time: '1 hour ago', isRead: false },
+  { id: '3', type: 'reminder', title: 'Upload Photos', message: "Job #2839 is in progress. Don't forget to upload before/after photos.", time: '3 hours ago', isRead: true },
+  { id: '4', type: 'upcoming', title: 'Job Starting Soon', message: 'Job #2855 starts in 30 minutes at 12 Sunset Blvd', time: '5 hours ago', isRead: true },
+  { id: '5', type: 'completed', title: 'Job Completed', message: 'Great job! Order #2831 has been marked as completed.', time: '1 day ago', isRead: true },
+  { id: '6', type: 'new_job', title: 'New Job Assigned', message: 'Job #2855 (move-out clean) added for April 5 at 10:00 AM', time: '1 day ago', isRead: true },
+];
+
 interface AppContextType {
   jobs: Job[];
+  notifications: AppNotification[];
+  unreadCount: number;
+  markAsRead: (id: string) => void;
+  markAllRead: () => void;
   isAuthenticated: boolean;
   showOnboarding: boolean;
   profileImage: string | null;
@@ -33,6 +46,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const markAsRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+  };
+
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -246,6 +270,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         jobs,
+        notifications,
+        unreadCount,
+        markAsRead,
+        markAllRead,
         isAuthenticated,
         showOnboarding,
         profileImage,

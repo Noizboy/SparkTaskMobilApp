@@ -28,7 +28,7 @@ export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const tabNavigation = useNavigation<TabNav>();
   const insets = useSafeAreaInsets();
-  const { jobs, profileImage } = useApp();
+  const { jobs, profileImage, unreadCount } = useApp();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -79,7 +79,7 @@ export function HomeScreen() {
               activeOpacity={0.7}
             >
               <Bell size={20} color={COLORS.foreground} />
-              <View style={styles.notifDot} />
+              {unreadCount > 0 && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
         </View>

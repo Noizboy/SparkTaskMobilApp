@@ -72,8 +72,8 @@ export function OrderDetailsScreen() {
 
         {/* Meta row */}
         <View style={styles.metaChips}>
-          <MetaChip icon={<Calendar size={13} color={COLORS.primary} />} text={formatFullDate(job.date)} />
-          <MetaChip icon={<Clock size={13} color={COLORS.primary} />} text={job.time} />
+          <MetaChip icon={<Calendar size={13} color={COLORS.white} />} text={formatFullDate(job.date)} />
+          <MetaChip icon={<Clock size={13} color={COLORS.white} />} text={job.time} />
         </View>
 
         {/* Summary stats */}
@@ -100,7 +100,7 @@ export function OrderDetailsScreen() {
                         backgroundColor: skipped
                           ? COLORS.warningLight
                           : allDone
-                          ? COLORS.successLight
+                          ? COLORS.primary
                           : COLORS.errorLight,
                       },
                     ]}
@@ -108,7 +108,7 @@ export function OrderDetailsScreen() {
                     {skipped ? (
                       <XCircle size={16} color={COLORS.warning} />
                     ) : allDone ? (
-                      <CheckCircle2 size={16} color={COLORS.success} />
+                      <CheckCircle2 size={16} color={COLORS.white} />
                     ) : (
                       <XCircle size={16} color={COLORS.error} />
                     )}
@@ -131,7 +131,7 @@ export function OrderDetailsScreen() {
                     <View key={todo.id} style={styles.todoRow}>
                       <CheckCircle2
                         size={14}
-                        color={todo.completed ? COLORS.success : COLORS.gray300}
+                        color={todo.completed ? COLORS.primary : COLORS.gray300}
                       />
                       <Text
                         style={[
@@ -170,7 +170,7 @@ export function OrderDetailsScreen() {
                 <View key={addon.id} style={styles.addonRow}>
                   <CheckCircle2
                     size={15}
-                    color={addon.selected ? COLORS.success : COLORS.gray300}
+                    color={addon.selected ? COLORS.primary : COLORS.gray300}
                   />
                   <Text style={styles.addonName}>{addon.name}</Text>
                 </View>
@@ -233,7 +233,7 @@ const metaStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -241,7 +241,7 @@ const metaStyles = StyleSheet.create({
   text: {
     fontFamily: FONTS.medium,
     fontSize: 12,
-    color: COLORS.primary,
+    color: COLORS.white,
   },
 });
 

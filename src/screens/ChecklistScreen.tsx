@@ -234,7 +234,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
               onPress={() => markAllDone(jobId, section.id)}
               style={sectionStyles.markAllBtn}
             >
-              <CheckCheck size={14} color={COLORS.primary} />
+              <CheckCheck size={14} color={COLORS.white} />
               <Text style={sectionStyles.markAllText}>Mark all done</Text>
             </TouchableOpacity>
           )}
@@ -249,7 +249,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
                 activeOpacity={0.7}
               >
                 {todo.completed ? (
-                  <CheckCircle2 size={20} color={COLORS.success} />
+                  <CheckCircle2 size={20} color={COLORS.primary} />
                 ) : (
                   <Circle size={20} color={COLORS.gray300} />
                 )}
@@ -355,7 +355,7 @@ function AddOnRow({ addon, jobId }: AddOnRowProps) {
       activeOpacity={0.7}
     >
       {addon.selected ? (
-        <CheckCircle2 size={20} color={COLORS.success} />
+        <CheckCircle2 size={20} color={COLORS.primary} />
       ) : (
         <Circle size={20} color={COLORS.gray300} />
       )}
@@ -507,7 +507,7 @@ export function ChecklistScreen() {
         <View style={completeStyles.overlay}>
           <View style={completeStyles.sheet}>
             <View style={completeStyles.iconWrap}>
-              <CheckCircle2 size={40} color={COLORS.success} />
+              <CheckCircle2 size={40} color={COLORS.white} />
             </View>
             <Text style={completeStyles.title}>Complete this job?</Text>
             <Text style={completeStyles.sub}>
@@ -579,7 +579,7 @@ const modalStyles = StyleSheet.create({
     borderColor: COLORS.gray200,
   },
   chipActive: {
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
   chipText: {
@@ -588,7 +588,7 @@ const modalStyles = StyleSheet.create({
     color: COLORS.foreground,
   },
   chipTextActive: {
-    color: COLORS.primary,
+    color: COLORS.white,
   },
   input: {
     borderWidth: 1,
@@ -651,7 +651,7 @@ const completeStyles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.successLight,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -724,7 +724,7 @@ const sectionStyles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -783,13 +783,13 @@ const sectionStyles = StyleSheet.create({
     alignSelf: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 5,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
   },
   markAllText: {
     fontFamily: FONTS.medium,
     fontSize: 12,
-    color: COLORS.primary,
+    color: COLORS.white,
   },
   todos: {
     gap: 8,

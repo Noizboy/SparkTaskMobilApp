@@ -99,7 +99,7 @@ export function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Account</Text>
           <View style={styles.card}>
-            <InfoRow icon={<Mail size={17} color={COLORS.primary} />} label="Email" value={USER.email} />
+            <InfoRow icon={<Mail size={17} color={COLORS.white} />} label="Email" value={USER.email} />
             <View style={styles.divider} />
             {isEditingPhone ? (
               <View style={styles.editRow}>
@@ -120,7 +120,7 @@ export function ProfileScreen() {
             ) : (
               <TouchableOpacity onPress={() => setIsEditingPhone(true)} activeOpacity={0.7}>
                 <InfoRow
-                  icon={<Phone size={17} color={COLORS.primary} />}
+                  icon={<Phone size={17} color={COLORS.white} />}
                   label="Phone"
                   value={phone}
                   action={<ChevronRight size={16} color={COLORS.gray400} />}
@@ -136,7 +136,7 @@ export function ProfileScreen() {
           <View style={styles.card}>
             <TouchableOpacity onPress={() => setIsChangingPwd(!isChangingPwd)} activeOpacity={0.7}>
               <InfoRow
-                icon={<Lock size={17} color={COLORS.primary} />}
+                icon={<Lock size={17} color={COLORS.white} />}
                 label="Change Password"
                 value=""
                 action={<ChevronRight size={16} color={COLORS.gray400} />}
@@ -193,7 +193,7 @@ export function ProfileScreen() {
           <Text style={styles.sectionLabel}>About</Text>
           <View style={styles.card}>
             <InfoRow
-              icon={<Info size={17} color={COLORS.primary} />}
+              icon={<Info size={17} color={COLORS.white} />}
               label="App Version"
               value={USER.version}
             />
@@ -247,7 +247,7 @@ const infoStyles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

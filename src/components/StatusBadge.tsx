@@ -16,8 +16,8 @@ export function StatusBadge({ status }: StatusBadgeProps) {
       label: 'Upcoming',
     },
     'in-progress': {
-      bg: COLORS.infoLight,
-      text: COLORS.infoText,
+      bg: COLORS.warningLight,
+      text: COLORS.warning,
       label: 'In Progress',
     },
     completed: {

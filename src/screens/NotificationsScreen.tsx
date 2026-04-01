@@ -1,61 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Bell, Clock, Calendar, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppNotification } from '../types';
+import { useApp } from '../context/AppContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
-
-const MOCK_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: '1',
-    type: 'upcoming',
-    title: 'Job Starting Soon',
-    message: 'Job #2847 will start in 2 hours at 456 Maple Drive',
-    time: '10 min ago',
-    isRead: false,
-  },
-  {
-    id: '2',
-    type: 'new_job',
-    title: 'New Job Assigned',
-    message: 'Job #2851 has been added to your schedule for today at 2:00 PM',
-    time: '1 hour ago',
-    isRead: false,
-  },
-  {
-    id: '3',
-    type: 'reminder',
-    title: 'Upload Photos',
-    message: 'Job #2839 is in progress. Don\'t forget to upload before/after photos.',
-    time: '3 hours ago',
-    isRead: true,
-  },
-  {
-    id: '4',
-    type: 'upcoming',
-    title: 'Job Starting Soon',
-    message: 'Job #2855 starts in 30 minutes at 12 Sunset Blvd',
-    time: '5 hours ago',
-    isRead: true,
-  },
-  {
-    id: '5',
-    type: 'completed',
-    title: 'Job Completed',
-    message: 'Great job! Order #2831 has been marked as completed.',
-    time: '1 day ago',
-    isRead: true,
-  },
-  {
-    id: '6',
-    type: 'new_job',
-    title: 'New Job Assigned',
-    message: 'Job #2855 (move-out clean) added for April 5 at 10:00 AM',
-    time: '1 day ago',
-    isRead: true,
-  },
-];
 
 function NotifIcon({ type }: { type: AppNotification['type'] }) {
   const color = COLORS.primary;
@@ -69,17 +19,7 @@ function NotifIcon({ type }: { type: AppNotification['type'] }) {
 
 export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
-  };
-
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
+  const { notifications, unreadCount, markAsRead, markAllRead } = useApp();
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>

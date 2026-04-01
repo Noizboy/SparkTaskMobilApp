@@ -74,10 +74,10 @@ export function JobInfoScreen() {
 
         {/* Quick info chips */}
         <View style={styles.chipsRow}>
-          <InfoChip icon={<Calendar size={13} color={COLORS.primary} />} text={formatFullDate(job.date)} />
-          <InfoChip icon={<Clock size={13} color={COLORS.primary} />} text={job.time} />
-          <InfoChip icon={<Briefcase size={13} color={COLORS.primary} />} text={job.serviceType} />
-          <InfoChip icon={<Clock size={13} color={COLORS.primary} />} text={job.duration} />
+          <InfoChip icon={<Calendar size={13} color={COLORS.white} />} text={formatFullDate(job.date)} />
+          <InfoChip icon={<Clock size={13} color={COLORS.white} />} text={job.time} />
+          <InfoChip icon={<Briefcase size={13} color={COLORS.white} />} text={job.serviceType} />
+          <InfoChip icon={<Clock size={13} color={COLORS.white} />} text={job.duration} />
         </View>
 
         {/* Details cards */}
@@ -184,7 +184,7 @@ const chipStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -192,7 +192,7 @@ const chipStyles = StyleSheet.create({
   text: {
     fontFamily: FONTS.medium,
     fontSize: 12,
-    color: COLORS.primary,
+    color: COLORS.white,
   },
 });
 
@@ -309,14 +309,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   previewNumText: {
     fontFamily: FONTS.bold,
     fontSize: 11,
-    color: COLORS.primary,
+    color: COLORS.white,
   },
   previewItemName: {
     fontFamily: FONTS.medium,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
+import { CalendarX2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,8 +33,15 @@ export function CalendarScreen() {
 
   Object.entries(jobsByDate).forEach(([date, dayJobs]) => {
     const hasUpcoming = dayJobs.some((j) => j.status === 'upcoming');
-    if (hasUpcoming && date !== selectedDate) {
+    const hasInProgress = dayJobs.some((j) => j.status === 'in-progress');
+    const allCompleted = dayJobs.every((j) => j.status === 'completed');
+    if (date === selectedDate) return;
+    if (hasUpcoming) {
       markedDates[date] = { marked: true, dotColor: COLORS.success };
+    } else if (hasInProgress) {
+      markedDates[date] = { marked: true, dotColor: COLORS.warning };
+    } else if (allCompleted) {
+      markedDates[date] = { marked: true, dotColor: COLORS.black };
     }
   });
 
@@ -98,13 +106,17 @@ export function CalendarScreen() {
               {selectedDate === todayStr ? "Today's Jobs" : `Jobs on ${selectedDate}`}
             </Text>
             <View style={styles.countBadge}>
-              <Text style={styles.countText}>{jobsForDay.length}</Text>
+              <Text style={styles.countText}>{jobsForDay.length} Total</Text>
             </View>
           </View>
 
           {jobsForDay.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No jobs scheduled for this day.</Text>
+              <View style={styles.emptyIcon}>
+                <CalendarX2 size={28} color={COLORS.gray400} />
+              </View>
+              <Text style={styles.emptyTitle}>No jobs scheduled for this day</Text>
+              <Text style={styles.emptyText}>Check back later or browse available openings.</Text>
             </View>
           ) : (
             <View style={styles.cardList}>
@@ -147,7 +159,7 @@ const styles = StyleSheet.create({
   listHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 14,
   },
   listTitle: {
@@ -158,8 +170,8 @@ const styles = StyleSheet.create({
   countBadge: {
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
-    width: 22,
-    height: 22,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -167,8 +179,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
     fontSize: 11,
     color: COLORS.white,
-    lineHeight: 22,
-    textAlignVertical: 'center',
     includeFontPadding: false,
   },
   emptyBox: {
@@ -176,12 +186,29 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xxl,
     padding: SPACING.xxl,
     alignItems: 'center',
+    gap: 8,
     ...SHADOWS.sm,
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontFamily: FONTS.semibold,
+    fontSize: 15,
+    color: COLORS.foreground,
+    textAlign: 'center',
   },
   emptyText: {
     fontFamily: FONTS.regular,
     fontSize: 14,
     color: COLORS.mutedForeground,
+    textAlign: 'center',
   },
   cardList: {
     gap: 10,
