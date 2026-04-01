@@ -9,7 +9,6 @@ import {
   Alert,
   Modal,
   TextInput as RNTextInput,
-  Animated,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -20,19 +19,16 @@ import {
   Camera,
   X,
   Ban,
-  Sparkles,
-  ChefHat,
-  Bed,
-  Bath,
-  Sofa,
-  Home,
-  Shirt,
-  Plus,
-  ClipboardList,
-  Info,
-  Key,
   CheckCheck,
+  ChevronsLeft,
 } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -46,16 +42,7 @@ import { RootStackParamList } from '../types';
 import { formatDate } from '../utils/dateUtils';
 
 type Route = RouteProp<RootStackParamList, 'Checklist'>;
-
-const ICON_MAP: Record<string, React.ElementType> = {
-  ChefHat, Bed, Bath, Sofa, Home, Sparkles, Shirt, Plus,
-  ClipboardList, Info, Key,
-};
-
-function SectionIcon({ name }: { name: string }) {
-  const Icon = ICON_MAP[name] || Sparkles;
-  return <Icon size={18} color={COLORS.primary} />;
-}
+type TabFilter = 'pending' | 'in-progress' | 'completed';
 
 interface SkipModalProps {
   visible: boolean;
@@ -135,7 +122,6 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
   const completedCount = section.todos.filter((t) => t.completed).length;
   const totalCount = section.todos.length;
   const allDone = completedCount === totalCount;
-  const progress = totalCount > 0 ? completedCount / totalCount : 0;
 
   const pickPhoto = async (type: 'before' | 'after') => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -191,27 +177,28 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
   return (
     <View style={[sectionStyles.card, section.skipReason ? sectionStyles.cardSkipped : null]}>
       {/* Card header */}
-      <TouchableOpacity
-        onPress={onToggleExpand}
-        style={sectionStyles.header}
-        activeOpacity={0.75}
-      >
-        <View style={sectionStyles.iconBox}>
-          <SectionIcon name={section.icon} />
-        </View>
+      <TouchableOpacity onPress={onToggleExpand} style={sectionStyles.header} activeOpacity={0.75}>
+        {/* Round check button */}
+        <TouchableOpacity
+          onPress={() => markAllDone(jobId, section.id)}
+          style={[sectionStyles.checkBtn, allDone && sectionStyles.checkBtnDone]}
+          activeOpacity={0.7}
+          disabled={!!section.skipReason}
+        >
+          {allDone ? (
+            <CheckCircle2 size={22} color={COLORS.white} />
+          ) : (
+            <Circle size={22} color={allDone ? COLORS.white : COLORS.gray300} />
+          )}
+        </TouchableOpacity>
+
         <View style={sectionStyles.headerInfo}>
           <Text style={sectionStyles.name}>{section.name}</Text>
           <Text style={sectionStyles.count}>
             {section.skipReason ? 'Skipped' : `${completedCount}/${totalCount} tasks`}
           </Text>
         </View>
-        {!section.skipReason && (
-          <View style={sectionStyles.progressPill}>
-            <View
-              style={[sectionStyles.progressFill, { width: `${Math.round(progress * 100)}%` }]}
-            />
-          </View>
-        )}
+
         {isExpanded ? (
           <ChevronUp size={18} color={COLORS.mutedForeground} />
         ) : (
@@ -249,13 +236,11 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
                 activeOpacity={0.7}
               >
                 {todo.completed ? (
-                  <CheckCircle2 size={20} color={COLORS.primary} />
+                  <CheckCircle2 size={22} color={COLORS.primary} />
                 ) : (
-                  <Circle size={20} color={COLORS.gray300} />
+                  <Circle size={22} color={COLORS.gray300} />
                 )}
-                <Text
-                  style={[sectionStyles.todoText, todo.completed && sectionStyles.todoTextDone]}
-                >
+                <Text style={[sectionStyles.todoText, todo.completed && sectionStyles.todoTextDone]}>
                   {todo.text}
                 </Text>
               </TouchableOpacity>
@@ -271,46 +256,36 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
                   onPress={() => setPhotoType(t)}
                   style={[sectionStyles.switchBtn, photoType === t && sectionStyles.switchBtnActive]}
                 >
-                  <Text
-                    style={[
-                      sectionStyles.switchText,
-                      photoType === t && sectionStyles.switchTextActive,
-                    ]}
-                  >
+                  <Text style={[sectionStyles.switchText, photoType === t && sectionStyles.switchTextActive]}>
                     {t === 'before' ? 'Before' : 'After'}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
             <View style={sectionStyles.photoRow}>
-              {(photoType === 'before' ? section.beforePhotos : section.afterPhotos).map(
-                (uri, i) => (
-                  <View key={i} style={sectionStyles.photoWrap}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        navigation.navigate('PhotoGallery', {
-                          photos: photoType === 'before' ? section.beforePhotos : section.afterPhotos,
-                          label: photoType === 'before' ? 'Before' : 'After',
-                          sectionName: section.name,
-                        })
-                      }
-                      activeOpacity={0.85}
-                    >
-                      <Image source={{ uri }} style={sectionStyles.photo} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => removePhoto(photoType, i)}
-                      style={sectionStyles.removePhoto}
-                    >
-                      <X size={10} color={COLORS.white} />
-                    </TouchableOpacity>
-                  </View>
-                )
-              )}
-              <TouchableOpacity
-                onPress={() => pickPhoto(photoType)}
-                style={sectionStyles.addPhotoBtn}
-              >
+              {(photoType === 'before' ? section.beforePhotos : section.afterPhotos).map((uri, i) => (
+                <View key={i} style={sectionStyles.photoWrap}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('PhotoGallery', {
+                        photos: photoType === 'before' ? section.beforePhotos : section.afterPhotos,
+                        label: photoType === 'before' ? 'Before' : 'After',
+                        sectionName: section.name,
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Image source={{ uri }} style={sectionStyles.photo} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => removePhoto(photoType, i)}
+                    style={sectionStyles.removePhoto}
+                  >
+                    <X size={10} color={COLORS.white} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity onPress={() => pickPhoto(photoType)} style={sectionStyles.addPhotoBtn}>
                 <Camera size={20} color={COLORS.mutedForeground} />
                 <Text style={sectionStyles.addPhotoText}>Add</Text>
               </TouchableOpacity>
@@ -341,26 +316,74 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
   );
 }
 
-interface AddOnRowProps {
-  addon: AddOn;
+interface AddOnsCardProps {
+  addOns: AddOn[];
   jobId: string;
 }
 
-function AddOnRow({ addon, jobId }: AddOnRowProps) {
+function AddOnsCard({ addOns, jobId }: AddOnsCardProps) {
   const { toggleAddOn } = useApp();
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const selectedCount = addOns.filter((a) => a.selected).length;
+  const totalCount = addOns.length;
+  const allSelected = selectedCount === totalCount;
+
+  const handleMarkAll = () => {
+    addOns.forEach((a) => {
+      if (!a.selected) toggleAddOn(jobId, a.id);
+    });
+  };
+
   return (
-    <TouchableOpacity
-      onPress={() => toggleAddOn(jobId, addon.id)}
-      style={addOnStyles.row}
-      activeOpacity={0.7}
-    >
-      {addon.selected ? (
-        <CheckCircle2 size={20} color={COLORS.primary} />
-      ) : (
-        <Circle size={20} color={COLORS.gray300} />
+    <View style={sectionStyles.card}>
+      <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={sectionStyles.header} activeOpacity={0.75}>
+        <TouchableOpacity
+          onPress={handleMarkAll}
+          style={[sectionStyles.checkBtn, allSelected && sectionStyles.checkBtnDone]}
+          activeOpacity={0.7}
+          disabled={allSelected}
+        >
+          {allSelected ? (
+            <CheckCircle2 size={22} color={COLORS.white} />
+          ) : (
+            <Circle size={22} color={COLORS.gray300} />
+          )}
+        </TouchableOpacity>
+        <View style={sectionStyles.headerInfo}>
+          <Text style={sectionStyles.name}>Add-ons</Text>
+          <Text style={sectionStyles.count}>{selectedCount}/{totalCount} selected</Text>
+        </View>
+        {isExpanded ? (
+          <ChevronUp size={18} color={COLORS.mutedForeground} />
+        ) : (
+          <ChevronDown size={18} color={COLORS.mutedForeground} />
+        )}
+      </TouchableOpacity>
+      {isExpanded && (
+        <View style={sectionStyles.body}>
+          <View style={sectionStyles.todos}>
+            {addOns.map((addon) => (
+              <TouchableOpacity
+                key={addon.id}
+                onPress={() => toggleAddOn(jobId, addon.id)}
+                style={sectionStyles.todoRow}
+                activeOpacity={0.7}
+              >
+                {addon.selected ? (
+                  <CheckCircle2 size={22} color={COLORS.primary} />
+                ) : (
+                  <Circle size={22} color={COLORS.gray300} />
+                )}
+                <Text style={[sectionStyles.todoText, addon.selected && sectionStyles.todoTextDone]}>
+                  {addon.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       )}
-      <Text style={addOnStyles.name}>{addon.name}</Text>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -371,19 +394,38 @@ export function ChecklistScreen() {
   const { jobs, completeJob, cancelJob } = useApp();
 
   const job = jobs.find((j) => j.id === route.params.jobId);
-  const [expandedSection, setExpandedSection] = useState<string | null>(
-    job?.sections[0]?.id ?? null
-  );
+  const [expandedSection, setExpandedSection] = useState<string | null>(job?.sections[0]?.id ?? null);
   const [completeModalVisible, setCompleteModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabFilter>('pending');
+
+  const swipeX = useSharedValue(0);
+  const swipeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: swipeX.value }],
+  }));
 
   if (!job) return null;
 
   const totalTodos = job.sections.reduce((a, s) => a + s.todos.length, 0);
-  const doneTodos = job.sections.reduce(
-    (a, s) => a + s.todos.filter((t) => t.completed).length,
-    0
-  );
+  const doneTodos = job.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0);
   const progress = totalTodos > 0 ? doneTodos / totalTodos : 0;
+  const percentage = Math.round(progress * 100);
+
+  // Filter sections by tab
+  const getSectionStatus = (section: Section): TabFilter => {
+    if (section.skipReason) return 'completed';
+    const done = section.todos.filter((t) => t.completed).length;
+    if (done === 0) return 'pending';
+    if (done === section.todos.length) return 'completed';
+    return 'in-progress';
+  };
+
+  const filteredSections = job.sections.filter((s) => getSectionStatus(s) === activeTab);
+
+  const tabCounts = {
+    pending: job.sections.filter((s) => getSectionStatus(s) === 'pending').length,
+    'in-progress': job.sections.filter((s) => getSectionStatus(s) === 'in-progress').length,
+    completed: job.sections.filter((s) => getSectionStatus(s) === 'completed').length,
+  };
 
   const handleComplete = () => {
     completeJob(job.id);
@@ -404,6 +446,30 @@ export function ChecklistScreen() {
     ]);
   };
 
+  const getAddOnsStatus = (): TabFilter => {
+    if (!job.addOns || job.addOns.length === 0) return 'pending';
+    const selected = job.addOns.filter((a) => a.selected).length;
+    if (selected === 0) return 'pending';
+    if (selected === job.addOns.length) return 'completed';
+    return 'in-progress';
+  };
+  const showAddOns = job.addOns && job.addOns.length > 0 && getAddOnsStatus() === activeTab;
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      if (e.translationX < 0) swipeX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      if (e.translationX < -120) runOnJS(handleCancel)();
+      swipeX.value = withSpring(0);
+    });
+
+  const TABS: { key: TabFilter; label: string }[] = [
+    { key: 'pending', label: 'Pending' },
+    { key: 'in-progress', label: 'In Progress' },
+    { key: 'completed', label: 'Completed' },
+  ];
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Top bar */}
@@ -415,23 +481,50 @@ export function ChecklistScreen() {
           <Text style={styles.topOrder}>#{job.orderNumber}</Text>
           <StatusBadge status={job.status} />
         </View>
-        <TouchableOpacity onPress={handleCancel} style={styles.cancelBtn}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Progress bar */}
-      <View style={styles.progressRow}>
-        <View style={styles.progressBg}>
-          <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+      {/* Progress hero */}
+      <View style={styles.progressHero}>
+        <View style={styles.progressHeroLeft}>
+          <Text style={styles.progressPct}>{percentage}%</Text>
+          <Text style={styles.progressLabel}>Overall Progress</Text>
         </View>
-        <Text style={styles.progressText}>{doneTodos}/{totalTodos} tasks</Text>
+        <View style={styles.progressHeroRight}>
+          <Text style={styles.progressFraction}>{doneTodos}<Text style={styles.progressTotal}>/{totalTodos}</Text></Text>
+          <Text style={styles.progressLabel}>Tasks done</Text>
+        </View>
+      </View>
+      <View style={styles.progressBarWrap}>
+        <View style={styles.progressBg}>
+          <View style={[styles.progressFill, { width: `${percentage}%` }]} />
+        </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
-      >
+      {/* Tabs */}
+      <View style={styles.tabsRow}>
+        {TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            onPress={() => setActiveTab(tab.key)}
+            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+              {tab.label}
+            </Text>
+            {tabCounts[tab.key] > 0 && (
+              <View style={[styles.tabBadge, activeTab === tab.key && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, activeTab === tab.key && styles.tabBadgeTextActive]}>
+                  {tabCounts[tab.key]}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
         {/* Job header */}
         <View style={styles.jobHeader}>
           {job.status !== 'completed' && (
@@ -449,43 +542,33 @@ export function ChecklistScreen() {
           </View>
         </View>
 
-        {/* Section cards */}
+        {/* Section cards + add-ons */}
         <View style={styles.sections}>
-          <Text style={styles.sectionsTitle}>Checklist</Text>
-          {job.sections.map((section) => (
-            <SectionCard
-              key={section.id}
-              section={section}
-              jobId={job.id}
-              isExpanded={expandedSection === section.id}
-              onToggleExpand={() =>
-                setExpandedSection(expandedSection === section.id ? null : section.id)
-              }
-            />
-          ))}
-        </View>
-
-        {/* Add-ons */}
-        {job.addOns && job.addOns.length > 0 && (
-          <View style={styles.addOnsSection}>
-            <Text style={styles.sectionsTitle}>Add-ons</Text>
-            <View style={styles.addOnsCard}>
-              {job.addOns.map((addon) => (
-                <AddOnRow key={addon.id} addon={addon} jobId={job.id} />
-              ))}
+          {filteredSections.length === 0 && !showAddOns ? (
+            <View style={styles.emptyTab}>
+              <Text style={styles.emptyTabText}>No sections in this category.</Text>
             </View>
-          </View>
-        )}
+          ) : (
+            <>
+              {filteredSections.map((section) => (
+                <SectionCard
+                  key={section.id}
+                  section={section}
+                  jobId={job.id}
+                  isExpanded={expandedSection === section.id}
+                  onToggleExpand={() =>
+                    setExpandedSection(expandedSection === section.id ? null : section.id)
+                  }
+                />
+              ))}
+              {showAddOns && <AddOnsCard addOns={job.addOns!} jobId={job.id} />}
+            </>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Footer: Complete button */}
+      {/* Footer: Complete button + swipe cancel */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <View style={styles.footerStats}>
-          <Text style={styles.footerProgress}>
-            {Math.round(progress * 100)}% complete
-          </Text>
-          <Text style={styles.footerCount}>{doneTodos} of {totalTodos} done</Text>
-        </View>
         <TouchableOpacity
           onPress={() => setCompleteModalVisible(true)}
           style={[styles.completeBtn, progress < 1 && styles.completeBtnPartial]}
@@ -495,6 +578,12 @@ export function ChecklistScreen() {
             {progress === 1 ? 'Complete Job ✓' : 'Complete Job'}
           </Text>
         </TouchableOpacity>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.swipeCancelRow, swipeAnimStyle]}>
+            <ChevronsLeft size={16} color={COLORS.error} />
+            <Text style={styles.swipeCancelText}>Swipe left to cancel job</Text>
+          </Animated.View>
+        </GestureDetector>
       </View>
 
       {/* Complete confirmation modal */}
@@ -516,10 +605,7 @@ export function ChecklistScreen() {
                 : 'All tasks are done! Mark this job as complete?'}
             </Text>
             <View style={completeStyles.actions}>
-              <TouchableOpacity
-                onPress={() => setCompleteModalVisible(false)}
-                style={completeStyles.cancelBtn}
-              >
+              <TouchableOpacity onPress={() => setCompleteModalVisible(false)} style={completeStyles.cancelBtn}>
                 <Text style={completeStyles.cancelText}>Not yet</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -718,15 +804,21 @@ const sectionStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.lg,
-    gap: 10,
+    gap: 12,
   },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primary,
+  checkBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.gray100,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.gray200,
+  },
+  checkBtnDone: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   headerInfo: {
     flex: 1,
@@ -741,18 +833,6 @@ const sectionStyles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.mutedForeground,
-  },
-  progressPill: {
-    width: 48,
-    height: 5,
-    backgroundColor: COLORS.gray200,
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
   },
   skipBadge: {
     flexDirection: 'row',
@@ -792,12 +872,12 @@ const sectionStyles = StyleSheet.create({
     color: COLORS.white,
   },
   todos: {
-    gap: 8,
+    gap: 10,
   },
   todoRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 4,
   },
   todoText: {
@@ -897,27 +977,6 @@ const sectionStyles = StyleSheet.create({
   },
 });
 
-const addOnStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray100,
-  },
-  name: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    color: COLORS.foreground,
-    flex: 1,
-  },
-  price: {
-    fontFamily: FONTS.semibold,
-    fontSize: 13,
-    color: COLORS.primary,
-  },
-});
 
 const styles = StyleSheet.create({
   root: {
@@ -950,27 +1009,58 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.foreground,
   },
-  cancelBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.errorLight,
-  },
-  cancelBtnText: {
-    fontFamily: FONTS.medium,
-    fontSize: 13,
-    color: COLORS.error,
-  },
-  progressRow: {
+  progressHero: {
     flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: SPACING.xxl,
-    gap: 10,
-    marginBottom: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.md,
+    gap: 20,
+  },
+  progressHeroLeft: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  progressHeroRight: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  progressPct: {
+    fontFamily: FONTS.bold,
+    fontSize: 28,
+    color: COLORS.foreground,
+    includeFontPadding: false,
+  },
+  progressFraction: {
+    fontFamily: FONTS.bold,
+    fontSize: 28,
+    color: COLORS.foreground,
+    includeFontPadding: false,
+  },
+  progressTotal: {
+    fontFamily: FONTS.regular,
+    fontSize: 18,
+    color: COLORS.mutedForeground,
+  },
+  progressLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: COLORS.mutedForeground,
+    marginTop: 2,
+  },
+  progressBarWrap: {
+    paddingHorizontal: SPACING.xxl,
+    marginBottom: SPACING.md,
   },
   progressBg: {
-    flex: 1,
-    height: 6,
+    height: 8,
     backgroundColor: COLORS.gray200,
     borderRadius: RADIUS.full,
     overflow: 'hidden',
@@ -980,12 +1070,56 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
   },
-  progressText: {
+  tabsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.xxl,
+    gap: 8,
+    marginBottom: SPACING.md,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.white,
+    borderWidth: 1.5,
+    borderColor: COLORS.gray200,
+  },
+  tabActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  tabText: {
     fontFamily: FONTS.medium,
     fontSize: 12,
     color: COLORS.mutedForeground,
-    minWidth: 60,
-    textAlign: 'right',
+  },
+  tabTextActive: {
+    color: COLORS.white,
+  },
+  tabBadge: {
+    backgroundColor: COLORS.gray200,
+    borderRadius: RADIUS.full,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  tabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  tabBadgeText: {
+    fontFamily: FONTS.bold,
+    fontSize: 10,
+    color: COLORS.foreground,
+    includeFontPadding: false,
+  },
+  tabBadgeTextActive: {
+    color: COLORS.white,
   },
   jobHeader: {
     paddingHorizontal: SPACING.xxl,
@@ -1021,21 +1155,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xxl,
     marginBottom: SPACING.lg,
   },
-  sectionsTitle: {
-    fontFamily: FONTS.semibold,
-    fontSize: 16,
-    color: COLORS.foreground,
-    marginBottom: 12,
-  },
-  addOnsSection: {
-    paddingHorizontal: SPACING.xxl,
-    marginBottom: SPACING.xl,
-  },
-  addOnsCard: {
+  emptyTab: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.xxl,
-    paddingHorizontal: SPACING.lg,
+    padding: SPACING.xxl,
+    alignItems: 'center',
     ...SHADOWS.sm,
+  },
+  emptyTabText: {
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: COLORS.mutedForeground,
   },
   footer: {
     position: 'absolute',
@@ -1047,21 +1177,6 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     paddingHorizontal: SPACING.xxl,
     paddingTop: 14,
-    gap: 8,
-  },
-  footerStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  footerProgress: {
-    fontFamily: FONTS.semibold,
-    fontSize: 13,
-    color: COLORS.foreground,
-  },
-  footerCount: {
-    fontFamily: FONTS.regular,
-    fontSize: 13,
-    color: COLORS.mutedForeground,
   },
   completeBtn: {
     backgroundColor: COLORS.primary,
@@ -1078,5 +1193,18 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semibold,
     fontSize: 16,
     color: COLORS.white,
+  },
+  swipeCancelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 8,
+  },
+  swipeCancelText: {
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: COLORS.error,
   },
 });
