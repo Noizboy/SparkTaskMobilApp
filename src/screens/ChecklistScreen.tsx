@@ -42,7 +42,7 @@ import { RootStackParamList } from '../types';
 import { formatDate } from '../utils/dateUtils';
 
 type Route = RouteProp<RootStackParamList, 'Checklist'>;
-type TabFilter = 'all' | 'pending' | 'in-progress' | 'completed';
+type TabFilter = 'pending' | 'in-progress' | 'completed';
 
 interface SkipModalProps {
   visible: boolean;
@@ -396,7 +396,7 @@ export function ChecklistScreen() {
   const job = jobs.find((j) => j.id === route.params.jobId);
   const [expandedSection, setExpandedSection] = useState<string | null>(job?.sections[0]?.id ?? null);
   const [completeModalVisible, setCompleteModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabFilter>('all');
+  const [activeTab, setActiveTab] = useState<TabFilter | null>(null);
 
   const swipeX = useSharedValue(0);
   const swipeAnimStyle = useAnimatedStyle(() => ({
@@ -421,12 +421,11 @@ export function ChecklistScreen() {
     return 'in-progress';
   };
 
-  const filteredSections = activeTab === 'all'
+  const filteredSections = activeTab === null
     ? job.sections
     : job.sections.filter((s) => getSectionStatus(s) === activeTab);
 
   const tabCounts = {
-    all: job.sections.length,
     pending: job.sections.filter((s) => getSectionStatus(s) === 'pending').length,
     'in-progress': job.sections.filter((s) => getSectionStatus(s) === 'in-progress').length,
     completed: job.sections.filter((s) => getSectionStatus(s) === 'completed').length,
@@ -458,7 +457,7 @@ export function ChecklistScreen() {
     if (selected === job.addOns.length) return 'completed';
     return 'in-progress';
   };
-  const showAddOns = job.addOns && job.addOns.length > 0 && (activeTab === 'all' || getAddOnsStatus() === activeTab);
+  const showAddOns = job.addOns && job.addOns.length > 0 && (activeTab === null || getAddOnsStatus() === activeTab);
 
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
@@ -470,7 +469,6 @@ export function ChecklistScreen() {
     });
 
   const TABS: { key: TabFilter; label: string }[] = [
-    { key: 'all', label: 'All' },
     { key: 'pending', label: 'Pending' },
     { key: 'in-progress', label: 'In Progress' },
     { key: 'completed', label: 'Completed' },
@@ -512,7 +510,7 @@ export function ChecklistScreen() {
         {TABS.map((tab) => (
           <TouchableOpacity
             key={tab.key}
-            onPress={() => setActiveTab(tab.key)}
+            onPress={() => setActiveTab(activeTab === tab.key ? null : tab.key)}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             activeOpacity={0.7}
           >
