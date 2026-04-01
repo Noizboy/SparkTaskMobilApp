@@ -405,8 +405,10 @@ export function ChecklistScreen() {
 
   if (!job) return null;
 
-  const totalTodos = job.sections.reduce((a, s) => a + s.todos.length, 0);
-  const doneTodos = job.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0);
+  const totalAddOns = job.addOns?.length ?? 0;
+  const doneAddOns = job.addOns?.filter((a) => a.selected).length ?? 0;
+  const totalTodos = job.sections.reduce((a, s) => a + s.todos.length, 0) + totalAddOns;
+  const doneTodos = job.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0) + doneAddOns;
   const progress = totalTodos > 0 ? doneTodos / totalTodos : 0;
   const percentage = Math.round(progress * 100);
 
