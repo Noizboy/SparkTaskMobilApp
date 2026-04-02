@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Image,
   Alert,
@@ -15,12 +16,18 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  ChevronsRight,
   Circle,
   Camera,
   X,
   Ban,
-  ChevronsLeft,
   Clock,
+  Settings2,
+  MapPin,
+  CalendarDays,
+  AlarmClock,
+  Timer,
+  Info,
 } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
@@ -32,7 +39,7 @@ import Animated, {
   interpolateColor,
   Easing,
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -169,7 +176,7 @@ interface SectionCardProps {
 type SectionNav = NativeStackNavigationProp<RootStackParamList>;
 
 function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCardProps) {
-  const { markAllDone, photosChange, updateSkipReason } = useApp();
+  const { markAllDone, photosChange, updateSkipReason, clearSkipReason } = useApp();
   const navigation = useNavigation<SectionNav>();
   const [photoType, setPhotoType] = useState<'before' | 'after'>('before');
   const [skipModalVisible, setSkipModalVisible] = useState(false);
@@ -284,7 +291,14 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
       {section.skipReason && (
         <View style={sectionStyles.skipBadge}>
           <Ban size={12} color={COLORS.warning} />
-          <Text style={sectionStyles.skipText}>Skipped: {section.skipReason}</Text>
+          <Text style={sectionStyles.skipText} numberOfLines={1}>Skipped: {section.skipReason}</Text>
+          <TouchableOpacity
+            onPress={() => clearSkipReason(jobId, section.id)}
+            style={sectionStyles.reopenBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={sectionStyles.reopenText}>Resume</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -457,23 +471,52 @@ export function ChecklistScreen() {
   const totalAddOns = job?.addOns?.length ?? 0;
   const doneAddOns = job?.addOns?.filter((a) => a.selected).length ?? 0;
   const totalTodos = (job?.sections.reduce((a, s) => a + s.todos.length, 0) ?? 0) + totalAddOns;
-  const doneTodos = (job?.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0) ?? 0) + doneAddOns;
+  const doneTodos = (job?.sections.reduce((a, s) =>
+    a + (s.skipReason ? s.todos.length : s.todos.filter((t) => t.completed).length), 0) ?? 0) + doneAddOns;
   const progress = totalTodos > 0 ? doneTodos / totalTodos : 0;
   const percentage = Math.round(progress * 100);
 
   const [expandedSection, setExpandedSection] = useState<string | null>(job?.sections[0]?.id ?? null);
   const [completeModalVisible, setCompleteModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<TabFilter | null>(null);
+  const [showProgress, setShowProgress] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [cancelConfirmed, setCancelConfirmed] = useState(false);
+  const cancelSwipeX = useSharedValue(0);
+  const cancelSwipeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: cancelSwipeX.value }],
+  }));
+  const cancelSwipeBgStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(cancelSwipeX.value / 120, 1),
+  }));
+  const onCancelConfirmed = () => {
+    setCancelConfirmed(true);
+    setTimeout(() => {
+      setSettingsVisible(false);
+      setCancelConfirmed(false);
+      cancelSwipeX.value = 0;
+      cancelJob(job.id);
+      navigation.goBack();
+    }, 1200);
+  };
+  const cancelPan = Gesture.Pan()
+    .onUpdate((e) => {
+      if (e.translationX > 0) cancelSwipeX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      if (e.translationX > 120) {
+        cancelSwipeX.value = withTiming(400, { duration: 200 });
+        runOnJS(onCancelConfirmed)();
+      } else {
+        cancelSwipeX.value = withSpring(0, { damping: 15, stiffness: 200 });
+      }
+    });
   const [, forceUpdate] = useState(0);
 
   // Refs so we can mutate during render without causing extra renders
   const delayedSectionIds = useRef<Set<string>>(new Set());
   const prevSectionStatuses = useRef<Record<string, TabFilter>>({});
 
-  const swipeX = useSharedValue(0);
-  const swipeAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: swipeX.value }],
-  }));
 
   const [barContainerWidth, setBarContainerWidth] = useState(0);
   const progressWidthAnim = useSharedValue(0);
@@ -520,19 +563,6 @@ export function ChecklistScreen() {
     navigation.goBack();
   };
 
-  const handleCancel = () => {
-    Alert.alert('Cancel Job', 'Reset this job back to upcoming?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Yes, Reset',
-        style: 'destructive',
-        onPress: () => {
-          cancelJob(job.id);
-          navigation.goBack();
-        },
-      },
-    ]);
-  };
 
   const getAddOnsStatus = (): TabFilter => {
     if (!job.addOns || job.addOns.length === 0) return 'pending';
@@ -543,14 +573,6 @@ export function ChecklistScreen() {
   };
   const showAddOns = job.addOns && job.addOns.length > 0 && (activeTab === null || getAddOnsStatus() === activeTab);
 
-  const panGesture = Gesture.Pan()
-    .onUpdate((e) => {
-      if (e.translationX < 0) swipeX.value = e.translationX;
-    })
-    .onEnd((e) => {
-      if (e.translationX < -120) runOnJS(handleCancel)();
-      swipeX.value = withSpring(0);
-    });
 
   const TABS: { key: TabFilter; label: string }[] = [
     { key: 'pending', label: 'Pending' },
@@ -565,21 +587,33 @@ export function ChecklistScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
-        <Text style={styles.topOrder}>Order #{job.orderNumber}</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setShowProgress((v) => !v)} activeOpacity={0.7} style={styles.topOrderBtn}>
+          <Text style={styles.topOrder}>Order #{job.orderNumber}</Text>
+          {showProgress
+            ? <ChevronUp size={14} color={COLORS.mutedForeground} />
+            : <ChevronDown size={14} color={COLORS.mutedForeground} />
+          }
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => { cancelSwipeX.value = 0; setSettingsVisible(true); }} style={styles.settingsBtn} activeOpacity={0.7}>
+          <Settings2 size={20} color={COLORS.foreground} />
+        </TouchableOpacity>
       </View>
 
       {/* Progress hero */}
-      <View style={styles.progressHero}>
-        <View style={styles.progressHeroLeft}>
-          <Text style={styles.progressPct}>{percentage}%</Text>
-          <Text style={styles.progressLabel}>Overall Progress</Text>
+      {showProgress && (
+        <View style={styles.progressHero}>
+          <View style={styles.progressHeroLeft}>
+            <Text style={styles.progressPct}>{percentage}%</Text>
+            <Text style={styles.progressLabel}>Overall Progress</Text>
+          </View>
+          <View style={styles.progressHeroRight}>
+            <Text style={styles.progressFraction}>{doneTodos}<Text style={styles.progressTotal}>/{totalTodos}</Text></Text>
+            <Text style={styles.progressLabel}>Tasks done</Text>
+          </View>
         </View>
-        <View style={styles.progressHeroRight}>
-          <Text style={styles.progressFraction}>{doneTodos}<Text style={styles.progressTotal}>/{totalTodos}</Text></Text>
-          <Text style={styles.progressLabel}>Tasks done</Text>
-        </View>
-      </View>
+      )}
+
+      {/* Progress bar — always visible */}
       <View style={styles.progressBarWrap}>
         <View
           style={styles.progressBg}
@@ -649,17 +683,107 @@ export function ChecklistScreen() {
             {progress === 1 ? 'Complete Job ✓' : 'Complete Job'}
           </Text>
         </TouchableOpacity>
-        <GestureDetector gesture={panGesture}>
-          <View style={styles.swipeCancelTrack}>
-            <ChevronsLeft size={13} color={COLORS.error} style={{ opacity: 0.3 }} />
-            <ChevronsLeft size={13} color={COLORS.error} style={{ opacity: 0.55 }} />
-            <Text style={styles.swipeCancelLabel}>Cancel Job</Text>
-            <Animated.View style={[styles.swipeCancelThumb, swipeAnimStyle]}>
-              <ChevronsLeft size={22} color={COLORS.white} />
-            </Animated.View>
-          </View>
-        </GestureDetector>
       </View>
+
+      {/* Settings / Job info modal */}
+      <Modal
+        visible={settingsVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setSettingsVisible(false); cancelSwipeX.value = 0; }}
+      >
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <Pressable style={settingsStyles.overlay} onPress={() => { setSettingsVisible(false); cancelSwipeX.value = 0; }}>
+            <Pressable onPress={() => {}}>
+              <View style={settingsStyles.sheet}>
+                {/* Handle */}
+                <View style={settingsStyles.handle} />
+
+                {/* Header */}
+                <View style={settingsStyles.header}>
+                  <View style={settingsStyles.headerIcon}>
+                    <Info size={20} color={COLORS.white} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={settingsStyles.title}>{job.serviceType}</Text>
+                    <Text style={settingsStyles.subtitle}>Order #{job.orderNumber}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => { setSettingsVisible(false); cancelSwipeX.value = 0; }} style={settingsStyles.closeBtn} activeOpacity={0.7}>
+                    <X size={18} color={COLORS.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Info cards */}
+                <View style={settingsStyles.infoGrid}>
+                  <View style={settingsStyles.infoCard}>
+                    <CalendarDays size={16} color={COLORS.primary} />
+                    <Text style={settingsStyles.infoCardLabel}>Date</Text>
+                    <Text style={settingsStyles.infoCardValue}>{job.date}</Text>
+                  </View>
+                  <View style={settingsStyles.infoCard}>
+                    <AlarmClock size={16} color={COLORS.primary} />
+                    <Text style={settingsStyles.infoCardLabel}>Time</Text>
+                    <Text style={settingsStyles.infoCardValue}>{job.time}</Text>
+                  </View>
+                  <View style={settingsStyles.infoCard}>
+                    <Timer size={16} color={COLORS.primary} />
+                    <Text style={settingsStyles.infoCardLabel}>Duration</Text>
+                    <Text style={settingsStyles.infoCardValue}>{job.duration}</Text>
+                  </View>
+                </View>
+
+                {/* Address */}
+                <View style={settingsStyles.infoRowFull}>
+                  <View style={settingsStyles.infoRowIcon}>
+                    <MapPin size={15} color={COLORS.primary} />
+                  </View>
+                  <Text style={settingsStyles.infoRowText}>{job.address}</Text>
+                </View>
+
+                {job.specialInstructions && (
+                  <View style={settingsStyles.infoRowFull}>
+                    <View style={settingsStyles.infoRowIcon}>
+                      <Info size={15} color={COLORS.primary} />
+                    </View>
+                    <Text style={settingsStyles.infoRowText}>{job.specialInstructions}</Text>
+                  </View>
+                )}
+
+                {job.accessInfo && (
+                  <View style={settingsStyles.infoRowFull}>
+                    <View style={settingsStyles.infoRowIcon}>
+                      <Settings2 size={15} color={COLORS.primary} />
+                    </View>
+                    <Text style={settingsStyles.infoRowText}>{job.accessInfo}</Text>
+                  </View>
+                )}
+
+                {/* Divider */}
+                <View style={settingsStyles.divider} />
+
+                {/* Swipe-right cancel */}
+                <Text style={settingsStyles.swipeHint}>Swipe right to cancel job</Text>
+                {cancelConfirmed ? (
+                  <View style={settingsStyles.cancelConfirmedTrack}>
+                    <CheckCircle2 size={20} color={COLORS.white} />
+                    <Text style={settingsStyles.cancelConfirmedText}>Canceled</Text>
+                  </View>
+                ) : (
+                  <View style={settingsStyles.cancelTrack}>
+                    <Animated.View style={[settingsStyles.cancelReveal, cancelSwipeBgStyle]} />
+                    <Text style={settingsStyles.cancelTrackLabel}>Cancel Job</Text>
+                    <GestureDetector gesture={cancelPan}>
+                      <Animated.View style={[settingsStyles.cancelThumb, cancelSwipeAnimStyle]}>
+                        <ChevronsRight size={20} color={COLORS.white} />
+                      </Animated.View>
+                    </GestureDetector>
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          </Pressable>
+        </GestureHandlerRootView>
+      </Modal>
 
       {/* Complete confirmation modal */}
       <Modal
@@ -790,6 +914,170 @@ const modalStyles = StyleSheet.create({
   confirmText: {
     fontFamily: FONTS.semibold,
     fontSize: 14,
+    color: COLORS.white,
+  },
+});
+
+const settingsStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: SPACING.xxl,
+    paddingBottom: 36,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.gray200,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontFamily: FONTS.semibold,
+    fontSize: 16,
+    color: COLORS.foreground,
+  },
+  subtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: COLORS.mutedForeground,
+    marginTop: 1,
+  },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  infoCard: {
+    flex: 1,
+    backgroundColor: COLORS.gray100,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.md,
+    alignItems: 'center',
+    gap: 4,
+  },
+  infoCardLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: COLORS.mutedForeground,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoCardValue: {
+    fontFamily: FONTS.semibold,
+    fontSize: 13,
+    color: COLORS.foreground,
+    textAlign: 'center',
+  },
+  infoRowFull: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+    backgroundColor: COLORS.gray100,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+  },
+  infoRowIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoRowText: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    color: COLORS.foreground,
+    flex: 1,
+    lineHeight: 20,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.gray200,
+    marginVertical: 16,
+  },
+  swipeHint: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: COLORS.mutedForeground,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  cancelTrack: {
+    height: 56,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.gray100,
+    borderWidth: 1.5,
+    borderColor: COLORS.gray200,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelReveal: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.full,
+  },
+  cancelTrackLabel: {
+    fontFamily: FONTS.semibold,
+    fontSize: 14,
+    color: COLORS.error,
+  },
+  cancelThumb: {
+    position: 'absolute',
+    left: 3,
+    top: 2.5,
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelConfirmedTrack: {
+    height: 56,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.error,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  cancelConfirmedText: {
+    fontFamily: FONTS.semibold,
+    fontSize: 16,
     color: COLORS.white,
   },
 });
@@ -941,6 +1229,17 @@ const sectionStyles = StyleSheet.create({
     color: '#92400e',
     flex: 1,
   },
+  reopenBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.warning,
+  },
+  reopenText: {
+    fontFamily: FONTS.semibold,
+    fontSize: 11,
+    color: COLORS.white,
+  },
   body: {
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.lg,
@@ -1066,6 +1365,20 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.sm,
+  },
+  topOrderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  settingsBtn: {
     width: 40,
     height: 40,
     borderRadius: RADIUS.full,
@@ -1233,34 +1546,5 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semibold,
     fontSize: 16,
     color: COLORS.white,
-  },
-  swipeCancelTrack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    height: 52,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.errorLight,
-    borderWidth: 1.5,
-    borderColor: COLORS.error,
-    paddingLeft: SPACING.md,
-    paddingRight: 4,
-    overflow: 'hidden',
-    gap: 2,
-  },
-  swipeCancelLabel: {
-    flex: 1,
-    fontFamily: FONTS.semibold,
-    fontSize: 14,
-    color: COLORS.error,
-    textAlign: 'center',
-  },
-  swipeCancelThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.error,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

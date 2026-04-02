@@ -34,8 +34,16 @@ export function HomeScreen() {
   today.setHours(0, 0, 0, 0);
 
   const inProgressJobs = jobs.filter((j) => j.status === 'in-progress');
-  const upcomingJobs = jobs.filter((j) => j.status === 'upcoming' && isFutureOrToday(j.date));
-  const completedJobs = jobs.filter((j) => j.status === 'completed');
+
+  const allUpcomingJobs = jobs
+    .filter((j) => j.status === 'upcoming' && isFutureOrToday(j.date))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  const upcomingJobs = allUpcomingJobs.slice(0, 4);
+
+  const allCompletedJobs = jobs
+    .filter((j) => j.status === 'completed')
+    .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
+  const completedJobs = allCompletedJobs.slice(0, 4);
 
   const markedDates = [...inProgressJobs, ...upcomingJobs].map((j) => j.date);
 
@@ -133,7 +141,14 @@ export function HomeScreen() {
         {/* Completed */}
         {completedJobs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Completed</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Completed</Text>
+              {allCompletedJobs.length > 4 && (
+                <TouchableOpacity onPress={() => navigation.navigate('AllCompletedJobs')} activeOpacity={0.7}>
+                  <Text style={styles.viewAllText}>View All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.cardList}>
               {completedJobs.map((job) => (
                 <HomeJobCard key={job.id} job={job} onPress={() => handleJobPress(job.id)} />

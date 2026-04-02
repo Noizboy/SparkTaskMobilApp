@@ -52,13 +52,17 @@ export function OrderDetailsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
-        <StatusBadge status={job.status} />
+        <Text style={styles.topOrder}>Order #{job.orderNumber}</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Title */}
         <View style={[styles.titleSection, job.status === 'completed' && { paddingBottom: 0 }]}>
-          <Text style={styles.orderNum}>Order #{job.orderNumber}</Text>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Status:</Text>
+            <StatusBadge status={job.status} />
+          </View>
           {job.status !== 'completed' && (
             <>
               <Text style={styles.clientName}>{job.clientName}</Text>
@@ -148,12 +152,8 @@ export function OrderDetailsScreen() {
                 {/* Photos */}
                 {(section.beforePhotos.length > 0 || section.afterPhotos.length > 0) && (
                   <View style={styles.photosSection}>
-                    {section.beforePhotos.length > 0 && (
-                      <PhotoRow label="Before" photos={section.beforePhotos} sectionName={section.name} />
-                    )}
-                    {section.afterPhotos.length > 0 && (
-                      <PhotoRow label="After" photos={section.afterPhotos} sectionName={section.name} />
-                    )}
+                    <PhotoStack label="Before" photos={section.beforePhotos} sectionName={section.name} />
+                    <PhotoStack label="After" photos={section.afterPhotos} sectionName={section.name} />
                   </View>
                 )}
               </View>
@@ -203,28 +203,39 @@ function StatBox({ value, label }: { value: string; label: string }) {
 
 type PhotoRowNav = NativeStackNavigationProp<RootStackParamList>;
 
-function PhotoRow({ label, photos, sectionName }: { label: string; photos: string[]; sectionName: string }) {
+function PhotoStack({ label, photos, sectionName }: { label: string; photos: string[]; sectionName: string }) {
   const navigation = useNavigation<PhotoRowNav>();
 
   return (
-    <View style={photoStyles.wrap}>
-      <Text style={photoStyles.label}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={photoStyles.row}>
-          {photos.map((uri, i) => (
-            <TouchableOpacity
-              key={i}
-              onPress={() =>
-                navigation.navigate('PhotoGallery', { photos, label, sectionName })
-              }
-              activeOpacity={0.85}
-            >
-              <Image source={{ uri }} style={photoStyles.img} />
-            </TouchableOpacity>
-          ))}
+    <TouchableOpacity
+      style={photoStyles.stack}
+      onPress={() => photos.length > 0 && navigation.navigate('PhotoGallery', { photos, label, sectionName })}
+      activeOpacity={photos.length > 0 ? 0.85 : 1}
+    >
+      <View style={photoStyles.labelRow}>
+        <Text style={photoStyles.label}>{label}</Text>
+        {photos.length > 0 && (
+          <View style={photoStyles.badge}>
+            <Text style={photoStyles.badgeText}>{photos.length}</Text>
+          </View>
+        )}
+      </View>
+      {photos.length > 0 ? (
+        <View style={photoStyles.imgWrap}>
+          <Image source={{ uri: photos[0] }} style={photoStyles.img} />
+          {photos.length > 1 && (
+            <View style={photoStyles.overlay}>
+              <Camera size={14} color={COLORS.white} />
+              <Text style={photoStyles.overlayText}>+{photos.length - 1}</Text>
+            </View>
+          )}
         </View>
-      </ScrollView>
-    </View>
+      ) : (
+        <View style={photoStyles.empty}>
+          <Camera size={18} color={COLORS.gray300} />
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -268,23 +279,73 @@ const statStyles = StyleSheet.create({
 });
 
 const photoStyles = StyleSheet.create({
-  wrap: {
+  stack: {
+    flex: 1,
     gap: 6,
-    marginTop: 10,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   label: {
     fontFamily: FONTS.medium,
     fontSize: 12,
     color: COLORS.mutedForeground,
   },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
+  badge: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontFamily: FONTS.bold,
+    fontSize: 10,
+    color: COLORS.white,
+    includeFontPadding: false,
+  },
+  imgWrap: {
+    position: 'relative',
   },
   img: {
-    width: 72,
-    height: 72,
+    width: '100%',
+    aspectRatio: 1,
     borderRadius: RADIUS.lg,
+  },
+  overlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderTopLeftRadius: RADIUS.md,
+    borderBottomRightRadius: RADIUS.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  overlayText: {
+    fontFamily: FONTS.semibold,
+    fontSize: 12,
+    color: COLORS.white,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  empty: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.gray100,
+    borderWidth: 1.5,
+    borderColor: COLORS.gray200,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
@@ -313,6 +374,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xxl,
     paddingBottom: SPACING.xl,
     gap: 4,
+  },
+  topOrder: {
+    fontFamily: FONTS.semibold,
+    fontSize: 16,
+    color: COLORS.foreground,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  statusLabel: {
+    fontFamily: FONTS.semibold,
+    fontSize: 15,
+    color: COLORS.foreground,
   },
   orderNum: {
     fontFamily: FONTS.bold,
@@ -421,7 +498,8 @@ const styles = StyleSheet.create({
   },
   photosSection: {
     marginTop: 12,
-    gap: 8,
+    flexDirection: 'row',
+    gap: 10,
   },
   addonRow: {
     flexDirection: 'row',

@@ -35,6 +35,7 @@ interface AppContextType {
   cancelJob: (jobId: string) => void;
   resetAllJobs: () => void;
   updateSkipReason: (jobId: string, sectionId: string, reason: string) => void;
+  clearSkipReason: (jobId: string, sectionId: string) => void;
   setProfileImage: (image: string | null) => void;
 }
 
@@ -209,6 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return {
         ...job,
         status: 'completed' as const,
+        completedAt: Date.now(),
         sections: updatedSections,
         addOns: updatedAddOns,
       };
@@ -225,6 +227,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sections: job.sections.map((section) => ({
           ...section,
           completed: false,
+          skipReason: undefined,
           beforePhotos: [],
           afterPhotos: [],
           todos: section.todos.map((todo) => ({ ...todo, completed: false })),
@@ -267,6 +270,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     saveJobs(updated);
   };
 
+  const clearSkipReason = (jobId: string, sectionId: string) => {
+    const updated = jobs.map((job) => {
+      if (job.id !== jobId) return job;
+      return {
+        ...job,
+        sections: job.sections.map((section) =>
+          section.id === sectionId ? { ...section, skipReason: undefined } : section
+        ),
+      };
+    });
+    saveJobs(updated);
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -291,6 +307,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         cancelJob,
         resetAllJobs,
         updateSkipReason,
+        clearSkipReason,
         setProfileImage,
       }}
     >

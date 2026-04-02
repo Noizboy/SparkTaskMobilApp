@@ -40,6 +40,7 @@ export interface Job {
   goal?: string;
   sections: Section[];
   addOns?: AddOn[];
+  completedAt?: number;
 }
 
 export interface AppNotification {
@@ -60,6 +61,7 @@ export type RootStackParamList = {
   OrderDetails: { jobId: string };
   DayJobs: { date: string };
   AllUpcomingJobs: undefined;
+  AllCompletedJobs: undefined;
   PhotoGallery: { photos: string[]; label: string; sectionName: string };
 };
 

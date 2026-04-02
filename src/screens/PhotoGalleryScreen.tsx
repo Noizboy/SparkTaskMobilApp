@@ -254,12 +254,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: RADIUS.full,
     paddingHorizontal: 7,
-    paddingVertical: 2,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   photoIndex: {
     fontFamily: FONTS.medium,
     fontSize: 11,
     color: '#fff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 14,
   },
 });
 

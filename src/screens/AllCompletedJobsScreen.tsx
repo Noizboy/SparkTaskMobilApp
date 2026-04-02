@@ -1,12 +1,6 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import { ArrowLeft, Calendar } from 'lucide-react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,21 +9,20 @@ import { useApp } from '../context/AppContext';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
-import { isFutureOrToday } from '../utils/dateUtils';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-export function AllUpcomingJobsScreen() {
+export function AllCompletedJobsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { jobs } = useApp();
 
-  const upcomingJobs = jobs
-    .filter((j) => j.status === 'upcoming' && isFutureOrToday(j.date))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  const completedJobs = jobs
+    .filter((j) => j.status === 'completed')
+    .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
 
   const handleJobPress = (jobId: string) => {
-    navigation.navigate('JobInfo', { jobId });
+    navigation.navigate('OrderDetails', { jobId });
   };
 
   return (
@@ -38,7 +31,7 @@ export function AllUpcomingJobsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>Upcoming Jobs</Text>
+        <Text style={styles.topTitle}>Completed Jobs</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -47,20 +40,20 @@ export function AllUpcomingJobsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
       >
         <Text style={styles.subtitle}>
-          {upcomingJobs.length} job{upcomingJobs.length !== 1 ? 's' : ''} scheduled
+          {completedJobs.length} job{completedJobs.length !== 1 ? 's' : ''} completed
         </Text>
 
-        {upcomingJobs.length === 0 ? (
+        {completedJobs.length === 0 ? (
           <View style={styles.emptyCard}>
             <View style={styles.emptyIcon}>
-              <Calendar size={32} color={COLORS.gray400} />
+              <CheckCircle2 size={32} color={COLORS.gray400} />
             </View>
-            <Text style={styles.emptyTitle}>No upcoming jobs at the moment</Text>
-            <Text style={styles.emptyText}>You've completed your assigned schedule for today.</Text>
+            <Text style={styles.emptyTitle}>No completed jobs yet</Text>
+            <Text style={styles.emptyText}>Completed jobs will appear here.</Text>
           </View>
         ) : (
           <View style={styles.cardList}>
-            {upcomingJobs.map((job) => (
+            {completedJobs.map((job) => (
               <HomeJobCard key={job.id} job={job} onPress={() => handleJobPress(job.id)} />
             ))}
           </View>
