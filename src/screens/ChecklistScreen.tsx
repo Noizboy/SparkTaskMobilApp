@@ -32,7 +32,6 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   withSequence,
   runOnJS,
@@ -65,7 +64,7 @@ function SkipModal({ visible, sectionName, onConfirm, onCancel }: SkipModalProps
   const reasons = ['Client request', 'Already clean', 'No access', 'Out of time', 'Other'];
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
       <View style={modalStyles.overlay}>
         <View style={modalStyles.sheet}>
           <Text style={modalStyles.title}>Skip "{sectionName}"?</Text>
@@ -460,7 +459,7 @@ function AddOnsCard({ addOns, jobId }: AddOnsCardProps) {
 }
 
 export function ChecklistScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { jobs, completeJob, cancelJob } = useApp();
@@ -477,17 +476,55 @@ export function ChecklistScreen() {
   const percentage = Math.round(progress * 100);
 
   const [expandedSection, setExpandedSection] = useState<string | null>(job?.sections[0]?.id ?? null);
-  const [completeModalVisible, setCompleteModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<TabFilter | null>(null);
   const [showProgress, setShowProgress] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [cancelConfirmed, setCancelConfirmed] = useState(false);
+  const [cancelTrackWidth, setCancelTrackWidth] = useState(0);
+  const cancelMaxSwipe = cancelTrackWidth - 48 - 6;
+  const [completeConfirmed, setCompleteConfirmed] = useState(false);
+  const [completeTrackWidth, setCompleteTrackWidth] = useState(0);
+  const completeMaxSwipe = completeTrackWidth - 48 - 6; // track width - thumb width - padding
+  const completeSwipeX = useSharedValue(0);
+  const completeSwipeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: completeSwipeX.value }],
+  }));
+  const completeSwipeBgStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(completeSwipeX.value / (completeMaxSwipe || 1), 1),
+  }));
+  const completeLabelStyle = useAnimatedStyle(() => ({
+    opacity: 1 - Math.min(completeSwipeX.value / (completeMaxSwipe * 0.5), 1),
+  }));
+  const onCompleteConfirmed = () => {
+    setCompleteConfirmed(true);
+    setTimeout(() => {
+      completeJob(job!.id);
+      navigation.replace('JobCompleted', { jobId: job!.id });
+    }, 1200);
+  };
+  const completePan = Gesture.Pan()
+    .onUpdate((e) => {
+      if (e.translationX > 0) {
+        completeSwipeX.value = Math.min(e.translationX, completeMaxSwipe);
+      }
+    })
+    .onEnd(() => {
+      if (completeSwipeX.value >= completeMaxSwipe - 10) {
+        completeSwipeX.value = withTiming(completeMaxSwipe, { duration: 100 });
+        runOnJS(onCompleteConfirmed)();
+      } else {
+        completeSwipeX.value = withTiming(0, { duration: 200 });
+      }
+    });
   const cancelSwipeX = useSharedValue(0);
   const cancelSwipeAnimStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: cancelSwipeX.value }],
   }));
   const cancelSwipeBgStyle = useAnimatedStyle(() => ({
-    opacity: Math.min(cancelSwipeX.value / 120, 1),
+    opacity: Math.min(cancelSwipeX.value / (cancelMaxSwipe || 1), 1),
+  }));
+  const cancelLabelStyle = useAnimatedStyle(() => ({
+    opacity: 1 - Math.min(cancelSwipeX.value / (cancelMaxSwipe * 0.5), 1),
   }));
   const onCancelConfirmed = () => {
     setCancelConfirmed(true);
@@ -495,20 +532,22 @@ export function ChecklistScreen() {
       setSettingsVisible(false);
       setCancelConfirmed(false);
       cancelSwipeX.value = 0;
-      cancelJob(job.id);
+      cancelJob(job!.id);
       navigation.goBack();
     }, 1200);
   };
   const cancelPan = Gesture.Pan()
     .onUpdate((e) => {
-      if (e.translationX > 0) cancelSwipeX.value = e.translationX;
+      if (e.translationX > 0) {
+        cancelSwipeX.value = Math.min(e.translationX, cancelMaxSwipe);
+      }
     })
-    .onEnd((e) => {
-      if (e.translationX > 120) {
-        cancelSwipeX.value = withTiming(400, { duration: 200 });
+    .onEnd(() => {
+      if (cancelSwipeX.value >= cancelMaxSwipe - 10) {
+        cancelSwipeX.value = withTiming(cancelMaxSwipe, { duration: 100 });
         runOnJS(onCancelConfirmed)();
       } else {
-        cancelSwipeX.value = withSpring(0, { damping: 15, stiffness: 200 });
+        cancelSwipeX.value = withTiming(0, { duration: 200 });
       }
     });
   const [, forceUpdate] = useState(0);
@@ -558,10 +597,6 @@ export function ChecklistScreen() {
     completed: job.sections.filter((s) => getSectionStatus(s) === 'completed').length,
   };
 
-  const handleComplete = () => {
-    completeJob(job.id);
-    navigation.goBack();
-  };
 
 
   const getAddOnsStatus = (): TabFilter => {
@@ -672,24 +707,34 @@ export function ChecklistScreen() {
         </View>
       </ScrollView>
 
-      {/* Footer: Complete button + swipe cancel */}
+      {/* Footer: Swipe to complete */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <TouchableOpacity
-          onPress={() => setCompleteModalVisible(true)}
-          style={[styles.completeBtn, progress < 1 && styles.completeBtnPartial]}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.completeBtnText}>
-            {progress === 1 ? 'Complete Job ✓' : 'Complete Job'}
-          </Text>
-        </TouchableOpacity>
+        {completeConfirmed ? (
+          <View style={styles.completeConfirmedTrack}>
+            <CheckCircle2 size={20} color={COLORS.white} />
+            <Text style={styles.completeConfirmedText}>Completed!</Text>
+          </View>
+        ) : (
+          <View style={[styles.completeTrack, progress < 1 && styles.completeTrackPartial]} onLayout={(e) => setCompleteTrackWidth(e.nativeEvent.layout.width)}>
+            <Animated.View style={[styles.completeReveal, progress < 1 ? styles.completeRevealPartial : null, completeSwipeBgStyle]} />
+            <Animated.Text style={[styles.completeTrackLabel, completeLabelStyle]}>
+              {progress === 1 ? 'Swipe to Complete ✓' : 'Swipe to Complete'}
+            </Animated.Text>
+            <GestureDetector gesture={completePan}>
+              <Animated.View style={[styles.completeThumb, progress < 1 && styles.completeThumbPartial, completeSwipeAnimStyle]}>
+                <ChevronsRight size={20} color={progress === 1 ? COLORS.primary : COLORS.primaryLight} />
+              </Animated.View>
+            </GestureDetector>
+          </View>
+        )}
       </View>
 
       {/* Settings / Job info modal */}
       <Modal
         visible={settingsVisible}
         transparent
-        animationType="slide"
+        animationType="fade"
+        statusBarTranslucent
         onRequestClose={() => { setSettingsVisible(false); cancelSwipeX.value = 0; }}
       >
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -769,9 +814,9 @@ export function ChecklistScreen() {
                     <Text style={settingsStyles.cancelConfirmedText}>Canceled</Text>
                   </View>
                 ) : (
-                  <View style={settingsStyles.cancelTrack}>
+                  <View style={settingsStyles.cancelTrack} onLayout={(e) => setCancelTrackWidth(e.nativeEvent.layout.width)}>
                     <Animated.View style={[settingsStyles.cancelReveal, cancelSwipeBgStyle]} />
-                    <Text style={settingsStyles.cancelTrackLabel}>Cancel Job</Text>
+                    <Animated.Text style={[settingsStyles.cancelTrackLabel, cancelLabelStyle]}>Cancel Job</Animated.Text>
                     <GestureDetector gesture={cancelPan}>
                       <Animated.View style={[settingsStyles.cancelThumb, cancelSwipeAnimStyle]}>
                         <ChevronsRight size={20} color={COLORS.white} />
@@ -785,41 +830,6 @@ export function ChecklistScreen() {
         </GestureHandlerRootView>
       </Modal>
 
-      {/* Complete confirmation modal */}
-      <Modal
-        visible={completeModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCompleteModalVisible(false)}
-      >
-        <View style={completeStyles.overlay}>
-          <View style={completeStyles.sheet}>
-            <View style={completeStyles.iconWrap}>
-              <CheckCircle2 size={40} color={COLORS.white} />
-            </View>
-            <Text style={completeStyles.title}>Complete this job?</Text>
-            <Text style={completeStyles.sub}>
-              {progress < 1
-                ? `${totalTodos - doneTodos} tasks are still incomplete. Are you sure you want to mark this job as complete?`
-                : 'All tasks are done! Mark this job as complete?'}
-            </Text>
-            <View style={completeStyles.actions}>
-              <TouchableOpacity onPress={() => setCompleteModalVisible(false)} style={completeStyles.cancelBtn}>
-                <Text style={completeStyles.cancelText}>Not yet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setCompleteModalVisible(false);
-                  handleComplete();
-                }}
-                style={completeStyles.confirmBtn}
-              >
-                <Text style={completeStyles.confirmText}>Complete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -1047,7 +1057,7 @@ const settingsStyles = StyleSheet.create({
   },
   cancelReveal: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.error,
+    backgroundColor: '#dc2626',
     borderRadius: RADIUS.full,
   },
   cancelTrackLabel: {
@@ -1062,7 +1072,7 @@ const settingsStyles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.error,
+    backgroundColor: '#dc2626',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1082,75 +1092,6 @@ const settingsStyles = StyleSheet.create({
   },
 });
 
-const completeStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: SPACING.xxl,
-    paddingBottom: 36,
-    alignItems: 'center',
-  },
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontFamily: FONTS.bold,
-    fontSize: 20,
-    color: COLORS.foreground,
-    marginBottom: 8,
-  },
-  sub: {
-    fontFamily: FONTS.regular,
-    fontSize: 14,
-    color: COLORS.mutedForeground,
-    textAlign: 'center',
-    lineHeight: 21,
-    marginBottom: 24,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-  },
-  cancelBtn: {
-    flex: 1,
-    height: 50,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelText: {
-    fontFamily: FONTS.semibold,
-    fontSize: 15,
-    color: COLORS.foreground,
-  },
-  confirmBtn: {
-    flex: 1,
-    height: 50,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmText: {
-    fontFamily: FONTS.semibold,
-    fontSize: 15,
-    color: COLORS.white,
-  },
-});
 
 const sectionStyles = StyleSheet.create({
   card: {
@@ -1531,18 +1472,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xxl,
     paddingTop: 14,
   },
-  completeBtn: {
+  completeTrack: {
+    height: 56,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    height: 52,
+    overflow: 'hidden',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.md,
   },
-  completeBtnPartial: {
+  completeTrackPartial: {
     backgroundColor: COLORS.primaryLight,
   },
-  completeBtnText: {
+  completeReveal: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.primaryDark,
+    borderRadius: RADIUS.full,
+  },
+  completeRevealPartial: {
+    backgroundColor: COLORS.primary,
+  },
+  completeTrackLabel: {
+    fontFamily: FONTS.semibold,
+    fontSize: 15,
+    color: COLORS.white,
+  },
+  completeThumb: {
+    position: 'absolute',
+    left: 3,
+    top: 2.5,
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completeThumbPartial: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  completeConfirmedTrack: {
+    height: 56,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    ...SHADOWS.md,
+  },
+  completeConfirmedText: {
     fontFamily: FONTS.semibold,
     fontSize: 16,
     color: COLORS.white,

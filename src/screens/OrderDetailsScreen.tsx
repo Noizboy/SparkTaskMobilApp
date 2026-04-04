@@ -37,13 +37,25 @@ export function OrderDetailsScreen() {
   const job = jobs.find((j) => j.id === route.params.jobId);
   if (!job) return null;
 
-  const totalTodos = job.sections.reduce((a, s) => a + s.todos.length, 0);
-  const doneTodos = job.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0);
-  const selectedAddOns = job.addOns?.filter((a) => a.selected) ?? [];
+  const totalAddOns = job.addOns?.length ?? 0;
+  const doneAddOns = job.addOns?.filter((a) => a.selected).length ?? 0;
+  const totalTodos = job.sections.reduce((a, s) => a + s.todos.length, 0) + totalAddOns;
+  const doneTodos = job.sections.reduce((a, s) => a + s.todos.filter((t) => t.completed).length, 0) + doneAddOns;
   const totalPhotos = job.sections.reduce(
     (a, s) => a + s.beforePhotos.length + s.afterPhotos.length,
     0
   );
+
+  const getActualDuration = () => {
+    if (!job.startedAt || !job.completedAt) return null;
+    const totalMinutes = Math.round((job.completedAt - job.startedAt) / 60000);
+    if (totalMinutes < 60) return `${totalMinutes}m`;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
+  };
+  const actualDuration = getActualDuration();
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -83,8 +95,7 @@ export function OrderDetailsScreen() {
         {/* Summary stats */}
         <View style={styles.statsRow}>
           <StatBox value={`${doneTodos}/${totalTodos}`} label="Tasks" />
-          <StatBox value={`${job.sections.length}`} label="Sections" />
-          <StatBox value={`${selectedAddOns.length}`} label="Add-ons" />
+          <StatBox value={actualDuration ?? job.duration} label="Duration" />
           <StatBox value={`${totalPhotos}`} label="Photos" />
         </View>
 
@@ -226,7 +237,7 @@ function PhotoStack({ label, photos, sectionName }: { label: string; photos: str
           {photos.length > 1 && (
             <View style={photoStyles.overlay}>
               <Camera size={14} color={COLORS.white} />
-              <Text style={photoStyles.overlayText}>+{photos.length - 1}</Text>
+              <Text style={photoStyles.overlayText}>+{photos.length}</Text>
             </View>
           )}
         </View>
@@ -253,6 +264,8 @@ const metaStyles = StyleSheet.create({
     fontFamily: FONTS.medium,
     fontSize: 12,
     color: COLORS.white,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
 

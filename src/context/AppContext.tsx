@@ -186,7 +186,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const startJob = (jobId: string) => {
     const updated = jobs.map((job) =>
-      job.id === jobId ? { ...job, status: 'in-progress' as const } : job
+      job.id === jobId ? { ...job, status: 'in-progress' as const, startedAt: Date.now() } : job
     );
     saveJobs(updated);
   };

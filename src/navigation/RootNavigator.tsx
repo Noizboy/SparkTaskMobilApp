@@ -23,6 +23,7 @@ import { OrderDetailsScreen } from '../screens/OrderDetailsScreen';
 import { DayJobsScreen } from '../screens/DayJobsScreen';
 import { AllUpcomingJobsScreen } from '../screens/AllUpcomingJobsScreen';
 import { AllCompletedJobsScreen } from '../screens/AllCompletedJobsScreen';
+import { JobCompletedScreen } from '../screens/JobCompletedScreen';
 import { PhotoGalleryScreen } from '../screens/PhotoGalleryScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -153,6 +154,11 @@ export function RootNavigator() {
             name="AllCompletedJobs"
             component={AllCompletedJobsScreen}
             options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="JobCompleted"
+            component={JobCompletedScreen}
+            options={{ animation: 'fade' }}
           />
           <Stack.Screen
             name="PhotoGallery"

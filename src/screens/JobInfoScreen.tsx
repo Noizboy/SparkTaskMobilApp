@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -39,7 +40,16 @@ export function JobInfoScreen() {
   const job = jobs.find((j) => j.id === route.params.jobId);
   if (!job) return null;
 
+  const inProgressJob = jobs.find((j) => j.status === 'in-progress' && j.id !== job.id);
+
   const handleStart = () => {
+    if (inProgressJob) {
+      Alert.alert(
+        'Job in progress',
+        `You must complete Order #${inProgressJob.orderNumber} before starting a new job.`,
+      );
+      return;
+    }
     startJob(job.id);
     navigation.replace('Checklist', { jobId: job.id });
   };
@@ -193,6 +203,8 @@ const chipStyles = StyleSheet.create({
     fontFamily: FONTS.medium,
     fontSize: 12,
     color: COLORS.white,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
 
