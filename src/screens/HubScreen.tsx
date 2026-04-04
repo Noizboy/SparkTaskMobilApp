@@ -306,7 +306,7 @@ export function HubScreen() {
           </View>
           {weekDiffPct !== null && (
             <View style={s.highlightCard}>
-              <BarChart3 size={16} color={weekDiffPct >= 0 ? COLORS.primary : COLORS.error} />
+              <TrendingUp size={16} color={weekDiffPct >= 0 ? COLORS.primary : COLORS.error} />
               <Text style={[s.highlightValue, weekDiffPct < 0 && { color: COLORS.error }]}>
                 {weekDiffPct >= 0 ? '+' : ''}{weekDiffPct}%
               </Text>
