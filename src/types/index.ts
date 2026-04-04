@@ -70,6 +70,6 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Calendar: undefined;
-  Notifications: undefined;
+  Hub: undefined;
   Profile: undefined;
 };

@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Calendar, Bell, User } from 'lucide-react-native';
+import { Home, Calendar, CalendarClock, User } from 'lucide-react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -15,7 +15,7 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
-import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { HubScreen } from '../screens/HubScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { JobInfoScreen } from '../screens/JobInfoScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
@@ -67,7 +67,7 @@ function CustomTabBar({ state, navigation }: CustomTabBarProps) {
   const tabs = [
     { key: 'Home', icon: Home, label: 'Home' },
     { key: 'Calendar', icon: Calendar, label: 'Calendar' },
-    { key: 'Notifications', icon: Bell, label: 'Alerts' },
+    { key: 'Hub', icon: CalendarClock, label: 'Hub' },
     { key: 'Profile', icon: User, label: 'Profile' },
   ];
 
@@ -105,7 +105,7 @@ function MainTabNavigator() {
     >
       <Tab.Screen name="Home" component={withAnimation(HomeScreen)} />
       <Tab.Screen name="Calendar" component={withAnimation(CalendarScreen)} />
-      <Tab.Screen name="Notifications" component={withAnimation(NotificationsScreen)} />
+      <Tab.Screen name="Hub" component={withAnimation(HubScreen)} />
       <Tab.Screen name="Profile" component={withAnimation(ProfileScreen)} />
     </Tab.Navigator>
   );
