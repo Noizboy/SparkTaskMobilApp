@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ArrowLeft,
   MapPin,
+  Phone,
   Clock,
   Calendar,
   CheckCircle2,
@@ -82,6 +84,16 @@ export function OrderDetailsScreen() {
                 <MapPin size={13} color={COLORS.mutedForeground} />
                 <Text style={styles.address}>{job.address}</Text>
               </View>
+              {job.phone && (
+                <TouchableOpacity
+                  style={styles.phoneRow}
+                  onPress={() => Linking.openURL(`tel:${job.phone}`)}
+                  activeOpacity={0.7}
+                >
+                  <Phone size={14} color={COLORS.primary} />
+                  <Text style={styles.phoneText}>{job.phone}</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -426,6 +438,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.mutedForeground,
     flex: 1,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 4,
+  },
+  phoneText: {
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: COLORS.primary,
   },
   metaChips: {
     flexDirection: 'row',

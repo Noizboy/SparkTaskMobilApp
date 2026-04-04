@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Linking,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -14,6 +15,7 @@ import {
   Calendar,
   Briefcase,
   Key,
+  Phone,
   Target,
   AlertCircle,
   ChevronRight,
@@ -74,6 +76,16 @@ export function JobInfoScreen() {
           {job.status !== 'completed' && (
             <>
               <Text style={styles.clientName}>{job.clientName}</Text>
+              {job.phone && (
+                <TouchableOpacity
+                  style={styles.phoneRow}
+                  onPress={() => Linking.openURL(`tel:${job.phone}`)}
+                  activeOpacity={0.7}
+                >
+                  <Phone size={14} color={COLORS.primary} />
+                  <Text style={styles.phoneText}>{job.phone}</Text>
+                </TouchableOpacity>
+              )}
               <View style={styles.addressRow}>
                 <MapPin size={14} color={COLORS.mutedForeground} />
                 <Text style={styles.address}>{job.address}</Text>
@@ -285,6 +297,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.mutedForeground,
     flex: 1,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 4,
+  },
+  phoneText: {
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: COLORS.primary,
   },
   chipsRow: {
     flexDirection: 'row',

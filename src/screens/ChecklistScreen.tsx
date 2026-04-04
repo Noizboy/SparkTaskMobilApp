@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
   Modal,
+  Linking,
   TextInput as RNTextInput,
 } from 'react-native';
 import {
@@ -22,12 +23,14 @@ import {
   X,
   Ban,
   Clock,
-  Settings2,
   MapPin,
   CalendarDays,
   AlarmClock,
   Timer,
   Info,
+  Phone,
+  Key,
+  User,
 } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
@@ -630,7 +633,7 @@ export function ChecklistScreen() {
           }
         </TouchableOpacity>
         <TouchableOpacity onPress={() => { cancelSwipeX.value = 0; setSettingsVisible(true); }} style={styles.settingsBtn} activeOpacity={0.7}>
-          <Settings2 size={20} color={COLORS.foreground} />
+          <Info size={20} color={COLORS.foreground} />
         </TouchableOpacity>
       </View>
 
@@ -718,7 +721,7 @@ export function ChecklistScreen() {
           <View style={[styles.completeTrack, progress < 1 && styles.completeTrackPartial]} onLayout={(e) => setCompleteTrackWidth(e.nativeEvent.layout.width)}>
             <Animated.View style={[styles.completeReveal, progress < 1 ? styles.completeRevealPartial : null, completeSwipeBgStyle]} />
             <Animated.Text style={[styles.completeTrackLabel, completeLabelStyle]}>
-              {progress === 1 ? 'Swipe to Complete ✓' : 'Swipe to Complete'}
+              Swipe to Complete
             </Animated.Text>
             <GestureDetector gesture={completePan}>
               <Animated.View style={[styles.completeThumb, progress < 1 && styles.completeThumbPartial, completeSwipeAnimStyle]}>
@@ -777,6 +780,28 @@ export function ChecklistScreen() {
                   </View>
                 </View>
 
+                {/* Client */}
+                <View style={settingsStyles.infoRowFull}>
+                  <View style={settingsStyles.infoRowIcon}>
+                    <User size={15} color={COLORS.primary} />
+                  </View>
+                  <Text style={settingsStyles.infoRowText}>{job.clientName}</Text>
+                </View>
+
+                {/* Phone */}
+                {job.phone && (
+                  <TouchableOpacity
+                    style={settingsStyles.infoRowFull}
+                    onPress={() => Linking.openURL(`tel:${job.phone}`)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={settingsStyles.infoRowIcon}>
+                      <Phone size={15} color={COLORS.primary} />
+                    </View>
+                    <Text style={[settingsStyles.infoRowText, { color: COLORS.primary }]}>{job.phone}</Text>
+                  </TouchableOpacity>
+                )}
+
                 {/* Address */}
                 <View style={settingsStyles.infoRowFull}>
                   <View style={settingsStyles.infoRowIcon}>
@@ -797,7 +822,7 @@ export function ChecklistScreen() {
                 {job.accessInfo && (
                   <View style={settingsStyles.infoRowFull}>
                     <View style={settingsStyles.infoRowIcon}>
-                      <Settings2 size={15} color={COLORS.primary} />
+                      <Key size={15} color={COLORS.primary} />
                     </View>
                     <Text style={settingsStyles.infoRowText}>{job.accessInfo}</Text>
                   </View>

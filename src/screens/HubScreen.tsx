@@ -25,7 +25,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
-import { RootStackParamList, Job } from '../types';
+import { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Period = 'week' | 'month' | 'all';
@@ -77,7 +77,7 @@ function getMonthStart(d: Date): Date {
 export function HubScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { jobs } = useApp();
+  const { jobs, reviews } = useApp();
   const [period, setPeriod] = useState<Period>('week');
 
   const now = new Date();
@@ -154,6 +154,27 @@ export function HubScreen() {
   const lastWeekMs = lastWeekJobs.reduce((a, j) => a + (j.completedAt! - j.startedAt!), 0);
   const weekDiffPct = lastWeekMs > 0 ? Math.round(((thisWeekMs - lastWeekMs) / lastWeekMs) * 100) : null;
 
+
+  // Standings
+  const STANDING_LEVELS = ['At Risk', 'Fair', 'Good', 'Great', 'Fantastic'] as const;
+  const STANDING_COLORS = [COLORS.error, '#e67e22', COLORS.warning, COLORS.primary, '#16a34a'];
+
+  const avgRating = useMemo(() => {
+    if (reviews.length === 0) return 0;
+    return reviews.reduce((a, r) => a + r.rating, 0) / reviews.length;
+  }, [reviews]);
+
+  const standingIndex = useMemo(() => {
+    if (avgRating >= 4.5) return 4;
+    if (avgRating >= 3.75) return 3;
+    if (avgRating >= 3.0) return 2;
+    if (avgRating >= 2.0) return 1;
+    return 0;
+  }, [avgRating]);
+
+  const standingLabel = STANDING_LEVELS[standingIndex];
+  const standingColor = STANDING_COLORS[standingIndex];
+  const nextLevel = standingIndex < 4 ? STANDING_LEVELS[standingIndex + 1] : null;
 
   // Most skipped sections
   const skippedSections = useMemo(() => {
@@ -316,6 +337,45 @@ export function HubScreen() {
         </View>
 
 
+        {/* Standings */}
+        {reviews.length > 0 && (
+          <View style={s.standingCard}>
+            <Text style={s.standingTitle}>Standings</Text>
+            <Text style={[s.standingLevel, { color: standingColor }]}>{standingLabel}</Text>
+
+            {/* Segmented bar */}
+            <View style={s.standingBarRow}>
+              {STANDING_LEVELS.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    s.standingSegment,
+                    i === 0 && s.standingSegmentFirst,
+                    i === STANDING_LEVELS.length - 1 && s.standingSegmentLast,
+                    { backgroundColor: i <= standingIndex ? STANDING_COLORS[i] : COLORS.gray200 },
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Labels under bar */}
+            <View style={s.standingLabelsRow}>
+              <Text style={s.standingLabelLeft}>{STANDING_LEVELS[0]}</Text>
+              <Text style={s.standingLabelRight}>{STANDING_LEVELS[4]}</Text>
+            </View>
+
+            {/* Tip */}
+            {nextLevel && (
+              <View style={s.standingTip}>
+                <Text style={s.standingTipTitle}>How to reach {nextLevel}?</Text>
+                <Text style={s.standingTipText}>
+                  Keep getting great reviews from clients. Your standing is based on {reviews.length} ratings with an average of {avgRating.toFixed(1)}/5.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Skipped sections */}
         {skippedSections.length > 0 && (
           <View style={s.skippedCard}>
@@ -453,6 +513,25 @@ const s = StyleSheet.create({
   highlightValue: { fontFamily: FONTS.bold, fontSize: 16, color: COLORS.foreground },
   highlightLabel: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.mutedForeground, textAlign: 'center' },
 
+
+  // Standings
+  standingCard: {
+    marginHorizontal: SPACING.xxl, marginBottom: SPACING.lg,
+    backgroundColor: COLORS.white, borderRadius: RADIUS.xxl,
+    padding: SPACING.lg, ...SHADOWS.sm,
+  },
+  standingTitle: { fontFamily: FONTS.semibold, fontSize: 13, color: COLORS.mutedForeground, textTransform: 'uppercase', letterSpacing: 0.5 },
+  standingLevel: { fontFamily: FONTS.bold, fontSize: 28, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.md },
+  standingBarRow: { flexDirection: 'row', gap: 4, marginBottom: 6 },
+  standingSegment: { flex: 1, height: 8 },
+  standingSegmentFirst: { borderTopLeftRadius: 4, borderBottomLeftRadius: 4 },
+  standingSegmentLast: { borderTopRightRadius: 4, borderBottomRightRadius: 4 },
+  standingLabelsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.md },
+  standingLabelLeft: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.mutedForeground },
+  standingLabelRight: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.mutedForeground },
+  standingTip: { backgroundColor: COLORS.gray100, borderRadius: RADIUS.lg, padding: SPACING.md },
+  standingTipTitle: { fontFamily: FONTS.semibold, fontSize: 13, color: COLORS.foreground, marginBottom: 4 },
+  standingTipText: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.mutedForeground, lineHeight: 18 },
 
   // Skipped sections
   skippedCard: {

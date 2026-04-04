@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Job, AppNotification } from '../types';
+import { Job, AppNotification, Review } from '../types';
 import { mockJobs } from '../data/mockJobs';
 import { storage } from '../utils/storage';
 import { AUTH_CONFIG } from '../config/auth';
@@ -13,8 +13,20 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
   { id: '6', type: 'new_job', title: 'New Job Assigned', message: 'Job #2855 (move-out clean) added for April 5 at 10:00 AM', time: '1 day ago', isRead: true },
 ];
 
+const MOCK_REVIEWS: Review[] = [
+  { id: 'r1', clientName: 'Emma Richardson', rating: 5, comment: 'Absolutely spotless! Sarah did an amazing job with the deep clean.', date: '2026-03-28', orderNumber: '2831' },
+  { id: 'r2', clientName: 'Marcus Johnson', rating: 4, comment: 'Great work overall. Kitchen was perfect, would book again.', date: '2026-03-25', orderNumber: '2839' },
+  { id: 'r3', clientName: 'Sophia Martinez', rating: 5, comment: 'Move-out clean was flawless. Landlord approved immediately!', date: '2026-03-27', orderNumber: '2843' },
+  { id: 'r4', clientName: 'James Whitfield', rating: 5, comment: 'Very thorough and professional. Highly recommend.', date: '2026-03-20', orderNumber: '2820' },
+  { id: 'r5', clientName: 'Priya Nair', rating: 4, comment: 'Good attention to detail. Bathroom sparkled!', date: '2026-03-18', orderNumber: '2815' },
+  { id: 'r6', clientName: 'Carlos Reyes', rating: 5, comment: 'Best cleaning service we have ever had. 10/10!', date: '2026-03-15', orderNumber: '2810' },
+  { id: 'r7', clientName: 'Natalie Brooks', rating: 3, comment: 'Decent job but missed a couple of spots under the couch.', date: '2026-03-12', orderNumber: '2805' },
+  { id: 'r8', clientName: 'David Chen', rating: 5, comment: 'Exceeded expectations. Will definitely request Sarah again.', date: '2026-03-10', orderNumber: '2800' },
+];
+
 interface AppContextType {
   jobs: Job[];
+  reviews: Review[];
   notifications: AppNotification[];
   unreadCount: number;
   markAsRead: (id: string) => void;
@@ -287,6 +299,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         jobs,
+        reviews: MOCK_REVIEWS,
         notifications,
         unreadCount,
         markAsRead,

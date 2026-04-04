@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
-import { CalendarClock, Calendar } from 'lucide-react-native';
+import { Bell, Calendar } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,7 +28,7 @@ export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const tabNavigation = useNavigation<TabNav>();
   const insets = useSafeAreaInsets();
-  const { jobs, profileImage } = useApp();
+  const { jobs, profileImage, unreadCount } = useApp();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -83,10 +83,11 @@ export function HomeScreen() {
           <View style={styles.headerRight}>
             <TouchableOpacity
               style={styles.notifBtn}
-              onPress={() => tabNavigation.navigate('Hub')}
+              onPress={() => tabNavigation.navigate('Notifications')}
               activeOpacity={0.7}
             >
-              <CalendarClock size={20} color={COLORS.foreground} />
+              <Bell size={20} color={COLORS.foreground} />
+              {unreadCount > 0 && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -201,6 +202,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.sm,
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.error,
   },
   avatar: {
     width: 40,

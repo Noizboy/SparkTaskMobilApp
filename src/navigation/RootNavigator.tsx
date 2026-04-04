@@ -18,6 +18,7 @@ import { CalendarScreen } from '../screens/CalendarScreen';
 import { HubScreen } from '../screens/HubScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { JobInfoScreen } from '../screens/JobInfoScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { ChecklistScreen } from '../screens/ChecklistScreen';
 import { OrderDetailsScreen } from '../screens/OrderDetailsScreen';
 import { DayJobsScreen } from '../screens/DayJobsScreen';
@@ -107,6 +108,7 @@ function MainTabNavigator() {
       <Tab.Screen name="Calendar" component={withAnimation(CalendarScreen)} />
       <Tab.Screen name="Hub" component={withAnimation(HubScreen)} />
       <Tab.Screen name="Profile" component={withAnimation(ProfileScreen)} />
+      <Tab.Screen name="Notifications" component={withAnimation(NotificationsScreen)} />
     </Tab.Navigator>
   );
 }

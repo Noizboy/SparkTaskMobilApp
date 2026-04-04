@@ -30,6 +30,7 @@ export interface Job {
   orderNumber: string;
   clientName: string;
   address: string;
+  phone?: string;
   date: string;
   time: string;
   status: 'upcoming' | 'in-progress' | 'completed';
@@ -42,6 +43,15 @@ export interface Job {
   addOns?: AddOn[];
   startedAt?: number;
   completedAt?: number;
+}
+
+export interface Review {
+  id: string;
+  clientName: string;
+  rating: number;
+  comment: string;
+  date: string;
+  orderNumber: string;
 }
 
 export interface AppNotification {
@@ -72,4 +82,5 @@ export type MainTabParamList = {
   Calendar: undefined;
   Hub: undefined;
   Profile: undefined;
+  Notifications: undefined;
 };
