@@ -7,21 +7,25 @@ import {
   StyleSheet,
   Image,
   Alert,
+  Linking,
 } from 'react-native';
 import { TextInput } from 'react-native-paper';
-import { User, Mail, Phone, Lock, Camera, LogOut, Info, ChevronRight } from 'lucide-react-native';
+import { User, Mail, Phone, Lock, Camera, LogOut, Info, ChevronRight, Globe, HelpCircle, FileText, Shield, ExternalLink } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { handleLogout, profileImage, setProfileImage } = useApp();
+  const { language: currentLangCode, setLanguage: setLangFromContext, t } = useLanguage();
 
   const [phone, setPhone] = useState('+1 (555) 123-4567');
   const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [isChangingPwd, setIsChangingPwd] = useState(false);
   const [currentPwd, setCurrentPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
@@ -29,10 +33,19 @@ export function ProfileScreen() {
 
   const USER = { name: 'Sarah Johnson', email: 'sarah.johnson@cleaningco.com', version: '1.0.0' };
 
+  const LANGUAGES = [
+    { code: 'en', label: 'English' },
+    { code: 'es', label: 'Español' },
+    { code: 'pt', label: 'Português' },
+    { code: 'zh', label: 'Chinese Simplified' },
+  ];
+
+  const currentLang = LANGUAGES.find((l) => l.code === currentLangCode) ?? LANGUAGES[0];
+
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photos.');
+      Alert.alert(t('permissionNeeded'), t('allowPhotos'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -52,18 +65,18 @@ export function ProfileScreen() {
       setCurrentPwd('');
       setNewPwd('');
       setConfirmPwd('');
-      Alert.alert('Success', 'Password updated successfully.');
+      Alert.alert(t('success'), t('passwordUpdated'));
     } else if (newPwd !== confirmPwd) {
-      Alert.alert('Error', 'Passwords do not match.');
+      Alert.alert(t('error'), t('passwordsNoMatch'));
     } else {
-      Alert.alert('Error', 'Password must be at least 6 characters.');
+      Alert.alert(t('error'), t('passwordTooShort'));
     }
   };
 
   const confirmLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: handleLogout },
+    Alert.alert(t('signOut'), t('signOutConfirm'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('signOut'), style: 'destructive', onPress: handleLogout },
     ]);
   };
 
@@ -74,7 +87,7 @@ export function ProfileScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
+          <Text style={styles.title}>{t('profile')}</Text>
         </View>
 
         {/* Avatar */}
@@ -97,9 +110,9 @@ export function ProfileScreen() {
 
         {/* Account Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Account</Text>
+          <Text style={styles.sectionLabel}>{t('account')}</Text>
           <View style={styles.card}>
-            <InfoRow icon={<Mail size={17} color={COLORS.white} />} label="Email" value={USER.email} />
+            <InfoRow icon={<Mail size={17} color={COLORS.white} />} label={t('email')} value={USER.email} />
             <View style={styles.divider} />
             {isEditingPhone ? (
               <View style={styles.editRow}>
@@ -114,30 +127,59 @@ export function ProfileScreen() {
                   theme={{ roundness: RADIUS.md }}
                 />
                 <TouchableOpacity onPress={handleSavePhone} style={styles.saveBtn}>
-                  <Text style={styles.saveBtnText}>Save</Text>
+                  <Text style={styles.saveBtnText}>{t('save')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity onPress={() => setIsEditingPhone(true)} activeOpacity={0.7}>
                 <InfoRow
                   icon={<Phone size={17} color={COLORS.white} />}
-                  label="Phone"
+                  label={t('phone')}
                   value={phone}
                   action={<ChevronRight size={16} color={COLORS.gray400} />}
                 />
               </TouchableOpacity>
+            )}
+            <View style={styles.divider} />
+            <TouchableOpacity onPress={() => setShowLangDropdown(!showLangDropdown)} activeOpacity={0.7}>
+              <InfoRow
+                icon={<Globe size={17} color={COLORS.white} />}
+                label={t('language')}
+                value={currentLang.label}
+                action={<ChevronRight size={16} color={COLORS.gray400} style={{ transform: [{ rotate: showLangDropdown ? '90deg' : '0deg' }] }} />}
+              />
+            </TouchableOpacity>
+            {showLangDropdown && (
+              <View style={langStyles.dropdown}>
+                {LANGUAGES.map((lang) => {
+                  const selected = currentLangCode === lang.code;
+                  return (
+                    <TouchableOpacity
+                      key={lang.code}
+                      style={langStyles.option}
+                      onPress={() => { setLangFromContext(lang.code as any); setShowLangDropdown(false); }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[langStyles.radio, selected && langStyles.radioSelected]}>
+                        {selected && <View style={langStyles.radioDot} />}
+                      </View>
+                      <Text style={[langStyles.label, selected && langStyles.labelActive]}>{lang.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             )}
           </View>
         </View>
 
         {/* Security */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Security</Text>
+          <Text style={styles.sectionLabel}>{t('security')}</Text>
           <View style={styles.card}>
             <TouchableOpacity onPress={() => setIsChangingPwd(!isChangingPwd)} activeOpacity={0.7}>
               <InfoRow
                 icon={<Lock size={17} color={COLORS.white} />}
-                label="Change Password"
+                label={t('changePassword')}
                 value=""
                 action={<ChevronRight size={16} color={COLORS.gray400} />}
               />
@@ -145,7 +187,7 @@ export function ProfileScreen() {
             {isChangingPwd && (
               <View style={styles.pwdForm}>
                 <TextInput
-                  label="Current Password"
+                  label={t('currentPassword')}
                   value={currentPwd}
                   onChangeText={setCurrentPwd}
                   secureTextEntry
@@ -157,7 +199,7 @@ export function ProfileScreen() {
                   theme={{ roundness: RADIUS.md }}
                 />
                 <TextInput
-                  label="New Password"
+                  label={t('newPassword')}
                   value={newPwd}
                   onChangeText={setNewPwd}
                   secureTextEntry
@@ -169,7 +211,7 @@ export function ProfileScreen() {
                   theme={{ roundness: RADIUS.md }}
                 />
                 <TextInput
-                  label="Confirm Password"
+                  label={t('confirmPassword')}
                   value={confirmPwd}
                   onChangeText={setConfirmPwd}
                   secureTextEntry
@@ -181,7 +223,7 @@ export function ProfileScreen() {
                   theme={{ roundness: RADIUS.md }}
                 />
                 <TouchableOpacity onPress={handleChangePwd} style={styles.updatePwdBtn}>
-                  <Text style={styles.updatePwdText}>Update Password</Text>
+                  <Text style={styles.updatePwdText}>{t('updatePassword')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -190,13 +232,79 @@ export function ProfileScreen() {
 
         {/* App info */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>About</Text>
+          <Text style={styles.sectionLabel}>{t('about')}</Text>
           <View style={styles.card}>
             <InfoRow
               icon={<Info size={17} color={COLORS.white} />}
-              label="App Version"
+              label={t('appVersion')}
               value={USER.version}
             />
+          </View>
+        </View>
+
+        {/* Help */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t('help')}</Text>
+          <View style={styles.card}>
+            <TouchableOpacity onPress={() => Linking.openURL('mailto:support@sparktask.app')} activeOpacity={0.7}>
+              <InfoRow
+                icon={<Mail size={17} color={COLORS.white} />}
+                label={t('contactUs')}
+                value="support@sparktask.app"
+                action={<ExternalLink size={14} color={COLORS.gray400} />}
+              />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity onPress={() => Linking.openURL('https://sparktask.app/how-to')} activeOpacity={0.7}>
+              <InfoRow
+                icon={<Info size={17} color={COLORS.white} />}
+                label={t('howTo')}
+                value={t('howToSub')}
+                action={<ExternalLink size={14} color={COLORS.gray400} />}
+              />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity onPress={() => Linking.openURL('https://sparktask.app/faq')} activeOpacity={0.7}>
+              <InfoRow
+                icon={<HelpCircle size={17} color={COLORS.white} />}
+                label={t('faq')}
+                value={t('faqSub')}
+                action={<ExternalLink size={14} color={COLORS.gray400} />}
+              />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity onPress={() => Linking.openURL('https://sparktask.app/help')} activeOpacity={0.7}>
+              <InfoRow
+                icon={<HelpCircle size={17} color={COLORS.white} />}
+                label={t('helpCenter')}
+                value={t('helpCenterSub')}
+                action={<ExternalLink size={14} color={COLORS.gray400} />}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Legal */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t('legal')}</Text>
+          <View style={styles.card}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://sparktask.app/terms')} activeOpacity={0.7}>
+              <InfoRow
+                icon={<FileText size={17} color={COLORS.white} />}
+                label={t('termsOfService')}
+                value=""
+                action={<ExternalLink size={14} color={COLORS.gray400} />}
+              />
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity onPress={() => Linking.openURL('https://sparktask.app/privacy')} activeOpacity={0.7}>
+              <InfoRow
+                icon={<Shield size={17} color={COLORS.white} />}
+                label={t('privacyPolicy')}
+                value=""
+                action={<ExternalLink size={14} color={COLORS.gray400} />}
+              />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -204,10 +312,11 @@ export function ProfileScreen() {
         <View style={[styles.section, { marginTop: 8 }]}>
           <TouchableOpacity onPress={confirmLogout} style={styles.logoutBtn} activeOpacity={0.85}>
             <LogOut size={18} color={COLORS.error} />
-            <Text style={styles.logoutText}>Sign Out</Text>
+            <Text style={styles.logoutText}>{t('signOut')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
     </View>
   );
 }
@@ -267,6 +376,48 @@ const infoStyles = StyleSheet.create({
   },
   action: {
     marginLeft: 8,
+  },
+});
+
+const langStyles = StyleSheet.create({
+  dropdown: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    gap: 4,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: RADIUS.full,
+    borderWidth: 2,
+    borderColor: COLORS.gray300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: {
+    borderColor: COLORS.primary,
+  },
+  radioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+  },
+  label: {
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: COLORS.foreground,
+  },
+  labelActive: {
+    fontFamily: FONTS.semibold,
+    color: COLORS.primary,
   },
 });
 

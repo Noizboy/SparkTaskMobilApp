@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
@@ -23,6 +24,7 @@ export function AllUpcomingJobsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { jobs } = useApp();
+  const { t } = useLanguage();
 
   const upcomingJobs = jobs
     .filter((j) => j.status === 'upcoming' && isFutureOrToday(j.date))
@@ -38,7 +40,7 @@ export function AllUpcomingJobsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>Upcoming Jobs</Text>
+        <Text style={styles.topTitle}>{t('upcomingJobs')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -47,7 +49,7 @@ export function AllUpcomingJobsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
       >
         <Text style={styles.subtitle}>
-          {upcomingJobs.length} job{upcomingJobs.length !== 1 ? 's' : ''} scheduled
+          {upcomingJobs.length} {upcomingJobs.length !== 1 ? t('jobsScheduled') : t('jobScheduled')}
         </Text>
 
         {upcomingJobs.length === 0 ? (
@@ -55,8 +57,8 @@ export function AllUpcomingJobsScreen() {
             <View style={styles.emptyIcon}>
               <Calendar size={32} color={COLORS.gray400} />
             </View>
-            <Text style={styles.emptyTitle}>No upcoming jobs at the moment</Text>
-            <Text style={styles.emptyText}>You've completed your assigned schedule for today.</Text>
+            <Text style={styles.emptyTitle}>{t('noUpcomingJobs')}</Text>
+            <Text style={styles.emptyText}>{t('noUpcomingJobsSub')}</Text>
           </View>
         ) : (
           <View style={styles.cardList}>

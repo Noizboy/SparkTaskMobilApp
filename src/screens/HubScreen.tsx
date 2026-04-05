@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { HubScreenSkeleton } from '../components/SkeletonLoader';
 import { RootStackParamList } from '../types';
@@ -50,13 +51,13 @@ function formatDuration(ms: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-function formatDateLabel(dateStr: string): string {
+function formatDateLabel(dateStr: string, t: (key: any) => string): string {
   const date = new Date(dateStr + 'T00:00:00');
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const days = Math.round((today.getTime() - date.getTime()) / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
+  if (days === 0) return t('today');
+  if (days === 1) return t('yesterday');
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
@@ -79,6 +80,7 @@ export function HubScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { jobs, jobsLoaded, reviews } = useApp();
+  const { t } = useLanguage();
   const [period, setPeriod] = useState<Period>('week');
 
   const now = new Date();
@@ -157,7 +159,7 @@ export function HubScreen() {
 
 
   // Standings
-  const STANDING_LEVELS = ['At Risk', 'Fair', 'Good', 'Great', 'Fantastic'] as const;
+  const STANDING_LEVELS = [t('atRisk'), t('fair'), t('good'), t('great'), t('fantastic')];
   const STANDING_COLORS = [COLORS.error, '#e67e22', COLORS.warning, COLORS.primary, '#16a34a'];
 
   const avgRating = useMemo(() => {
@@ -210,6 +212,31 @@ export function HubScreen() {
 
   // Active job & next job
   const activeJob = jobs.find((j) => j.status === 'in-progress' && j.startedAt);
+
+  // Elapsed timer for active job
+  const [elapsed, setElapsed] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (activeJob?.startedAt) {
+      setElapsed(Math.floor((Date.now() - activeJob.startedAt) / 1000));
+      intervalRef.current = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - activeJob.startedAt!) / 1000));
+      }, 1000);
+    } else {
+      setElapsed(0);
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [activeJob?.startedAt]);
+
+  const formatElapsed = (secs: number): string => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s2 = secs % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s2).padStart(2, '0')}`;
+    return `${String(m).padStart(2, '0')}:${String(s2).padStart(2, '0')}`;
+  };
+
   const nextJob = useMemo(() => {
     const upcoming = jobs
       .filter((j) => j.status === 'upcoming')
@@ -219,9 +246,9 @@ export function HubScreen() {
 
   // ── Period tabs ──
   const PERIODS: { key: Period; label: string }[] = [
-    { key: 'week', label: 'This Week' },
-    { key: 'month', label: 'This Month' },
-    { key: 'all', label: 'All Time' },
+    { key: 'week', label: t('thisWeek') },
+    { key: 'month', label: t('thisMonth') },
+    { key: 'all', label: t('allTime') },
   ];
 
   if (!jobsLoaded) {
@@ -235,22 +262,24 @@ export function HubScreen() {
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       <View style={s.header}>
-        <Text style={s.headerTitle}>Hub</Text>
-        <Text style={s.headerSub}>Your work overview</Text>
+        <Text style={s.headerTitle}>{t('hub')}</Text>
+        <Text style={s.headerSub}>{t('yourWorkOverview')}</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Active clock-in */}
         {activeJob && (
           <View style={s.activeBanner}>
-            <View style={s.activeDot} />
             <View style={{ flex: 1 }}>
-              <Text style={s.activeTitle}>Clocked In</Text>
+              <Text style={s.activeTitle}>{t('clockedIn')}</Text>
               <Text style={s.activeSub}>
-                Order #{activeJob.orderNumber} since {formatTime(activeJob.startedAt!)}
+                {t('order')} #{activeJob.orderNumber} {t('since')} {formatTime(activeJob.startedAt!)}
               </Text>
             </View>
-            <LogIn size={20} color={COLORS.primary} />
+            <View style={s.activeTimer}>
+              <Clock size={14} color={COLORS.white} />
+              <Text style={s.activeTimerText}>{formatElapsed(elapsed)}</Text>
+            </View>
           </View>
         )}
 
@@ -265,7 +294,7 @@ export function HubScreen() {
               <CalendarCheck size={18} color={COLORS.white} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.nextJobLabel}>Next Job</Text>
+              <Text style={s.nextJobLabel}>{t('nextJob')}</Text>
               <Text style={s.nextJobTitle}>Order #{nextJob.orderNumber} · {nextJob.time}</Text>
               <View style={s.nextJobAddress}>
                 <MapPin size={10} color={COLORS.mutedForeground} />
@@ -297,28 +326,28 @@ export function HubScreen() {
               <Briefcase size={16} color={COLORS.white} />
             </View>
             <Text style={s.statValue}>{totalCompleted}</Text>
-            <Text style={s.statLabel}>Jobs Done</Text>
+            <Text style={s.statLabel}>{t('jobsDone')}</Text>
           </View>
           <View style={s.statCard}>
             <View style={s.statIcon}>
               <Clock size={16} color={COLORS.white} />
             </View>
             <Text style={s.statValue}>{totalHours.toFixed(1)}h</Text>
-            <Text style={s.statLabel}>Hours</Text>
+            <Text style={s.statLabel}>{t('hours')}</Text>
           </View>
           <View style={s.statCard}>
             <View style={s.statIcon}>
               <TrendingUp size={16} color={COLORS.white} />
             </View>
             <Text style={s.statValue}>{avgMs > 0 ? formatDuration(avgMs) : '--'}</Text>
-            <Text style={s.statLabel}>Avg / Job</Text>
+            <Text style={s.statLabel}>{t('avgPerJob')}</Text>
           </View>
           <View style={s.statCard}>
             <View style={s.statIcon}>
               <Camera size={16} color={COLORS.white} />
             </View>
             <Text style={s.statValue}>{totalPhotos}</Text>
-            <Text style={s.statLabel}>Photos</Text>
+            <Text style={s.statLabel}>{t('photos')}</Text>
           </View>
         </View>
 
@@ -327,12 +356,12 @@ export function HubScreen() {
           <View style={s.highlightCard}>
             <Flame size={16} color={COLORS.warning} />
             <Text style={s.highlightValue}>{streak}d</Text>
-            <Text style={s.highlightLabel}>Streak</Text>
+            <Text style={s.highlightLabel}>{t('streak')}</Text>
           </View>
           <View style={s.highlightCard}>
             <CheckCircle2 size={16} color={COLORS.primary} />
             <Text style={s.highlightValue}>{completionRate}%</Text>
-            <Text style={s.highlightLabel}>Complete Rate</Text>
+            <Text style={s.highlightLabel}>{t('completeRate')}</Text>
           </View>
           {weekDiffPct !== null && (
             <View style={s.highlightCard}>
@@ -340,7 +369,7 @@ export function HubScreen() {
               <Text style={[s.highlightValue, weekDiffPct < 0 && { color: COLORS.error }]}>
                 {weekDiffPct >= 0 ? '+' : ''}{weekDiffPct}%
               </Text>
-              <Text style={s.highlightLabel}>vs Last Week</Text>
+              <Text style={s.highlightLabel}>{t('vsLastWeek')}</Text>
             </View>
           )}
         </View>
@@ -349,7 +378,7 @@ export function HubScreen() {
         {/* Standings */}
         {reviews.length > 0 && (
           <View style={s.standingCard}>
-            <Text style={s.standingTitle}>Standings</Text>
+            <Text style={s.standingTitle}>{t('standings')}</Text>
             <Text style={[s.standingLevel, { color: standingColor }]}>{standingLabel}</Text>
 
             {/* Segmented bar */}
@@ -376,9 +405,9 @@ export function HubScreen() {
             {/* Tip */}
             {nextLevel && (
               <View style={s.standingTip}>
-                <Text style={s.standingTipTitle}>How to reach {nextLevel}?</Text>
+                <Text style={s.standingTipTitle}>{t('howToReach')} {nextLevel}?</Text>
                 <Text style={s.standingTipText}>
-                  Keep getting great reviews from clients. Your standing is based on {reviews.length} ratings with an average of {avgRating.toFixed(1)}/5.
+                  {t('standingTip')} {reviews.length} {t('ratings')} {avgRating.toFixed(1)}/5.
                 </Text>
               </View>
             )}
@@ -388,7 +417,7 @@ export function HubScreen() {
         {/* Skipped sections */}
         {skippedSections.length > 0 && (
           <View style={s.skippedCard}>
-            <Text style={s.skippedTitle}>Most Skipped Sections</Text>
+            <Text style={s.skippedTitle}>{t('mostSkippedSections')}</Text>
             {skippedSections.map(([name, count]) => (
               <View key={name} style={s.skippedRow}>
                 <Ban size={13} color={COLORS.warning} />
@@ -401,12 +430,12 @@ export function HubScreen() {
 
         {/* Clock history */}
         <View style={s.historySection}>
-          <Text style={s.sectionTitle}>Clock History</Text>
+          <Text style={s.sectionTitle}>{t('clockHistory')}</Text>
           {dateGroups.length === 0 ? (
             <View style={s.emptyCard}>
               <Clock size={32} color={COLORS.gray300} />
-              <Text style={s.emptyText}>No clock entries yet</Text>
-              <Text style={s.emptySub}>Start and complete a job to see your history</Text>
+              <Text style={s.emptyText}>{t('noClockEntries')}</Text>
+              <Text style={s.emptySub}>{t('noClockEntriesSub')}</Text>
             </View>
           ) : (
             dateGroups.map(([date, entries]) => {
@@ -414,7 +443,7 @@ export function HubScreen() {
               return (
                 <View key={date} style={s.dayCard}>
                   <View style={s.dayHeader}>
-                    <Text style={s.dayLabel}>{formatDateLabel(date)}</Text>
+                    <Text style={s.dayLabel}>{formatDateLabel(date, t)}</Text>
                     <View style={s.dayTotalPill}>
                       <Clock size={11} color={COLORS.white} />
                       <Text style={s.dayTotalText}>{formatDuration(dayTotal)}</Text>
@@ -463,6 +492,15 @@ const s = StyleSheet.create({
   activeDot: { width: 10, height: 10, borderRadius: RADIUS.full, backgroundColor: COLORS.primary },
   activeTitle: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.primary },
   activeSub: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.foreground, marginTop: 1 },
+  activeTimer: {
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.lg,
+    paddingHorizontal: 14, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  activeTimerText: {
+    fontFamily: FONTS.bold, fontSize: 18, color: COLORS.white,
+    letterSpacing: 1, includeFontPadding: false,
+  },
 
   // Next job
   nextJobCard: {

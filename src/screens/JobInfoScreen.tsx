@@ -25,6 +25,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { StatusBadge } from '../components/StatusBadge';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
@@ -38,6 +39,7 @@ export function JobInfoScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { jobs, startJob } = useApp();
+  const { t } = useLanguage();
 
   const job = jobs.find((j) => j.id === route.params.jobId);
   if (!job) return null;
@@ -47,8 +49,8 @@ export function JobInfoScreen() {
   const handleStart = () => {
     if (inProgressJob) {
       Alert.alert(
-        'Job in progress',
-        `You must complete Order #${inProgressJob.orderNumber} before starting a new job.`,
+        t('jobInProgress'),
+        t('mustCompleteFirst', { orderNumber: inProgressJob.orderNumber }),
       );
       return;
     }
@@ -106,7 +108,7 @@ export function JobInfoScreen() {
         {job.goal && (
           <DetailCard
             icon={<Target size={17} color={COLORS.primary} />}
-            title="Goal"
+            title={t('goal')}
             content={job.goal}
           />
         )}
@@ -114,7 +116,7 @@ export function JobInfoScreen() {
         {job.specialInstructions && (
           <DetailCard
             icon={<AlertCircle size={17} color={COLORS.warning} />}
-            title="Special Instructions"
+            title={t('specialInstructions')}
             content={job.specialInstructions}
             accent={COLORS.warningLight}
           />
@@ -123,14 +125,14 @@ export function JobInfoScreen() {
         {job.accessInfo && (
           <DetailCard
             icon={<Key size={17} color={COLORS.primary} />}
-            title="Access Info"
+            title={t('accessInfo')}
             content={job.accessInfo}
           />
         )}
 
         {/* Sections preview */}
         <View style={styles.sectionPreview}>
-          <Text style={styles.previewTitle}>Sections ({job.sections.length})</Text>
+          <Text style={styles.previewTitle}>{t('sections')} ({job.sections.length})</Text>
           <View style={styles.previewList}>
             {job.sections.map((section, i) => (
               <View key={section.id} style={styles.previewItem}>
@@ -138,7 +140,7 @@ export function JobInfoScreen() {
                   <Text style={styles.previewNumText}>{i + 1}</Text>
                 </View>
                 <Text style={styles.previewItemName}>{section.name}</Text>
-                <Text style={styles.previewItemTodos}>{section.todos.length} tasks</Text>
+                <Text style={styles.previewItemTodos}>{section.todos.length} {t('tasks')}</Text>
                 <ChevronRight size={14} color={COLORS.gray300} />
               </View>
             ))}
@@ -148,7 +150,7 @@ export function JobInfoScreen() {
         {/* Add-ons preview */}
         {job.addOns && job.addOns.length > 0 && (
           <View style={styles.sectionPreview}>
-            <Text style={styles.previewTitle}>Available Add-ons ({job.addOns.length})</Text>
+            <Text style={styles.previewTitle}>{t('availableAddOns')} ({job.addOns.length})</Text>
             <View style={styles.addOnChips}>
               {job.addOns.map((addon) => (
                 <View key={addon.id} style={styles.addOnChip}>
@@ -163,7 +165,7 @@ export function JobInfoScreen() {
       {/* Start Job Button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity onPress={handleStart} style={styles.startBtn} activeOpacity={0.85}>
-          <Text style={styles.startBtnText}>Start Job</Text>
+          <Text style={styles.startBtnText}>{t('startJob')}</Text>
         </TouchableOpacity>
       </View>
     </View>

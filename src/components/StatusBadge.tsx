@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, FONTS, RADIUS } from '../constants/theme';
+import { useLanguage } from '../context/LanguageContext';
 
 type Status = 'upcoming' | 'in-progress' | 'completed';
 
@@ -9,21 +10,22 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
+  const { t } = useLanguage();
   const config = {
     upcoming: {
       bg: COLORS.primary,
       text: COLORS.white,
-      label: 'Upcoming',
+      label: t('upcoming'),
     },
     'in-progress': {
       bg: COLORS.warningLight,
       text: COLORS.warning,
-      label: 'In Progress',
+      label: t('inProgressStatus'),
     },
     completed: {
       bg: '#000000',
       text: '#FFFFFF',
-      label: 'Completed',
+      label: t('completedStatus'),
     },
   }[status];
 

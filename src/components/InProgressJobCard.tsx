@@ -4,6 +4,7 @@ import { Timer } from 'lucide-react-native';
 import { Job } from '../types';
 import { COLORS, FONTS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { formatFullDate } from '../utils/dateUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 interface InProgressJobCardProps {
   job: Job;
@@ -19,6 +20,7 @@ function formatElapsed(seconds: number): string {
 }
 
 export function InProgressJobCard({ job, onPress }: InProgressJobCardProps) {
+  const { t } = useLanguage();
   const totalTodos = job.sections.reduce((acc, s) => acc + s.todos.length, 0);
   const completedTodos = job.sections.reduce(
     (acc, s) => acc + s.todos.filter((t) => t.completed).length,
@@ -52,13 +54,13 @@ export function InProgressJobCard({ job, onPress }: InProgressJobCardProps) {
         <View style={styles.left}>
           <Text style={styles.title}>{job.serviceType}</Text>
           <Text style={styles.status}>ORDER #: {job.orderNumber}</Text>
-          <Text style={styles.scheduled}>Scheduled for: {formatFullDate(job.date)}, {job.time}</Text>
+          <Text style={styles.scheduled}>{t('scheduledFor')}: {formatFullDate(job.date)}, {job.time}</Text>
 
           <View style={styles.progressInfo}>
               <Text style={styles.percentage}>{percentage}%</Text>
               <View>
-                <Text style={styles.overallLabel}>Overall Progress:</Text>
-                <Text style={styles.tasksText}>{completedTodos} of {totalTodos} tasks completed</Text>
+                <Text style={styles.overallLabel}>{t('overallProgressLabel')}</Text>
+                <Text style={styles.tasksText}>{completedTodos} {t('ofTasksCompleted', { total: String(totalTodos) })}</Text>
               </View>
             </View>
         </View>
@@ -66,7 +68,7 @@ export function InProgressJobCard({ job, onPress }: InProgressJobCardProps) {
         {/* Timer pill */}
         <View style={styles.timerPill}>
           <Timer size={20} color={COLORS.foreground} />
-          <Text style={styles.timerLabel}>Time elapsed:</Text>
+          <Text style={styles.timerLabel}>{t('timeElapsed')}</Text>
           <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
         </View>
       </View>

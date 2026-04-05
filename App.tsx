@@ -16,6 +16,7 @@ import {
 } from '@expo-google-fonts/poppins';
 
 import { AppProvider } from './src/context/AppContext';
+import { LanguageProvider } from './src/context/LanguageContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { paperTheme, COLORS } from './src/constants/theme';
 
@@ -41,6 +42,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <LanguageProvider>
         <AppProvider>
           <PaperProvider theme={paperTheme}>
             <NavigationContainer>
@@ -51,6 +53,7 @@ export default function App() {
             </NavigationContainer>
           </PaperProvider>
         </AppProvider>
+        </LanguageProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

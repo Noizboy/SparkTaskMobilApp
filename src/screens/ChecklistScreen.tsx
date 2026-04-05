@@ -47,6 +47,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Section, AddOn } from '../types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
@@ -63,15 +64,16 @@ interface SkipModalProps {
 }
 
 function SkipModal({ visible, sectionName, onConfirm, onCancel }: SkipModalProps) {
+  const { t } = useLanguage();
   const [reason, setReason] = useState('');
-  const reasons = ['Client request', 'Already clean', 'No access', 'Out of time', 'Other'];
+  const reasons = [t('clientRequest'), t('alreadyClean'), t('noAccess'), t('outOfTime'), t('other')];
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
       <View style={modalStyles.overlay}>
         <View style={modalStyles.sheet}>
-          <Text style={modalStyles.title}>Skip "{sectionName}"?</Text>
-          <Text style={modalStyles.sub}>Select or type a reason</Text>
+          <Text style={modalStyles.title}>{t('skip')} "{sectionName}"?</Text>
+          <Text style={modalStyles.sub}>{t('selectOrTypeReason')}</Text>
           <View style={modalStyles.chips}>
             {reasons.map((r) => (
               <TouchableOpacity
@@ -86,7 +88,7 @@ function SkipModal({ visible, sectionName, onConfirm, onCancel }: SkipModalProps
             ))}
           </View>
           <RNTextInput
-            placeholder="Or type a custom reason..."
+            placeholder={t('orTypeCustomReason')}
             value={reason}
             onChangeText={setReason}
             style={modalStyles.input}
@@ -94,7 +96,7 @@ function SkipModal({ visible, sectionName, onConfirm, onCancel }: SkipModalProps
           />
           <View style={modalStyles.actions}>
             <TouchableOpacity onPress={onCancel} style={modalStyles.cancelBtn}>
-              <Text style={modalStyles.cancelText}>Cancel</Text>
+              <Text style={modalStyles.cancelText}>{t('cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
@@ -106,7 +108,7 @@ function SkipModal({ visible, sectionName, onConfirm, onCancel }: SkipModalProps
               style={[modalStyles.confirmBtn, !reason.trim() && { opacity: 0.4 }]}
               disabled={!reason.trim()}
             >
-              <Text style={modalStyles.confirmText}>Skip Section</Text>
+              <Text style={modalStyles.confirmText}>{t('skipSection')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -178,6 +180,7 @@ interface SectionCardProps {
 type SectionNav = NativeStackNavigationProp<RootStackParamList>;
 
 function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCardProps) {
+  const { t } = useLanguage();
   const { markAllDone, photosChange, updateSkipReason, clearSkipReason } = useApp();
   const navigation = useNavigation<SectionNav>();
   const [photoType, setPhotoType] = useState<'before' | 'after'>('before');
@@ -212,7 +215,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
     if (status !== 'granted') {
       const libraryStatus = (await ImagePicker.requestMediaLibraryPermissionsAsync()).status;
       if (libraryStatus !== 'granted') {
-        Alert.alert('Permission needed', 'Camera or gallery access is required.');
+        Alert.alert(t('permissionNeeded'), t('permissionNeededCamera'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -225,9 +228,9 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
       }
       return;
     }
-    Alert.alert('Add Photo', 'Choose source', [
+    Alert.alert(t('addPhoto'), t('chooseSource'), [
       {
-        text: 'Camera',
+        text: t('camera'),
         onPress: async () => {
           const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
           if (!result.canceled) {
@@ -237,7 +240,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
         },
       },
       {
-        text: 'Gallery',
+        text: t('gallery'),
         onPress: async () => {
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -249,7 +252,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
           }
         },
       },
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('cancel'), style: 'cancel' },
     ]);
   };
 
@@ -279,7 +282,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
         <View style={sectionStyles.headerInfo}>
           <Text style={sectionStyles.name}>{section.name}</Text>
           <Text style={sectionStyles.count}>
-            {section.skipReason ? 'Skipped' : `${completedCount}/${totalCount} tasks`}
+            {section.skipReason ? t('skipped') : `${completedCount}/${totalCount} ${t('tasks')}`}
           </Text>
         </View>
 
@@ -293,13 +296,13 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
       {section.skipReason && (
         <View style={sectionStyles.skipBadge}>
           <Ban size={12} color={COLORS.warning} />
-          <Text style={sectionStyles.skipText} numberOfLines={1}>Skipped: {section.skipReason}</Text>
+          <Text style={sectionStyles.skipText} numberOfLines={1}>{t('skipped')}: {section.skipReason}</Text>
           <TouchableOpacity
             onPress={() => clearSkipReason(jobId, section.id)}
             style={sectionStyles.reopenBtn}
             activeOpacity={0.7}
           >
-            <Text style={sectionStyles.reopenText}>Resume</Text>
+            <Text style={sectionStyles.reopenText}>{t('resume')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -310,7 +313,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
           {section.estimatedTime && (
             <View style={sectionStyles.estimatedRow}>
               <Clock size={13} color={COLORS.primary} />
-              <Text style={sectionStyles.estimatedTime}>Estimated time: {section.estimatedTime}</Text>
+              <Text style={sectionStyles.estimatedTime}>{t('estimatedTime')}: {section.estimatedTime}</Text>
             </View>
           )}
 
@@ -324,14 +327,14 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
           {/* Photos */}
           <View style={sectionStyles.photosSection}>
             <View style={sectionStyles.photoTypeSwitch}>
-              {(['before', 'after'] as const).map((t) => (
+              {(['before', 'after'] as const).map((pt) => (
                 <TouchableOpacity
-                  key={t}
-                  onPress={() => setPhotoType(t)}
-                  style={[sectionStyles.switchBtn, photoType === t && sectionStyles.switchBtnActive]}
+                  key={pt}
+                  onPress={() => setPhotoType(pt)}
+                  style={[sectionStyles.switchBtn, photoType === pt && sectionStyles.switchBtnActive]}
                 >
-                  <Text style={[sectionStyles.switchText, photoType === t && sectionStyles.switchTextActive]}>
-                    {t === 'before' ? 'Before' : 'After'}
+                  <Text style={[sectionStyles.switchText, photoType === pt && sectionStyles.switchTextActive]}>
+                    {pt === 'before' ? t('before') : t('after')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -361,7 +364,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
               ))}
               <TouchableOpacity onPress={() => pickPhoto(photoType)} style={sectionStyles.addPhotoBtn}>
                 <Camera size={20} color={COLORS.mutedForeground} />
-                <Text style={sectionStyles.addPhotoText}>Add</Text>
+                <Text style={sectionStyles.addPhotoText}>{t('add')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -372,7 +375,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
             style={sectionStyles.skipBtn}
           >
             <Ban size={14} color={COLORS.mutedForeground} />
-            <Text style={sectionStyles.skipBtnText}>Skip this section</Text>
+            <Text style={sectionStyles.skipBtnText}>{t('skipThis')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -396,6 +399,7 @@ interface AddOnsCardProps {
 }
 
 function AddOnsCard({ addOns, jobId }: AddOnsCardProps) {
+  const { t } = useLanguage();
   const { toggleAddOn } = useApp();
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -425,8 +429,8 @@ function AddOnsCard({ addOns, jobId }: AddOnsCardProps) {
           )}
         </TouchableOpacity>
         <View style={sectionStyles.headerInfo}>
-          <Text style={sectionStyles.name}>Add-ons</Text>
-          <Text style={sectionStyles.count}>{selectedCount}/{totalCount} selected</Text>
+          <Text style={sectionStyles.name}>{t('addOns')}</Text>
+          <Text style={sectionStyles.count}>{selectedCount}/{totalCount} {t('selected')}</Text>
         </View>
         {isExpanded ? (
           <ChevronUp size={18} color={COLORS.mutedForeground} />
@@ -462,6 +466,7 @@ function AddOnsCard({ addOns, jobId }: AddOnsCardProps) {
 }
 
 export function ChecklistScreen() {
+  const { t } = useLanguage();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
@@ -613,9 +618,9 @@ export function ChecklistScreen() {
 
 
   const TABS: { key: TabFilter; label: string }[] = [
-    { key: 'pending', label: 'Pending' },
-    { key: 'in-progress', label: 'In Progress' },
-    { key: 'completed', label: 'Completed' },
+    { key: 'pending', label: t('pending') },
+    { key: 'in-progress', label: t('inProgress') },
+    { key: 'completed', label: t('completed') },
   ];
 
   return (
@@ -642,11 +647,11 @@ export function ChecklistScreen() {
         <View style={styles.progressHero}>
           <View style={styles.progressHeroLeft}>
             <Text style={styles.progressPct}>{percentage}%</Text>
-            <Text style={styles.progressLabel}>Overall Progress</Text>
+            <Text style={styles.progressLabel}>{t('overallProgress')}</Text>
           </View>
           <View style={styles.progressHeroRight}>
             <Text style={styles.progressFraction}>{doneTodos}<Text style={styles.progressTotal}>/{totalTodos}</Text></Text>
-            <Text style={styles.progressLabel}>Tasks done</Text>
+            <Text style={styles.progressLabel}>{t('tasksDone')}</Text>
           </View>
         </View>
       )}
@@ -689,7 +694,7 @@ export function ChecklistScreen() {
         <View style={styles.sections}>
           {filteredSections.length === 0 && !showAddOns ? (
             <View style={styles.emptyTab}>
-              <Text style={styles.emptyTabText}>No sections in this category.</Text>
+              <Text style={styles.emptyTabText}>{t('noSectionsInCategory')}</Text>
             </View>
           ) : (
             <>
@@ -715,13 +720,13 @@ export function ChecklistScreen() {
         {completeConfirmed ? (
           <View style={styles.completeConfirmedTrack}>
             <CheckCircle2 size={20} color={COLORS.white} />
-            <Text style={styles.completeConfirmedText}>Completed!</Text>
+            <Text style={styles.completeConfirmedText}>{t('completed_excl')}</Text>
           </View>
         ) : (
           <View style={[styles.completeTrack, progress < 1 && styles.completeTrackPartial]} onLayout={(e) => setCompleteTrackWidth(e.nativeEvent.layout.width)}>
             <Animated.View style={[styles.completeReveal, progress < 1 ? styles.completeRevealPartial : null, completeSwipeBgStyle]} />
             <Animated.Text style={[styles.completeTrackLabel, completeLabelStyle]}>
-              Swipe to Complete
+              {t('swipeToComplete')}
             </Animated.Text>
             <GestureDetector gesture={completePan}>
               <Animated.View style={[styles.completeThumb, progress < 1 && styles.completeThumbPartial, completeSwipeAnimStyle]}>
@@ -765,17 +770,17 @@ export function ChecklistScreen() {
                 <View style={settingsStyles.infoGrid}>
                   <View style={settingsStyles.infoCard}>
                     <CalendarDays size={16} color={COLORS.primary} />
-                    <Text style={settingsStyles.infoCardLabel}>Date</Text>
+                    <Text style={settingsStyles.infoCardLabel}>{t('date')}</Text>
                     <Text style={settingsStyles.infoCardValue}>{job.date}</Text>
                   </View>
                   <View style={settingsStyles.infoCard}>
                     <AlarmClock size={16} color={COLORS.primary} />
-                    <Text style={settingsStyles.infoCardLabel}>Time</Text>
+                    <Text style={settingsStyles.infoCardLabel}>{t('time')}</Text>
                     <Text style={settingsStyles.infoCardValue}>{job.time}</Text>
                   </View>
                   <View style={settingsStyles.infoCard}>
                     <Timer size={16} color={COLORS.primary} />
-                    <Text style={settingsStyles.infoCardLabel}>Duration</Text>
+                    <Text style={settingsStyles.infoCardLabel}>{t('duration')}</Text>
                     <Text style={settingsStyles.infoCardValue}>{job.duration}</Text>
                   </View>
                 </View>
@@ -832,16 +837,16 @@ export function ChecklistScreen() {
                 <View style={settingsStyles.divider} />
 
                 {/* Swipe-right cancel */}
-                <Text style={settingsStyles.swipeHint}>Swipe right to cancel job</Text>
+                <Text style={settingsStyles.swipeHint}>{t('swipeRightToCancel')}</Text>
                 {cancelConfirmed ? (
                   <View style={settingsStyles.cancelConfirmedTrack}>
                     <CheckCircle2 size={20} color={COLORS.white} />
-                    <Text style={settingsStyles.cancelConfirmedText}>Canceled</Text>
+                    <Text style={settingsStyles.cancelConfirmedText}>{t('canceled')}</Text>
                   </View>
                 ) : (
                   <View style={settingsStyles.cancelTrack} onLayout={(e) => setCancelTrackWidth(e.nativeEvent.layout.width)}>
                     <Animated.View style={[settingsStyles.cancelReveal, cancelSwipeBgStyle]} />
-                    <Animated.Text style={[settingsStyles.cancelTrackLabel, cancelLabelStyle]}>Cancel Job</Animated.Text>
+                    <Animated.Text style={[settingsStyles.cancelTrackLabel, cancelLabelStyle]}>{t('cancelJob')}</Animated.Text>
                     <GestureDetector gesture={cancelPan}>
                       <Animated.View style={[settingsStyles.cancelThumb, cancelSwipeAnimStyle]}>
                         <ChevronsRight size={20} color={COLORS.white} />

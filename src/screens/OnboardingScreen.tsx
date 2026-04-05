@@ -12,6 +12,7 @@ import { Sparkles, CalendarCheck, ClipboardList, Camera } from 'lucide-react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -20,8 +21,6 @@ const SLIDES = [
   {
     id: '1',
     Icon: Sparkles,
-    title: 'Welcome to Spark Task',
-    subtitle: 'Your professional cleaning management companion. Organized, efficient, and stress-free.',
     bg: COLORS.primary,
     iconBg: COLORS.white,
     iconColor: COLORS.primary,
@@ -29,8 +28,6 @@ const SLIDES = [
   {
     id: '2',
     Icon: CalendarCheck,
-    title: 'Track Your Schedule',
-    subtitle: 'See all your upcoming jobs at a glance. Never miss an appointment with smart calendar views.',
     bg: COLORS.foreground,
     iconBg: COLORS.primaryContainer,
     iconColor: COLORS.primary,
@@ -38,8 +35,6 @@ const SLIDES = [
   {
     id: '3',
     Icon: ClipboardList,
-    title: 'Follow the Checklist',
-    subtitle: 'Complete each task systematically. Section-by-section checklists keep you on track.',
     bg: '#1E3A5F',
     iconBg: COLORS.pastelBlue,
     iconColor: '#1E3A5F',
@@ -47,8 +42,6 @@ const SLIDES = [
   {
     id: '4',
     Icon: Camera,
-    title: 'Document Your Work',
-    subtitle: 'Capture before and after photos for every section. Build trust with your clients.',
     bg: COLORS.primaryDark,
     iconBg: COLORS.pastelGreen,
     iconColor: COLORS.primary,
@@ -57,7 +50,18 @@ const SLIDES = [
 
 export function OnboardingScreen() {
   const { handleOnboardingComplete } = useApp();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+
+  const getSlideText = (id: string) => {
+    switch (id) {
+      case '1': return { title: t('onboardingTitle1'), subtitle: t('onboardingSub1') };
+      case '2': return { title: t('onboardingTitle2'), subtitle: t('onboardingSub2') };
+      case '3': return { title: t('onboardingTitle3'), subtitle: t('onboardingSub3') };
+      case '4': return { title: t('onboardingTitle4'), subtitle: t('onboardingSub4') };
+      default: return { title: '', subtitle: '' };
+    }
+  };
   const [currentIndex, setCurrentIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
 
@@ -83,7 +87,7 @@ export function OnboardingScreen() {
       {/* Skip */}
       {currentIndex < SLIDES.length - 1 && (
         <TouchableOpacity onPress={skip} style={styles.skipBtn}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{t('skip')}</Text>
         </TouchableOpacity>
       )}
 
@@ -103,8 +107,8 @@ export function OnboardingScreen() {
               <View style={[styles.iconWrap, { backgroundColor: item.iconBg }]}>
                 <Icon size={52} color={item.iconColor} />
               </View>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.subtitle}>{item.subtitle}</Text>
+              <Text style={styles.title}>{getSlideText(item.id).title}</Text>
+              <Text style={styles.subtitle}>{getSlideText(item.id).subtitle}</Text>
             </View>
           );
         }}
@@ -127,7 +131,7 @@ export function OnboardingScreen() {
 
         <TouchableOpacity onPress={goNext} style={styles.nextBtn} activeOpacity={0.85}>
           <Text style={styles.nextBtnText}>
-            {currentIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
+            {currentIndex === SLIDES.length - 1 ? t('getStarted') : t('next')}
           </Text>
         </TouchableOpacity>
       </View>

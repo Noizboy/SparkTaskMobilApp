@@ -23,6 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { StatusBadge } from '../components/StatusBadge';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
@@ -35,6 +36,7 @@ export function OrderDetailsScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { jobs } = useApp();
+  const { t } = useLanguage();
 
   const job = jobs.find((j) => j.id === route.params.jobId);
   if (!job) return null;
@@ -74,7 +76,7 @@ export function OrderDetailsScreen() {
         {/* Title */}
         <View style={[styles.titleSection, job.status === 'completed' && { paddingBottom: 0 }]}>
           <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Status:</Text>
+            <Text style={styles.statusLabel}>{t('status')}:</Text>
             <StatusBadge status={job.status} />
           </View>
           {job.status !== 'completed' && (
@@ -106,14 +108,14 @@ export function OrderDetailsScreen() {
 
         {/* Summary stats */}
         <View style={styles.statsRow}>
-          <StatBox value={`${doneTodos}/${totalTodos}`} label="Tasks" />
-          <StatBox value={actualDuration ?? job.duration} label="Duration" />
-          <StatBox value={`${totalPhotos}`} label="Photos" />
+          <StatBox value={`${doneTodos}/${totalTodos}`} label={t('tasks')} />
+          <StatBox value={actualDuration ?? job.duration} label={t('duration')} />
+          <StatBox value={`${totalPhotos}`} label={t('photos')} />
         </View>
 
         {/* Sections */}
         <View style={styles.sectionsWrap}>
-          <Text style={styles.sectionTitle}>Sections</Text>
+          <Text style={styles.sectionTitle}>{t('sections')}</Text>
           {job.sections.map((section) => {
             const allDone = section.todos.every((t) => t.completed);
             const skipped = !!section.skipReason;
@@ -148,7 +150,7 @@ export function OrderDetailsScreen() {
 
                 {skipped && (
                   <View style={styles.skipReasonBox}>
-                    <Text style={styles.skipReasonText}>Skipped: {section.skipReason}</Text>
+                    <Text style={styles.skipReasonText}>{t('skipped')}: {section.skipReason}</Text>
                   </View>
                 )}
 
@@ -175,8 +177,8 @@ export function OrderDetailsScreen() {
                 {/* Photos */}
                 {(section.beforePhotos.length > 0 || section.afterPhotos.length > 0) && (
                   <View style={styles.photosSection}>
-                    <PhotoStack label="Before" photos={section.beforePhotos} sectionName={section.name} />
-                    <PhotoStack label="After" photos={section.afterPhotos} sectionName={section.name} />
+                    <PhotoStack label={t('before')} photos={section.beforePhotos} sectionName={section.name} />
+                    <PhotoStack label={t('after')} photos={section.afterPhotos} sectionName={section.name} />
                   </View>
                 )}
               </View>
@@ -187,7 +189,7 @@ export function OrderDetailsScreen() {
         {/* Add-ons */}
         {job.addOns && job.addOns.length > 0 && (
           <View style={styles.sectionsWrap}>
-            <Text style={styles.sectionTitle}>Add-ons</Text>
+            <Text style={styles.sectionTitle}>{t('addOns')}</Text>
             <View style={styles.sectionCard}>
               {job.addOns.map((addon) => (
                 <View key={addon.id} style={styles.addonRow}>

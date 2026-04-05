@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppNotification } from '../types';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 
-function NotifIcon({ type }: { type: AppNotification['type'] }) {
-  const color = COLORS.primary;
+function NotifIcon({ type, isRead }: { type: AppNotification['type']; isRead: boolean }) {
+  const color = isRead ? COLORS.primary : COLORS.white;
   const size = 18;
   if (type === 'upcoming') return <Clock size={size} color={color} />;
   if (type === 'new_job') return <Calendar size={size} color={color} />;
@@ -20,22 +21,23 @@ function NotifIcon({ type }: { type: AppNotification['type'] }) {
 export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const { notifications, unreadCount, markAsRead, markAllRead } = useApp();
+  const { t } = useLanguage();
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>{t('notifications')}</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={markAllRead}>
-            <Text style={styles.markAll}>Mark all as read</Text>
+            <Text style={styles.markAll}>{t('markAllAsRead')}</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {unreadCount > 0 && (
         <Text style={styles.unreadHint}>
-          {unreadCount} unread notification{unreadCount > 1 ? 's' : ''}
+          {unreadCount} {unreadCount > 1 ? t('unreadNotifications') : t('unreadNotification')}
         </Text>
       )}
 
@@ -49,8 +51,8 @@ export function NotificationsScreen() {
             <View style={styles.emptyIcon}>
               <Bell size={36} color={COLORS.gray400} />
             </View>
-            <Text style={styles.emptyTitle}>No notifications</Text>
-            <Text style={styles.emptyText}>You're all caught up!</Text>
+            <Text style={styles.emptyTitle}>{t('noNotifications')}</Text>
+            <Text style={styles.emptyText}>{t('allCaughtUp')}</Text>
           </View>
         ) : (
           notifications.map((notif) => (
@@ -65,10 +67,10 @@ export function NotificationsScreen() {
               <View
                 style={[
                   styles.iconWrap,
-                  { backgroundColor: notif.isRead ? COLORS.gray100 : COLORS.primaryContainer },
+                  { backgroundColor: notif.isRead ? COLORS.gray100 : COLORS.primary },
                 ]}
               >
-                <NotifIcon type={notif.type} />
+                <NotifIcon type={notif.type} isRead={notif.isRead} />
               </View>
 
               <View style={styles.cardContent}>

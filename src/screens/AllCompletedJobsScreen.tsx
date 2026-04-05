@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
@@ -16,6 +17,7 @@ export function AllCompletedJobsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { jobs } = useApp();
+  const { t } = useLanguage();
 
   const completedJobs = jobs
     .filter((j) => j.status === 'completed')
@@ -31,7 +33,7 @@ export function AllCompletedJobsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>Completed Jobs</Text>
+        <Text style={styles.topTitle}>{t('completedJobs')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -40,7 +42,7 @@ export function AllCompletedJobsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
       >
         <Text style={styles.subtitle}>
-          {completedJobs.length} job{completedJobs.length !== 1 ? 's' : ''} completed
+          {completedJobs.length} {completedJobs.length !== 1 ? t('jobsCompleted_count') : t('jobCompleted_count')}
         </Text>
 
         {completedJobs.length === 0 ? (
@@ -48,8 +50,8 @@ export function AllCompletedJobsScreen() {
             <View style={styles.emptyIcon}>
               <CheckCircle2 size={32} color={COLORS.gray400} />
             </View>
-            <Text style={styles.emptyTitle}>No completed jobs yet</Text>
-            <Text style={styles.emptyText}>Completed jobs will appear here.</Text>
+            <Text style={styles.emptyTitle}>{t('noCompletedJobs')}</Text>
+            <Text style={styles.emptyText}>{t('completedJobsWillAppear')}</Text>
           </View>
         ) : (
           <View style={styles.cardList}>

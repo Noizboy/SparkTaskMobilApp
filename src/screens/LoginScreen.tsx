@@ -15,11 +15,13 @@ import { Sparkles } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { AUTH_CONFIG } from '../config/auth';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../constants/theme';
 
 export function LoginScreen() {
   const { handleLogin } = useApp();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,7 +39,7 @@ export function LoginScreen() {
       ) {
         handleLogin();
       } else {
-        setError('Invalid email or password');
+        setError(t('invalidCredentials'));
       }
       setIsLoading(false);
     }, 900);
@@ -58,7 +60,7 @@ export function LoginScreen() {
             <Sparkles size={40} color={COLORS.primary} />
           </View>
           <Text style={styles.appName}>Spark Task</Text>
-          <Text style={styles.tagline}>Professional cleaning made simple</Text>
+          <Text style={styles.tagline}>{t('loginTagline')}</Text>
         </View>
 
         {/* Form card */}
@@ -68,12 +70,12 @@ export function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.welcomeTitle}>Welcome back</Text>
-          <Text style={styles.welcomeSub}>Sign in to continue to your workspace</Text>
+          <Text style={styles.welcomeTitle}>{t('welcomeBack')}</Text>
+          <Text style={styles.welcomeSub}>{t('signInSubtitle')}</Text>
 
           <View style={styles.fields}>
             <TextInput
-              label="Email Address"
+              label={t('emailAddress')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -88,7 +90,7 @@ export function LoginScreen() {
             />
 
             <TextInput
-              label="Password"
+              label={t('password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -110,7 +112,7 @@ export function LoginScreen() {
 
           <View style={styles.optionsRow}>
             <TouchableOpacity>
-              <Text style={styles.forgotText}>Forgot password?</Text>
+              <Text style={styles.forgotText}>{t('forgotPassword')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -129,13 +131,13 @@ export function LoginScreen() {
             {isLoading ? (
               <ActivityIndicator color={COLORS.white} size="small" />
             ) : (
-              <Text style={styles.loginBtnText}>Sign In</Text>
+              <Text style={styles.loginBtnText}>{t('signIn')}</Text>
             )}
           </TouchableOpacity>
 
           {/* Demo hint */}
           <View style={styles.demoBox}>
-            <Text style={styles.demoTitle}>Demo Credentials</Text>
+            <Text style={styles.demoTitle}>{t('demoCredentials')}</Text>
             <Text style={styles.demoText}>
               Email: <Text style={styles.demoValue}>demo@demo.com</Text>
             </Text>

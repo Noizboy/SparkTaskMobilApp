@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { WeekCalendarStrip } from '../components/WeekCalendarStrip';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { InProgressJobCard } from '../components/InProgressJobCard';
@@ -30,6 +31,7 @@ export function HomeScreen() {
   const tabNavigation = useNavigation<TabNav>();
   const insets = useSafeAreaInsets();
   const { jobs, jobsLoaded, profileImage, unreadCount } = useApp();
+  const { t } = useLanguage();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -87,7 +89,7 @@ export function HomeScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            <Text style={styles.name}>Welcome, Sarah</Text>
+            <Text style={styles.name}>{t('welcome') + ', Sarah'}</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -109,7 +111,7 @@ export function HomeScreen() {
         {/* In Progress */}
         {inProgressJobs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>In Progress</Text>
+            <Text style={styles.sectionTitle}>{t('inProgress')}</Text>
             <View style={styles.cardList}>
               {inProgressJobs.map((job) => (
                 <InProgressJobCard
@@ -125,9 +127,9 @@ export function HomeScreen() {
         {/* Upcoming */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Jobs</Text>
+            <Text style={styles.sectionTitle}>{t('upcomingJobs')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('AllUpcomingJobs')} activeOpacity={0.7}>
-              <Text style={styles.viewAllText}>View All</Text>
+              <Text style={styles.viewAllText}>{t('viewAll')}</Text>
             </TouchableOpacity>
           </View>
           {upcomingJobs.length === 0 ? (
@@ -135,8 +137,8 @@ export function HomeScreen() {
               <View style={styles.emptyIcon}>
                 <Calendar size={28} color={COLORS.gray400} />
               </View>
-              <Text style={styles.emptyTitle}>No upcoming jobs at the moment</Text>
-              <Text style={styles.emptyText}>You've completed your assigned schedule for today.</Text>
+              <Text style={styles.emptyTitle}>{t('noUpcomingJobs')}</Text>
+              <Text style={styles.emptyText}>{t('noUpcomingJobsSub')}</Text>
             </View>
           ) : (
             <View style={styles.cardList}>
@@ -151,10 +153,10 @@ export function HomeScreen() {
         {completedJobs.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Completed</Text>
+              <Text style={styles.sectionTitle}>{t('completed')}</Text>
               {allCompletedJobs.length > 4 && (
                 <TouchableOpacity onPress={() => navigation.navigate('AllCompletedJobs')} activeOpacity={0.7}>
-                  <Text style={styles.viewAllText}>View All</Text>
+                  <Text style={styles.viewAllText}>{t('viewAll')}</Text>
                 </TouchableOpacity>
               )}
             </View>

@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { CalendarScreenSkeleton, SkeletonCard } from '../components/SkeletonLoader';
@@ -19,6 +20,7 @@ export function CalendarScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { jobs, jobsLoaded } = useApp();
+  const { t } = useLanguage();
 
   const todayStr = toDateString(new Date());
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -90,7 +92,7 @@ export function CalendarScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Calendar</Text>
+          <Text style={styles.title}>{t('calendar')}</Text>
         </View>
 
         {/* Calendar */}
@@ -125,10 +127,10 @@ export function CalendarScreen() {
         <View style={styles.listSection}>
           <View style={styles.listHeader}>
             <Text style={styles.listTitle}>
-              {selectedDate === todayStr ? "Today's Jobs" : `Jobs on ${selectedDate}`}
+              {selectedDate === todayStr ? t('todaysJobs') : `${t('jobsOn')} ${selectedDate}`}
             </Text>
             <View style={styles.countBadge}>
-              <Text style={styles.countText}>{jobsForDay.length} Total</Text>
+              <Text style={styles.countText}>{jobsForDay.length} {t('total')}</Text>
             </View>
           </View>
 
@@ -142,8 +144,8 @@ export function CalendarScreen() {
               <View style={styles.emptyIcon}>
                 <CalendarX2 size={28} color={COLORS.gray400} />
               </View>
-              <Text style={styles.emptyTitle}>No jobs scheduled for this day</Text>
-              <Text style={styles.emptyText}>Check back later or browse available openings.</Text>
+              <Text style={styles.emptyTitle}>{t('noJobsScheduled')}</Text>
+              <Text style={styles.emptyText}>{t('noJobsScheduledSub')}</Text>
             </View>
           ) : (
             <View style={styles.cardList}>

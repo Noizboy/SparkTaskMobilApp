@@ -12,6 +12,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
@@ -25,6 +26,7 @@ export function DayJobsScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { jobs } = useApp();
+  const { t } = useLanguage();
 
   const { date } = route.params;
   const dayJobs = jobs.filter((j) => j.date === date);
@@ -56,7 +58,7 @@ export function DayJobsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
       >
         <Text style={styles.title}>
-          {dayJobs.length} job{dayJobs.length !== 1 ? 's' : ''} scheduled
+          {dayJobs.length} {dayJobs.length !== 1 ? t('jobsScheduled') : t('jobScheduled')}
         </Text>
 
         {dayJobs.length === 0 ? (
@@ -64,8 +66,8 @@ export function DayJobsScreen() {
             <View style={styles.emptyIcon}>
               <Calendar size={32} color={COLORS.gray400} />
             </View>
-            <Text style={styles.emptyTitle}>No jobs for this day</Text>
-            <Text style={styles.emptyText}>Nothing scheduled here.</Text>
+            <Text style={styles.emptyTitle}>{t('noJobsForDay')}</Text>
+            <Text style={styles.emptyText}>{t('nothingScheduledHere')}</Text>
           </View>
         ) : (
           <View style={styles.cardList}>

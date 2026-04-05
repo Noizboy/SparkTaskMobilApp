@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { RootStackParamList } from '../types';
 import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
 
@@ -25,6 +26,7 @@ export function JobCompletedScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { jobs } = useApp();
+  const { t } = useLanguage();
 
   const job = jobs.find((j) => j.id === route.params.jobId);
   if (!job) return null;
@@ -40,10 +42,10 @@ export function JobCompletedScreen() {
         <View style={styles.checkCircle}>
           <CheckCircle2 size={56} color={COLORS.white} />
         </View>
-        <Text style={styles.title}>Great job!</Text>
+        <Text style={styles.title}>{t('greatJob')}</Text>
         <Text style={styles.subtitle}>
-          You completed Order #{job.orderNumber}
-          {duration ? ` in ${duration}` : ''}
+          {t('youCompletedOrder')} #{job.orderNumber}
+          {duration ? ` ${t('inTime')} ${duration}` : ''}
         </Text>
       </View>
 
@@ -60,7 +62,7 @@ export function JobCompletedScreen() {
         style={styles.btn}
         activeOpacity={0.85}
       >
-        <Text style={styles.btnText}>View Order Details</Text>
+        <Text style={styles.btnText}>{t('viewOrderDetails')}</Text>
       </TouchableOpacity>
     </View>
   );

@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
+import { useLanguage } from '../context/LanguageContext';
 import { RootStackParamList } from '../types';
 
 const { width, height } = Dimensions.get('window');
@@ -46,6 +47,7 @@ export function PhotoGalleryScreen() {
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { photos, label, sectionName } = route.params;
+  const { t } = useLanguage();
 
   const [viewerVisible, setViewerVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -85,7 +87,7 @@ export function PhotoGalleryScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{label} Photos</Text>
+          <Text style={styles.headerTitle}>{label} {t('photosLabel')}</Text>
           <Text style={styles.headerSub} numberOfLines={1}>{sectionName}</Text>
         </View>
 
@@ -151,7 +153,7 @@ export function PhotoGalleryScreen() {
           {/* Top bar */}
           <View style={[viewer.topBar, { paddingTop: insets.top + 8 }]}>
             <View style={viewer.topBarLabel}>
-              <Text style={viewer.topBarTitle}>{label} Photos</Text>
+              <Text style={viewer.topBarTitle}>{label} {t('photosLabel')}</Text>
               <Text style={viewer.topBarSub}>{sectionName}</Text>
             </View>
             <TouchableOpacity
