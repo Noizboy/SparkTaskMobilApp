@@ -31,6 +31,7 @@ interface AppContextType {
   unreadCount: number;
   markAsRead: (id: string) => void;
   markAllRead: () => void;
+  jobsLoaded: boolean;
   isAuthenticated: boolean;
   showOnboarding: boolean;
   profileImage: string | null;
@@ -60,6 +61,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [jobsLoaded, setJobsLoaded] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -100,6 +102,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setJobs(mockJobs);
         await storage.setJSON('cleanerJobs', mockJobs);
       }
+      setJobsLoaded(true);
     };
     loadJobs();
   }, [isAuthenticated]);
@@ -299,6 +302,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         jobs,
+        jobsLoaded,
         reviews: MOCK_REVIEWS,
         notifications,
         unreadCount,

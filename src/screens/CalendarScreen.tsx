@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { CalendarX2 } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
+import { CalendarScreenSkeleton, SkeletonCard } from '../components/SkeletonLoader';
 import { RootStackParamList } from '../types';
 import { toDateString } from '../utils/dateUtils';
 
@@ -17,10 +18,23 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function CalendarScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { jobs } = useApp();
+  const { jobs, jobsLoaded } = useApp();
 
   const todayStr = toDateString(new Date());
   const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [dayLoading, setDayLoading] = useState(false);
+
+  const handleDaySelect = useCallback((dateString: string) => {
+    if (dateString === selectedDate) return;
+    setDayLoading(true);
+    setSelectedDate(dateString);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (!dayLoading) return;
+    const timer = setTimeout(() => setDayLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [dayLoading]);
 
   const markedDates: Record<string, any> = {};
 
@@ -63,6 +77,14 @@ export function CalendarScreen() {
     else navigation.navigate('OrderDetails', { jobId });
   };
 
+  if (!jobsLoaded) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <CalendarScreenSkeleton />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -75,7 +97,7 @@ export function CalendarScreen() {
         <View style={[styles.calendarWrap]}>
           <Calendar
             current={todayStr}
-            onDayPress={(day: any) => setSelectedDate(day.dateString)}
+            onDayPress={(day: any) => handleDaySelect(day.dateString)}
             markingType="dot"
             markedDates={markedDates}
             theme={{
@@ -110,7 +132,12 @@ export function CalendarScreen() {
             </View>
           </View>
 
-          {jobsForDay.length === 0 ? (
+          {dayLoading ? (
+            <View style={styles.cardList}>
+              <SkeletonCard />
+              <SkeletonCard style={{ marginTop: 10 }} />
+            </View>
+          ) : jobsForDay.length === 0 ? (
             <View style={styles.emptyBox}>
               <View style={styles.emptyIcon}>
                 <CalendarX2 size={28} color={COLORS.gray400} />

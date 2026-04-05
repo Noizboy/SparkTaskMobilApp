@@ -18,6 +18,7 @@ import { WeekCalendarStrip } from '../components/WeekCalendarStrip';
 import { HomeJobCard } from '../components/HomeJobCard';
 import { InProgressJobCard } from '../components/InProgressJobCard';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
+import { HomeScreenSkeleton } from '../components/SkeletonLoader';
 import { RootStackParamList, MainTabParamList } from '../types';
 import { toDateString, isFutureOrToday } from '../utils/dateUtils';
 
@@ -28,7 +29,7 @@ export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const tabNavigation = useNavigation<TabNav>();
   const insets = useSafeAreaInsets();
-  const { jobs, profileImage, unreadCount } = useApp();
+  const { jobs, jobsLoaded, profileImage, unreadCount } = useApp();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -58,6 +59,14 @@ export function HomeScreen() {
   const handleDayPress = (date: string) => {
     navigation.navigate('DayJobs', { date });
   };
+
+  if (!jobsLoaded) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <HomeScreenSkeleton />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>

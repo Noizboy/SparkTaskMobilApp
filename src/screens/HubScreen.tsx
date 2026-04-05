@@ -25,6 +25,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
+import { HubScreenSkeleton } from '../components/SkeletonLoader';
 import { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -77,7 +78,7 @@ function getMonthStart(d: Date): Date {
 export function HubScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { jobs, reviews } = useApp();
+  const { jobs, jobsLoaded, reviews } = useApp();
   const [period, setPeriod] = useState<Period>('week');
 
   const now = new Date();
@@ -222,6 +223,14 @@ export function HubScreen() {
     { key: 'month', label: 'This Month' },
     { key: 'all', label: 'All Time' },
   ];
+
+  if (!jobsLoaded) {
+    return (
+      <View style={[s.root, { paddingTop: insets.top }]}>
+        <HubScreenSkeleton />
+      </View>
+    );
+  }
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
