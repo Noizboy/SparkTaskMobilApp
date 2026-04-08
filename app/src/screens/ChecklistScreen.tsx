@@ -409,7 +409,7 @@ function AddOnsCard({ addOns, jobId }: AddOnsCardProps) {
 
   const handleMarkAll = () => {
     addOns.forEach((a) => {
-      if (!a.selected) toggleAddOn(jobId, a.id);
+      if (allSelected ? a.selected : !a.selected) toggleAddOn(jobId, a.id);
     });
   };
 
@@ -420,7 +420,6 @@ function AddOnsCard({ addOns, jobId }: AddOnsCardProps) {
           onPress={handleMarkAll}
           style={[sectionStyles.checkBtn, allSelected && sectionStyles.checkBtnDone]}
           activeOpacity={0.7}
-          disabled={allSelected}
         >
           {allSelected ? (
             <CheckCircle2 size={22} color={COLORS.white} />
