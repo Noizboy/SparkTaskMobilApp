@@ -8,6 +8,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { getAddons, createAddon, updateAddon, deleteAddon, Addon } from '../../data/mockAddons';
 
 export type { Addon } from '../../data/mockAddons';
@@ -29,14 +30,18 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
   const [newAddonData, setNewAddonData] = useState({
     name: '',
     description: '',
-    estimatedTime: '',
+    estimatedDuration: 0,
   });
+  const [durationValue, setDurationValue] = useState<number | ''>(0);
+  const [durationUnit, setDurationUnit] = useState<'minutes' | 'hours'>('minutes');
   const [errors, setErrors] = useState({
     name: '',
-    estimatedTime: '',
+    estimatedDuration: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const resetDurationUI = () => { setDurationValue(0); setDurationUnit('minutes'); };
 
   const handleCreateAddon = async () => {
     let hasErrors = false;
@@ -46,11 +51,11 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
     } else {
       setErrors(prev => ({ ...prev, name: '' }));
     }
-    if (!newAddonData.estimatedTime) {
-      setErrors(prev => ({ ...prev, estimatedTime: 'Please fill in the estimated time' }));
+    if (!newAddonData.estimatedDuration) {
+      setErrors(prev => ({ ...prev, estimatedDuration: 'Please fill in the estimated duration' }));
       hasErrors = true;
     } else {
-      setErrors(prev => ({ ...prev, estimatedTime: '' }));
+      setErrors(prev => ({ ...prev, estimatedDuration: '' }));
     }
     if (hasErrors) return;
 
@@ -65,8 +70,9 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
       }
       setAddons(getAddons());
       setIsCreateDialogOpen(false);
-      setNewAddonData({ name: '', description: '', estimatedTime: '' });
-      setErrors({ name: '', estimatedTime: '' });
+      setNewAddonData({ name: '', description: '', estimatedDuration: 0 });
+      setErrors({ name: '', estimatedDuration: '' });
+      resetDurationUI();
     } catch (err) {
       setError('Failed to create addon');
     } finally {
@@ -76,10 +82,18 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
 
   const handleEditAddon = (addon: Addon) => {
     setEditingAddon(addon);
+    const stored = addon.estimatedDuration ?? 0;
+    if (stored >= 60 && stored % 60 === 0) {
+      setDurationValue(stored / 60);
+      setDurationUnit('hours');
+    } else {
+      setDurationValue(stored || '');
+      setDurationUnit('minutes');
+    }
     setNewAddonData({
       name: addon.name,
       description: addon.description,
-      estimatedTime: addon.estimatedTime,
+      estimatedDuration: stored,
     });
   };
 
@@ -91,11 +105,11 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
     } else {
       setErrors(prev => ({ ...prev, name: '' }));
     }
-    if (!editingAddon || !newAddonData.estimatedTime) {
-      setErrors(prev => ({ ...prev, estimatedTime: 'Please fill in the estimated time' }));
+    if (!editingAddon || !newAddonData.estimatedDuration) {
+      setErrors(prev => ({ ...prev, estimatedDuration: 'Please fill in the estimated duration' }));
       hasErrors = true;
     } else {
-      setErrors(prev => ({ ...prev, estimatedTime: '' }));
+      setErrors(prev => ({ ...prev, estimatedDuration: '' }));
     }
     if (hasErrors) return;
 
@@ -110,8 +124,9 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
       }
       setAddons(getAddons());
       setEditingAddon(null);
-      setNewAddonData({ name: '', description: '', estimatedTime: '' });
-      setErrors({ name: '', estimatedTime: '' });
+      setNewAddonData({ name: '', description: '', estimatedDuration: 0 });
+      setErrors({ name: '', estimatedDuration: '' });
+      resetDurationUI();
     } catch (err) {
       setError('Failed to update addon');
     } finally {
@@ -168,7 +183,15 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-gray-900 font-medium">{addon.name}</h3>
                     <Badge className="bg-[#033620] text-white shadow-sm">
-                      {addon.estimatedTime}
+                      {(() => {
+                        const h = Math.floor(addon.estimatedDuration / 60);
+                        const m = addon.estimatedDuration % 60;
+                        return h > 0 && m > 0
+                          ? `${h} ${h === 1 ? 'hour' : 'hours'} ${m} min`
+                          : h > 0
+                          ? `${h} ${h === 1 ? 'hour' : 'hours'}`
+                          : `${m} min`;
+                      })()}
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-500">{addon.description}</p>
@@ -192,8 +215,9 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
         if (!open) {
           setIsCreateDialogOpen(false);
           setEditingAddon(null);
-          setNewAddonData({ name: '', description: '', estimatedTime: '' });
-          setErrors({ name: '', estimatedTime: '' });
+          setNewAddonData({ name: '', description: '', estimatedDuration: 0 });
+          setErrors({ name: '', estimatedDuration: '' });
+          resetDurationUI();
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" aria-describedby="addon-dialog-description">
@@ -232,17 +256,41 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="addonTime">
-                Estimated Time <span className="text-red-500">*</span>
+              <Label htmlFor="addonDuration">
+                Estimated Duration <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="addonTime"
-                placeholder="e.g: 15 min"
-                value={newAddonData.estimatedTime}
-                onChange={(e) => setNewAddonData({ ...newAddonData, estimatedTime: e.target.value })}
-                className="shadow-sm"
-              />
-              {errors.estimatedTime && <p className="text-red-500 text-sm">{errors.estimatedTime}</p>}
+              <div className="flex gap-2">
+                <Input
+                  id="addonDuration"
+                  type="number"
+                  min={1}
+                  placeholder="e.g: 30"
+                  value={durationValue === 0 ? '' : durationValue}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1);
+                    setDurationValue(val);
+                    setNewAddonData({ ...newAddonData, estimatedDuration: val === '' ? 0 : durationUnit === 'hours' ? (val as number) * 60 : (val as number) });
+                  }}
+                  className="shadow-sm flex-1"
+                />
+                <Select
+                  value={durationUnit}
+                  onValueChange={(unit: 'minutes' | 'hours') => {
+                    setDurationUnit(unit);
+                    const val = typeof durationValue === 'number' && durationValue > 0 ? durationValue : 0;
+                    setNewAddonData({ ...newAddonData, estimatedDuration: unit === 'hours' ? val * 60 : val });
+                  }}
+                >
+                  <SelectTrigger className="w-32 shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minutes">Minutes</SelectItem>
+                    <SelectItem value="hours">Hours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {errors.estimatedDuration && <p className="text-red-500 text-sm">{errors.estimatedDuration}</p>}
             </div>
           </div>
 
@@ -250,8 +298,9 @@ export function AddonsPage({ user, addons: externalAddons, onCreateAddon: extern
             <Button variant="outline" onClick={() => {
               setIsCreateDialogOpen(false);
               setEditingAddon(null);
-              setNewAddonData({ name: '', description: '', estimatedTime: '' });
-              setErrors({ name: '', estimatedTime: '' });
+              setNewAddonData({ name: '', description: '', estimatedDuration: 0 });
+              setErrors({ name: '', estimatedDuration: '' });
+              resetDurationUI();
             }}>
               Cancel
             </Button>

@@ -13,7 +13,7 @@ export interface Section {
   afterPhotos: string[];
   todos: Todo[];
   skipReason?: string;
-  estimatedTime?: string;
+  estimatedTime?: number;
 }
 
 export interface AddOn {

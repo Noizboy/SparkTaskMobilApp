@@ -322,7 +322,6 @@ const styles = StyleSheet.create({
   },
   addressLink: {
     color: COLORS.primary,
-    textDecorationLine: 'underline',
   },
   phoneRow: {
     flexDirection: 'row',

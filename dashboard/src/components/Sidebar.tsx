@@ -93,9 +93,9 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            // Mark Orders as active when on order-detail page
+            // Mark Orders as active when on order-related pages
             const isActive = currentPage === item.id || 
-                           (item.id === 'orders' && currentPage === 'order-detail');
+                           (item.id === 'orders' && ['order-detail', 'create-order'].includes(currentPage));
             
             return (
               <button
@@ -252,9 +252,9 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            // Mark Orders as active when on order-detail page
+            // Mark Orders as active when on order-related pages
             const isActive = currentPage === item.id || 
-                           (item.id === 'orders' && currentPage === 'order-detail');
+                           (item.id === 'orders' && ['order-detail', 'create-order'].includes(currentPage));
             
             return (
               <button

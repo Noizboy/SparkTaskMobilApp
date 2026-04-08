@@ -100,7 +100,7 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
 
   const handleLinkEmployee = async () => {
     if (!linkEmail) {
-      setError('Please enter an employee email');
+      setError('Please enter a member email');
       return;
     }
     setIsLoading(true);
@@ -122,7 +122,7 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
       setLinkEmail('');
       setIsLinkDialogOpen(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to link employee');
+      setError(err.message || 'Failed to link member');
     } finally {
       setIsLoading(false);
     }
@@ -236,7 +236,7 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
           <p className="text-sm text-gray-500 mb-6 max-w-sm">
             {searchQuery
               ? 'Try a different search term.'
-              : 'Invite or link employees to start building your team.'}
+              : 'Invite or link members to start building your team.'}
           </p>
           {!searchQuery && (
             <div className="flex gap-2">
@@ -309,11 +309,11 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="inviteEmail">Employee email</Label>
+              <Label htmlFor="inviteEmail">Member email</Label>
               <Input
                 id="inviteEmail"
                 type="email"
-                placeholder="employee@email.com"
+                placeholder="member@email.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 className="shadow-sm"
@@ -326,7 +326,7 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
 
             {inviteLink && (
               <div className="space-y-2">
-                <Label>Invitation link (share with employee)</Label>
+                <Label>Invitation link (share with member)</Label>
                 <div className="flex gap-2">
                   <Input value={inviteLink} readOnly className="flex-1 shadow-sm text-xs" />
                   <Button
@@ -355,23 +355,23 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
         </DialogContent>
       </Dialog>
 
-      {/* Link Existing Employee Dialog */}
+      {/* Link Existing Member Dialog */}
       <Dialog open={isLinkDialogOpen} onOpenChange={(open) => { setIsLinkDialogOpen(open); if (!open) { setLinkEmail(''); setError(null); } }}>
         <DialogContent className="shadow-xl" aria-describedby="link-dialog-description">
           <DialogHeader>
-            <DialogTitle>Link Existing Employee</DialogTitle>
+            <DialogTitle>Link Existing Member</DialogTitle>
             <DialogDescription id="link-dialog-description">
-              Link an existing employee account to your business by their email address.
+              Link an existing member account to your business by their email address.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="linkEmail">Employee email</Label>
+              <Label htmlFor="linkEmail">Member email</Label>
               <Input
                 id="linkEmail"
                 type="email"
-                placeholder="employee@email.com"
+                placeholder="member@email.com"
                 value={linkEmail}
                 onChange={(e) => setLinkEmail(e.target.value)}
                 className="shadow-sm"
@@ -385,7 +385,7 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
               Cancel
             </Button>
             <Button onClick={handleLinkEmployee} disabled={isLoading} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-              {isLoading ? 'Linking…' : 'Link Employee'}
+              {isLoading ? 'Linking…' : 'Link Member'}
             </Button>
           </DialogFooter>
         </DialogContent>

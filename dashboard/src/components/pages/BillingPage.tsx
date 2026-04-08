@@ -12,7 +12,7 @@ const plans = [
     description: 'Perfect to get started',
     features: [
       'Up to 50 orders/month',
-      '5 employees',
+      '5 members',
       'Basic checklists',
       'Email support',
     ],
@@ -25,7 +25,7 @@ const plans = [
     description: 'For growing teams',
     features: [
       'Unlimited orders',
-      '15 employees',
+      '15 members',
       'Custom checklists',
       'Unlimited add-ons',
       'Priority support',
@@ -41,7 +41,7 @@ const plans = [
     description: 'For large companies',
     features: [
       'Everything in Professional',
-      'Unlimited employees',
+      'Unlimited members',
       'Multi-location',
       'API access',
       '24/7 support',

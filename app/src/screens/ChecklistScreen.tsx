@@ -54,6 +54,16 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { RootStackParamList } from '../types';
 
+/** Format minutes into a human-readable duration string */
+function formatEstimatedTime(minutes: number): string {
+  if (minutes <= 0) return '';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m} min`;
+}
+
 type Route = RouteProp<RootStackParamList, 'Checklist'>;
 type TabFilter = 'pending' | 'in-progress' | 'completed';
 
@@ -311,10 +321,10 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
       {isExpanded && !section.skipReason && (
         <View style={sectionStyles.body}>
           {/* Estimated time */}
-          {section.estimatedTime && (
+          {section.estimatedTime != null && section.estimatedTime > 0 && (
             <View style={sectionStyles.estimatedRow}>
               <Clock size={13} color={COLORS.primary} />
-              <Text style={sectionStyles.estimatedTime}>{t('estimatedTime')}: {section.estimatedTime}</Text>
+              <Text style={sectionStyles.estimatedTime}>{t('estimatedTime')}: {formatEstimatedTime(section.estimatedTime)}</Text>
             </View>
           )}
 
@@ -831,7 +841,7 @@ export function ChecklistScreen() {
                   <View style={settingsStyles.infoRowIcon}>
                     <MapPin size={15} color={COLORS.primary} />
                   </View>
-                  <Text style={[settingsStyles.infoRowText, { color: COLORS.primary, textDecorationLine: 'underline' }]}>{job.address}</Text>
+                  <Text style={[settingsStyles.infoRowText, { color: COLORS.primary }]}>{job.address}</Text>
                 </TouchableOpacity>
 
                 {job.specialInstructions && (

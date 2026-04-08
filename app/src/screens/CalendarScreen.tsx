@@ -105,6 +105,7 @@ export function CalendarScreen() {
               onMonthChange={(month: any) => setCurrentMonth(`${month.year}-${String(month.month).padStart(2, '0')}-01`)}
               markingType="dot"
               markedDates={markedDates}
+              style={{ paddingBottom: 15 }}
               theme={{
                 backgroundColor: COLORS.white,
                 calendarBackground: COLORS.white,

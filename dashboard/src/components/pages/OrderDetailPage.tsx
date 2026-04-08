@@ -3,7 +3,6 @@ import * as api from '../../services/api';
 import { getServiceTypes } from '../../data/mockServiceTypes';
 import { getAreas, getAreaByName } from '../../data/mockAreas';
 import { getAddons } from '../../data/mockAddons';
-import { getTeamMembers } from '../../data/mockTeamMembers';
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -13,6 +12,7 @@ import { Textarea } from '../ui/textarea';
 import { Progress } from '../ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
@@ -35,17 +35,25 @@ import {
   IconKey,
   IconChevronDown,
   IconChevronUp,
-  IconSelector
+  IconSelector,
+  IconAlertTriangle
 } from '@tabler/icons-react';
+
+interface TeamMember {
+  id: string;
+  name: string;
+  role?: string;
+}
 
 interface OrderDetailPageProps {
   order: Order;
   onBack: () => void;
-  onUpdateOrder?: (updatedOrder: Order) => void;
+  onUpdateOrder?: (updatedOrder: Order) => Promise<void> | void;
   onDeleteOrder?: (orderId: string) => void;
+  teamMembers?: TeamMember[];
 }
 
-export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }: OrderDetailPageProps) {
+export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder, teamMembers = [] }: OrderDetailPageProps) {
   // Local state for the current order data
   const [currentOrder, setCurrentOrder] = useState<Order>(order);
   
@@ -104,6 +112,8 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
   const [isServiceDetailsOpen, setIsServiceDetailsOpen] = useState(true);
   const [isTaskChecklistOpen, setIsTaskChecklistOpen] = useState(false);
   
+  const [conflictError, setConflictError] = useState<string | null>(null);
+
   // Popover states for dropdowns
   const [openServiceType, setOpenServiceType] = useState(false);
   const [openAreas, setOpenAreas] = useState(false);
@@ -172,9 +182,13 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
     setEditedEmployees(editedEmployees.filter(e => e !== employee));
   };
 
-  const handleSaveEmployees = () => {
+  const handleSaveEmployees = async () => {
     if (onUpdateOrder) {
-      onUpdateOrder({ ...currentOrder, assignedEmployees: editedEmployees });
+      try {
+        await onUpdateOrder({ ...currentOrder, assignedEmployees: editedEmployees });
+      } catch (err: any) {
+        setConflictError(err.message || 'Failed to update assigned members.');
+      }
     }
   };
 
@@ -695,7 +709,7 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
               <Card className="shadow-md">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Notes</CardTitle>
+                    <CardTitle>Customer Notes</CardTitle>
                     {!isEditingNotes && canEdit && (
                       <Button
                         variant="ghost"
@@ -981,19 +995,25 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
                           <CommandList>
                             <CommandEmpty>No member found.</CommandEmpty>
                             <CommandGroup>
-                              {getTeamMembers()
+                              {teamMembers
                                 .filter(member => !editedEmployees.includes(member.name))
                                 .map((member) => (
                                   <CommandItem
                                     key={member.id}
                                     value={member.name}
-                                    onSelect={(currentValue) => {
+                                    onSelect={async (currentValue) => {
                                       const newEmployees = [...editedEmployees, currentValue];
                                       setEditedEmployees(newEmployees);
-                                      if (onUpdateOrder) {
-                                        onUpdateOrder({ ...currentOrder, assignedEmployees: newEmployees });
-                                      }
                                       setOpenMembers(false);
+                                      if (onUpdateOrder) {
+                                        try {
+                                          await onUpdateOrder({ ...currentOrder, assignedEmployees: newEmployees });
+                                        } catch (err: any) {
+                                          // Revert optimistic update
+                                          setEditedEmployees(editedEmployees);
+                                          setConflictError(err.message || 'Failed to assign member.');
+                                        }
+                                      }
                                     }}
                                   >
                                     <div className="flex items-center gap-2">
@@ -1004,7 +1024,7 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
                                       </div>
                                       <div className="flex flex-col">
                                         <span className="text-sm">{member.name}</span>
-                                        <span className="text-xs text-gray-500">{member.role}</span>
+                                        <span className="text-xs text-gray-500">{member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : ''}</span>
                                       </div>
                                     </div>
                                   </CommandItem>
@@ -1028,11 +1048,16 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
                         <span className="text-sm text-gray-900">{employee}</span>
                         {canEdit && (
                           <Button
-                            onClick={() => {
+                            onClick={async () => {
                               const newEmployees = editedEmployees.filter(e => e !== employee);
                               setEditedEmployees(newEmployees);
                               if (onUpdateOrder) {
-                                onUpdateOrder({ ...currentOrder, assignedEmployees: newEmployees });
+                                try {
+                                  await onUpdateOrder({ ...currentOrder, assignedEmployees: newEmployees });
+                                } catch (err: any) {
+                                  setEditedEmployees(editedEmployees);
+                                  setConflictError(err.message || 'Failed to remove member.');
+                                }
                               }
                             }}
                             variant="ghost"
@@ -1172,6 +1197,26 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule / assignment conflict modal */}
+      <Dialog open={!!conflictError} onOpenChange={() => setConflictError(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <IconAlertTriangle className="w-5 h-5" />
+              Assignment Conflict
+            </DialogTitle>
+            <DialogDescription className="text-gray-700 pt-2">
+              {conflictError}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button className="bg-[#033620] hover:bg-[#022819] text-white" onClick={() => setConflictError(null)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

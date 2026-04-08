@@ -36,7 +36,7 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
             {getStatusBadge(order.status)}
           </div>
           <DialogDescription>
-            View detailed information about this cleaning order including customer details, service information, assigned employees, and progress.
+            View detailed information about this cleaning order including customer details, service information, assigned members, and progress.
           </DialogDescription>
         </DialogHeader>
 
@@ -104,10 +104,10 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
             </CardContent>
           </Card>
 
-          {/* Assigned Employees */}
+          {/* Assigned Members */}
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-sm">Assigned Employees</CardTitle>
+              <CardTitle className="text-sm">Assigned Members</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2 flex-wrap">
@@ -209,7 +209,7 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <IconMessageCircle className="w-4 h-4" />
-                    Special Instructions
+                    Customer Notes
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

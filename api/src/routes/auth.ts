@@ -38,7 +38,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      'SELECT id, email, name, company, role, phone, avatar_url, password FROM users WHERE email = $1',
+      'SELECT id, email, name, company, role, phone, avatar_url, company_phone, address, city, zip_code, password FROM users WHERE email = $1',
       [email]
     );
 
@@ -172,6 +172,38 @@ authRouter.post('/register-with-invite', async (req: Request, res: Response) => 
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('POST /auth/register-with-invite error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── POST /auth/change-password ───────────────────────────────────────────────
+authRouter.post('/change-password', async (req: Request, res: Response) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'userId, currentPassword, and newPassword are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const result = await pool.query('SELECT password FROM users WHERE id = $1', [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const match = await bcrypt.compare(currentPassword, result.rows[0].password);
+    if (!match) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, userId]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('POST /auth/change-password error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -113,7 +113,7 @@ export function OrderDetailSkeleton() {
               </CardContent>
             </Card>
 
-            {/* Assigned Employees */}
+            {/* Assigned Members */}
             <Card className="shadow-md">
               <CardHeader>
                 <Skeleton className="h-6 w-44" />

@@ -87,34 +87,69 @@ export function ProfileScreen() {
       Alert.alert(t('error'), 'Session expired. Please log out and log back in.');
       return;
     }
+    if (!currentUser.id) {
+      Alert.alert(t('error'), 'User ID missing. Please log out and log back in.');
+      return;
+    }
     try {
-      const updated = { ...currentUser, phone };
-      setCurrentUser(updated);
-      await storage.setJSON('currentUser', updated);
-      const res = await fetch(`${API_BASE}/users/${currentUser.id}`, {
+      const url = `${API_BASE}/users/${currentUser.id}`;
+      console.log('[API] PATCH phone →', url, { phone });
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      console.log('[API] PATCH phone ←', res.status);
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`HTTP ${res.status}: ${body}`);
+      }
+      const updated = { ...currentUser, phone };
+      setCurrentUser(updated);
+      await storage.setJSON('currentUser', updated);
     } catch (err: any) {
       console.error('[API] updatePhone failed:', err);
-      Alert.alert(t('error'), 'Could not save phone number. Check your connection.');
+      Alert.alert(t('error'), `Could not save phone number.\n\n${err.message}`);
+      return;
     }
     setIsEditingPhone(false);
   };
 
-  const handleChangePwd = () => {
-    if (newPwd === confirmPwd && newPwd.length >= 6) {
+  const handleChangePwd = async () => {
+    if (newPwd !== confirmPwd) {
+      Alert.alert(t('error'), t('passwordsNoMatch'));
+      return;
+    }
+    if (newPwd.length < 6) {
+      Alert.alert(t('error'), t('passwordTooShort'));
+      return;
+    }
+    if (!currentUser?.id) {
+      Alert.alert(t('error'), 'Session expired. Please log out and log back in.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          currentPassword: currentPwd,
+          newPassword: newPwd,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert(t('error'), data.error || 'Failed to change password.');
+        return;
+      }
       setIsChangingPwd(false);
       setCurrentPwd('');
       setNewPwd('');
       setConfirmPwd('');
       Alert.alert(t('success'), t('passwordUpdated'));
-    } else if (newPwd !== confirmPwd) {
-      Alert.alert(t('error'), t('passwordsNoMatch'));
-    } else {
-      Alert.alert(t('error'), t('passwordTooShort'));
+    } catch (err) {
+      Alert.alert(t('error'), 'Could not connect to server. Check your connection.');
     }
   };
 

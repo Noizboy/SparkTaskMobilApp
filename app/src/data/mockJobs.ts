@@ -23,7 +23,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '45 min',
+        estimatedTime: 45,
         todos: [
           { id: 'k1', text: 'Wipe down countertops and backsplash', completed: false },
           { id: 'k2', text: 'Clean stovetop and exterior of appliances', completed: false },
@@ -39,7 +39,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'b1', text: 'Clean and sanitize toilet', completed: false },
           { id: 'b2', text: 'Clean shower/tub and tiles', completed: false },
@@ -54,7 +54,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'br1', text: 'Change bed linens', completed: false },
           { id: 'br2', text: 'Dust all surfaces', completed: false },
@@ -69,7 +69,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '25 min',
+        estimatedTime: 25,
         todos: [
           { id: 'l1', text: 'Dust all surfaces and shelves', completed: false },
           { id: 'l2', text: 'Vacuum sofa and cushions', completed: false },
@@ -106,7 +106,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'k21', text: 'Wipe countertops', completed: false },
           { id: 'k22', text: 'Clean sink', completed: false },
@@ -120,7 +120,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '20 min',
+        estimatedTime: 20,
         todos: [
           { id: 'b21', text: 'Sanitize toilet', completed: false },
           { id: 'b22', text: 'Clean shower', completed: false },
@@ -154,7 +154,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '1h',
+        estimatedTime: 60,
         todos: [
           { id: 'k31', text: 'Deep clean all appliances', completed: false },
           { id: 'k32', text: 'Clean inside cabinets', completed: false },
@@ -170,7 +170,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '45 min',
+        estimatedTime: 45,
         todos: [
           { id: 'b31', text: 'Deep clean toilet inside and out', completed: false },
           { id: 'b32', text: 'Remove soap scum from shower', completed: false },
@@ -185,7 +185,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'br31', text: 'Clean inside closets', completed: false },
           { id: 'br32', text: 'Dust all surfaces', completed: false },
@@ -221,7 +221,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '35 min',
+        estimatedTime: 35,
         todos: [
           { id: 'k61', text: 'Wipe countertops and backsplash', completed: false },
           { id: 'k62', text: 'Clean stovetop', completed: false },
@@ -236,7 +236,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '25 min',
+        estimatedTime: 25,
         todos: [
           { id: 'b61', text: 'Sanitize toilet', completed: false },
           { id: 'b62', text: 'Clean shower and tiles', completed: false },
@@ -271,7 +271,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '50 min',
+        estimatedTime: 50,
         todos: [
           { id: 'k71', text: 'Deep clean appliances exterior', completed: false },
           { id: 'k72', text: 'Scrub countertops', completed: false },
@@ -287,7 +287,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '40 min',
+        estimatedTime: 40,
         todos: [
           { id: 'b71', text: 'Scrub toilet inside and out', completed: false },
           { id: 'b72', text: 'Clean shower and glass door', completed: false },
@@ -303,7 +303,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'br71', text: 'Change bed linens', completed: false },
           { id: 'br72', text: 'Dust all surfaces', completed: false },
@@ -317,7 +317,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '25 min',
+        estimatedTime: 25,
         todos: [
           { id: 'l71', text: 'Dust surfaces and shelves', completed: false },
           { id: 'l72', text: 'Vacuum sofa', completed: false },
@@ -351,7 +351,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'k81', text: 'Wipe countertops', completed: false },
           { id: 'k82', text: 'Clean sink', completed: false },
@@ -365,7 +365,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '20 min',
+        estimatedTime: 20,
         todos: [
           { id: 'b81', text: 'Sanitize toilet', completed: false },
           { id: 'b82', text: 'Clean shower', completed: false },
@@ -379,7 +379,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '20 min',
+        estimatedTime: 20,
         todos: [
           { id: 'l81', text: 'Dust surfaces', completed: false },
           { id: 'l82', text: 'Vacuum floor', completed: false },
@@ -409,7 +409,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '55 min',
+        estimatedTime: 55,
         todos: [
           { id: 'k91', text: 'Deep clean all appliances', completed: false },
           { id: 'k92', text: 'Wipe inside cabinets', completed: false },
@@ -425,7 +425,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '40 min',
+        estimatedTime: 40,
         todos: [
           { id: 'b91', text: 'Disinfect toilet', completed: false },
           { id: 'b92', text: 'Scrub shower and tub', completed: false },
@@ -441,7 +441,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'br91', text: 'Wipe inside closets', completed: false },
           { id: 'br92', text: 'Dust all surfaces', completed: false },
@@ -476,7 +476,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'k41', text: 'Wipe down countertops', completed: true },
           { id: 'k42', text: 'Clean stovetop', completed: true },
@@ -491,7 +491,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '25 min',
+        estimatedTime: 25,
         todos: [
           { id: 'b41', text: 'Sanitize toilet', completed: false },
           { id: 'b42', text: 'Clean shower', completed: false },
@@ -506,7 +506,7 @@ export const mockJobs: Job[] = [
         completed: false,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '20 min',
+        estimatedTime: 20,
         todos: [
           { id: 'l41', text: 'Dust surfaces', completed: false },
           { id: 'l42', text: 'Vacuum floor and sofa', completed: false },
@@ -540,7 +540,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '45 min',
+        estimatedTime: 45,
         todos: [
           { id: 'k51', text: 'Wipe down countertops', completed: true },
           { id: 'k52', text: 'Clean stovetop', completed: true },
@@ -555,7 +555,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'b51', text: 'Sanitize toilet', completed: true },
           { id: 'b52', text: 'Clean shower', completed: true },
@@ -588,7 +588,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '15 min',
+        estimatedTime: 15,
         todos: [
           { id: 'k101', text: 'Wipe countertops', completed: true },
           { id: 'k102', text: 'Clean sink', completed: true },
@@ -602,7 +602,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '15 min',
+        estimatedTime: 15,
         todos: [
           { id: 'b101', text: 'Clean toilet', completed: true },
           { id: 'b102', text: 'Wipe mirror', completed: true },
@@ -631,7 +631,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '20 min',
+        estimatedTime: 20,
         todos: [
           { id: 'k111', text: 'Wipe countertops and backsplash', completed: true },
           { id: 'k112', text: 'Clean stovetop', completed: true },
@@ -646,7 +646,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '20 min',
+        estimatedTime: 20,
         todos: [
           { id: 'b111', text: 'Sanitize toilet', completed: true },
           { id: 'b112', text: 'Clean shower', completed: true },
@@ -661,7 +661,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '15 min',
+        estimatedTime: 15,
         todos: [
           { id: 'br111', text: 'Change bed linens', completed: true },
           { id: 'br112', text: 'Dust furniture', completed: true },
@@ -692,7 +692,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '30 min',
+        estimatedTime: 30,
         todos: [
           { id: 'k121', text: 'Deep clean oven interior', completed: true },
           { id: 'k122', text: 'Clean inside cabinets', completed: true },
@@ -708,7 +708,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '25 min',
+        estimatedTime: 25,
         todos: [
           { id: 'b121', text: 'Deep clean toilet', completed: true },
           { id: 'b122', text: 'Scrub shower tiles', completed: true },
@@ -723,7 +723,7 @@ export const mockJobs: Job[] = [
         completed: true,
         beforePhotos: [],
         afterPhotos: [],
-        estimatedTime: '20 min',
+        estimatedTime: 20,
         todos: [
           { id: 'l121', text: 'Dust all surfaces', completed: true },
           { id: 'l122', text: 'Clean windows interior', completed: true },

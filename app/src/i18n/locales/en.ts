@@ -136,9 +136,9 @@ export default {
   // Job Info
   startJob: 'Start Job',
   goal: 'Goal',
-  specialInstructions: 'Special Instructions',
+  specialInstructions: 'Customer Notes',
   accessInfo: 'Access Info',
-  availableAddOns: 'Available Add-ons',
+  availableAddOns: 'Add-ons',
   jobInProgress: 'Job in progress',
   mustCompleteFirst: 'You must complete Order #{{orderNumber}} before starting a new job.',
 

@@ -45,6 +45,7 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [apiOnline, setApiOnline] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [services, setServices] = useState<api.ServiceAPI[]>([]);
+  const [teamMembers, setTeamMembers] = useState<api.TeamMemberAPI[]>([]);
 
   // Check API health and load orders
   const loadOrders = useCallback(async () => {
@@ -70,10 +71,20 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
     }
   }, [user?.id]);
 
+  const loadTeamMembers = useCallback(async () => {
+    try {
+      const data = await api.fetchTeamMembers();
+      setTeamMembers(data);
+    } catch {
+      console.warn('Failed to load team members');
+    }
+  }, []);
+
   useEffect(() => {
     loadOrders();
     loadServices();
-  }, [loadOrders, loadServices]);
+    loadTeamMembers();
+  }, [loadOrders, loadServices, loadTeamMembers]);
 
   // Real-time updates via SSE — no polling, no F5 needed
   useSSE({
@@ -112,13 +123,9 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   };
 
   const handleUpdateOrder = async (updatedOrder: Order) => {
-    try {
-      const saved = await api.updateOrder(updatedOrder.id, updatedOrder);
-      setSelectedOrder(saved);
-      setOrders(prev => prev.map(o => o.id === saved.id ? saved : o));
-    } catch (err) {
-      console.error('Failed to update order:', err);
-    }
+    const saved = await api.updateOrder(updatedOrder.id, updatedOrder);
+    setSelectedOrder(saved);
+    setOrders(prev => prev.map(o => o.id === saved.id ? saved : o));
   };
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -154,14 +161,14 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
         return <OverviewPage user={user} onNavigate={setCurrentPage} onViewOrder={handleNavigateToOrderDetail} orders={orders} />;
       case 'orders':
         if (ordersLoading) return <OrdersSkeleton />;
-        return <OrdersPage user={user} onViewOrder={handleNavigateToOrderDetail} onNavigate={setCurrentPage} orders={orders} />;
+        return <OrdersPage user={user} onViewOrder={handleNavigateToOrderDetail} onNavigate={setCurrentPage} orders={orders} teamMembers={teamMembers} />
       case 'create-order':
-        return <CreateOrderPage onBack={() => setCurrentPage('orders')} onOrderCreated={() => console.log('Order created!')} />;
+        return <CreateOrderPage onBack={() => setCurrentPage('orders')} onOrderCreated={() => { loadOrders(); setCurrentPage('orders'); }} teamMembers={teamMembers} />;
       case 'order-detail':
         if (!selectedOrder) {
           return <OrderDetailSkeleton />;
         }
-        return <OrderDetailPage order={selectedOrder} onBack={handleBackFromOrderDetail} onUpdateOrder={handleUpdateOrder} onDeleteOrder={handleDeleteOrder} />;
+        return <OrderDetailPage order={selectedOrder} onBack={handleBackFromOrderDetail} onUpdateOrder={handleUpdateOrder} onDeleteOrder={handleDeleteOrder} teamMembers={teamMembers} />;
       case 'team':
         return <TeamMembersPage user={user} />;
       case 'checklist':

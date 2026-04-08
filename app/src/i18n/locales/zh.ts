@@ -136,9 +136,9 @@ export default {
   // Job Info
   startJob: '开始工作',
   goal: '目标',
-  specialInstructions: '特殊说明',
+  specialInstructions: '客户备注',
   accessInfo: '访问信息',
-  availableAddOns: '可用附加服务',
+  availableAddOns: 'Add-ons',
   jobInProgress: '工作进行中',
   mustCompleteFirst: '您必须先完成订单 #{{orderNumber}} 才能开始新工作。',
 

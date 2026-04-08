@@ -161,7 +161,7 @@ export function DateRangePicker({
 
         <PopoverContent
           className="w-auto p-0 shadow-xl border border-gray-200 rounded-2xl overflow-hidden bg-white"
-          align="start"
+          align="end"
         >
           <div className="flex items-start px-3 pt-4 pb-2 gap-2">
             {/* ← */}

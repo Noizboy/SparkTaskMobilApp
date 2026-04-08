@@ -81,7 +81,7 @@ function CustomTabBar({ state, navigation }: CustomTabBarProps) {
           return (
             <TouchableOpacity
               key={tab.key}
-              onPress={() => navigation.navigate(tab.key)}
+              onPress={() => { if (!isActive) navigation.navigate(tab.key); }}
               style={[styles.tabItem, isActive && styles.tabItemActive]}
               activeOpacity={0.7}
             >

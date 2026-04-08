@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { IconPlus, IconTrash, IconMenu2 } from '@tabler/icons-react';
@@ -9,12 +9,14 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { getAreas, createArea, updateArea, deleteArea, Area } from '../../data/mockAreas';
+import { fetchAreas, createArea as apiCreateArea, updateArea as apiUpdateArea, deleteArea as apiDeleteArea, AreaAPI } from '../../services/api';
 
 export function ChecklistManagementPage({ user }: { user: any }) {
-  const [areas, setAreas] = useState<Area[]>(getAreas());
+  const [areas, setAreas] = useState<AreaAPI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingArea, setEditingArea] = useState<Area | null>(null);
+  const [editingArea, setEditingArea] = useState<AreaAPI | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [areaToDelete, setAreaToDelete] = useState<string | null>(null);
   const [newAreaData, setNewAreaData] = useState({
@@ -32,7 +34,23 @@ export function ChecklistManagementPage({ user }: { user: any }) {
 
   const resetDurationUI = () => { setDurationValue(0); setDurationUnit('minutes'); };
 
-  const handleCreateArea = () => {
+  const loadAreas = useCallback(async () => {
+    try {
+      setLoading(true);
+      setLoadError(null);
+      const data = await fetchAreas();
+      setAreas(data);
+    } catch (err: any) {
+      console.error('Failed to load areas:', err);
+      setLoadError(err.message || 'Failed to load areas. Please try logging out and back in.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAreas(); }, [loadAreas]);
+
+  const handleCreateArea = async () => {
     let hasErrors = false;
     if (!newAreaData.name) {
       setErrors(prev => ({ ...prev, name: 'Area name is required' }));
@@ -49,15 +67,19 @@ export function ChecklistManagementPage({ user }: { user: any }) {
     if (hasErrors) return;
 
     const filteredChecklist = newAreaData.checklist.filter(item => item.trim());
-    createArea({ ...newAreaData, checklist: filteredChecklist });
-    setAreas(getAreas());
+    try {
+      await apiCreateArea({ name: newAreaData.name, estimatedDuration: newAreaData.estimatedDuration, checklist: filteredChecklist });
+      await loadAreas();
+    } catch (err) {
+      console.error('Failed to create area:', err);
+    }
     setIsCreateDialogOpen(false);
     setNewAreaData({ name: '', description: '', estimatedDuration: 0, checklist: [''] });
     setErrors({ name: '', checklist: '' });
     resetDurationUI();
   };
 
-  const handleEditArea = (area: Area) => {
+  const handleEditArea = (area: AreaAPI) => {
     setEditingArea(area);
     const stored = area.estimatedDuration ?? 0;
     // Reverse-convert: if divisible by 60 and >= 60, show as hours; otherwise minutes
@@ -76,7 +98,7 @@ export function ChecklistManagementPage({ user }: { user: any }) {
     });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     let hasErrors = false;
     if (!editingArea || !newAreaData.name) {
       setErrors(prev => ({ ...prev, name: 'Area name is required' }));
@@ -93,8 +115,12 @@ export function ChecklistManagementPage({ user }: { user: any }) {
     if (hasErrors) return;
 
     const filteredChecklist = newAreaData.checklist.filter(item => item.trim());
-    updateArea(editingArea.id, { ...newAreaData, checklist: filteredChecklist });
-    setAreas(getAreas());
+    try {
+      await apiUpdateArea(editingArea.id, { name: newAreaData.name, estimatedDuration: newAreaData.estimatedDuration, checklist: filteredChecklist });
+      await loadAreas();
+    } catch (err) {
+      console.error('Failed to update area:', err);
+    }
     setEditingArea(null);
     setNewAreaData({ name: '', description: '', estimatedDuration: 0, checklist: [''] });
     setErrors({ name: '', checklist: '' });
@@ -106,10 +132,14 @@ export function ChecklistManagementPage({ user }: { user: any }) {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDeleteArea = () => {
+  const confirmDeleteArea = async () => {
     if (areaToDelete) {
-      deleteArea(areaToDelete);
-      setAreas(getAreas());
+      try {
+        await apiDeleteArea(areaToDelete);
+        await loadAreas();
+      } catch (err) {
+        console.error('Failed to delete area:', err);
+      }
     }
     setDeleteDialogOpen(false);
     setAreaToDelete(null);
@@ -150,7 +180,12 @@ export function ChecklistManagementPage({ user }: { user: any }) {
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="divide-y divide-gray-200">
-          {areas.length === 0 ? (
+          {loadError ? (
+            <div className="p-8 text-center">
+              <p className="text-red-500 mb-3">{loadError}</p>
+              <Button variant="outline" onClick={loadAreas}>Retry</Button>
+            </div>
+          ) : areas.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-gray-500">No areas created yet. Click "New Area" to get started.</p>
             </div>

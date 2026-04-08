@@ -67,11 +67,11 @@ usersRouter.post('/link', authenticate, async (req: Request, res: Response) => {
     const target = existing.rows[0];
 
     if (target.role === 'admin' || target.role === 'business') {
-      return res.status(400).json({ error: 'Cannot link an admin or business account as an employee' });
+      return res.status(400).json({ error: 'Cannot link an admin or business account as a member' });
     }
 
     if (target.business_id !== null) {
-      return res.status(409).json({ error: 'This employee is already linked to a business' });
+      return res.status(409).json({ error: 'This member is already linked to a business' });
     }
 
     const result = await pool.query(
@@ -83,7 +83,7 @@ usersRouter.post('/link', authenticate, async (req: Request, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(409).json({ error: 'This employee is already linked to a business' });
+      return res.status(409).json({ error: 'This member is already linked to a business' });
     }
 
     res.json(result.rows[0]);
@@ -155,7 +155,7 @@ usersRouter.get('/', authenticate, async (_req: Request, res: Response) => {
 usersRouter.patch('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, phone, role } = req.body;
+    const { name, phone, role, company, company_phone, address, city, zip_code } = req.body;
 
     // Validate role if provided
     if (role !== undefined && role !== null) {
@@ -169,10 +169,15 @@ usersRouter.patch('/:id', async (req: Request, res: Response) => {
       `UPDATE users
        SET name = COALESCE($1, name),
            phone = COALESCE($2, phone),
-           role = COALESCE($3, role)
-       WHERE id = $4
-       RETURNING id, email, name, company, role, phone, avatar_url`,
-      [name ?? null, phone ?? null, role ?? null, id]
+           role = COALESCE($3, role),
+           company = COALESCE($4, company),
+           company_phone = COALESCE($5, company_phone),
+           address = COALESCE($6, address),
+           city = COALESCE($7, city),
+           zip_code = COALESCE($8, zip_code)
+       WHERE id = $9
+       RETURNING id, email, name, company, role, phone, avatar_url, company_phone, address, city, zip_code`,
+      [name ?? null, phone ?? null, role ?? null, company ?? null, company_phone ?? null, address ?? null, city ?? null, zip_code ?? null, id]
     );
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -214,6 +219,24 @@ usersRouter.post('/:id/avatar', upload.single('avatar'), async (req: Request, re
     const { id } = req.params;
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
+    // Fetch existing avatar_url to delete old file
+    const existing = await pool.query(`SELECT avatar_url FROM users WHERE id = $1`, [id]);
+    if (existing.rows.length === 0) {
+      fs.unlinkSync(req.file.path); // clean up uploaded file
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldAvatarUrl: string | null = existing.rows[0].avatar_url;
+    if (oldAvatarUrl) {
+      const oldFilename = oldAvatarUrl.split('/uploads/avatars/').pop();
+      if (oldFilename) {
+        const oldPath = path.join(uploadsDir, oldFilename);
+        if (fs.existsSync(oldPath)) {
+          try { fs.unlinkSync(oldPath); } catch { /* ignore if already gone */ }
+        }
+      }
+    }
+
     const host = req.get('host') || 'localhost:3001';
     const protocol = req.protocol || 'http';
     const avatarUrl = `${protocol}://${host}/uploads/avatars/${req.file.filename}`;
@@ -223,7 +246,6 @@ usersRouter.post('/:id/avatar', upload.single('avatar'), async (req: Request, re
       [avatarUrl, id]
     );
 
-    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(result.rows[0]);
   } catch (err: any) {
     console.error('POST /users/:id/avatar error:', err);

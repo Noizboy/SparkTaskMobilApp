@@ -2,7 +2,7 @@ export interface Addon {
   id: string;
   name: string;
   description: string;
-  estimatedTime: string;
+  estimatedDuration: number; // minutes
 }
 
 let addons: Addon[] = [
@@ -10,37 +10,37 @@ let addons: Addon[] = [
     id: '1',
     name: 'Microwave',
     description: 'Deep cleaning inside and outside microwave',
-    estimatedTime: '15 min',
+    estimatedDuration: 15,
   },
   {
     id: '2',
     name: 'Refrigerator',
     description: 'Clean inside and outside refrigerator',
-    estimatedTime: '30 min',
+    estimatedDuration: 30,
   },
   {
     id: '3',
     name: 'Oven',
     description: 'Deep clean oven interior and exterior',
-    estimatedTime: '45 min',
+    estimatedDuration: 45,
   },
   {
     id: '4',
     name: 'Windows',
     description: 'Clean windows inside and outside',
-    estimatedTime: '20 min per window',
+    estimatedDuration: 20,
   },
   {
     id: '5',
     name: 'Balcony',
     description: 'Sweep and clean balcony area',
-    estimatedTime: '25 min',
+    estimatedDuration: 25,
   },
   {
     id: '6',
     name: 'Cabinets',
     description: 'Clean inside and outside cabinets',
-    estimatedTime: '30 min',
+    estimatedDuration: 30,
   },
 ];
 

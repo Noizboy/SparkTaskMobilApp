@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -8,28 +8,33 @@ import { Calendar } from '../ui/calendar';
 import { TimePicker } from '../ui/time-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { IconCheck, IconCalendar, IconClock, IconX, IconSelector } from '@tabler/icons-react';
+import { IconCheck, IconCalendar, IconClock, IconX, IconSelector, IconAlertTriangle } from '@tabler/icons-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { format } from 'date-fns';
 import { getServiceTypes } from '../../data/mockServiceTypes';
-import { getAreas } from '../../data/mockAreas';
+import { fetchAreas, AreaAPI } from '../../services/api';
 import { getAddons } from '../../data/mockAddons';
+
+interface TeamMember {
+  id: string;
+  name: string;
+  role?: string;
+}
 
 interface CreateOrderPageProps {
   onBack: () => void;
   onOrderCreated?: () => void;
+  teamMembers?: TeamMember[];
 }
 
-const mockEmployees = [
-  { id: '1', name: 'John Perez' },
-  { id: '2', name: 'Anna Lopez' },
-  { id: '3', name: 'Peter Sanchez' },
-  { id: '4', name: 'Maria Torres' },
-];
-
-export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps) {
+export function CreateOrderPage({ onBack, onOrderCreated, teamMembers = [] }: CreateOrderPageProps) {
   const serviceTypes = getServiceTypes();
-  const areas = getAreas();
+  const [areas, setAreas] = useState<AreaAPI[]>([]);
   const addons = getAddons();
+
+  useEffect(() => {
+    fetchAreas().then(setAreas).catch(err => console.error('Failed to load areas:', err));
+  }, []);
   
   const [formData, setFormData] = useState({
     customerName: '',
@@ -54,6 +59,7 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
   const [openAreas, setOpenAreas] = useState(false);
   const [openAddons, setOpenAddons] = useState(false);
   const [openEmployees, setOpenEmployees] = useState(false);
+  const [conflictError, setConflictError] = useState<string | null>(null);
 
   const handleTimeChange = (time: string) => {
     setFormData({ ...formData, scheduledTime: time });
@@ -124,10 +130,7 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
       specialInstructions: formData.customerNotes,
       accessInfo: formData.accessInstructions,
       goal: formData.goal,
-      assignedEmployees: formData.assignedEmployees.map(id => {
-        const emp = mockEmployees.find(e => e.id === id);
-        return emp?.name ?? id;
-      }),
+      assignedEmployees: formData.assignedEmployees,
       sections,
       addOns,
     };
@@ -138,10 +141,17 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(await res.text());
-    } catch (err) {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          setConflictError(body.error || 'Assignment conflict detected.');
+          return;
+        }
+        throw new Error(body.error || 'Failed to create order');
+      }
+    } catch (err: any) {
       console.error('[CreateOrder] Failed:', err);
-      alert('Failed to create order. Check console for details.');
+      alert(err.message || 'Failed to create order. Check console for details.');
       return;
     }
 
@@ -185,12 +195,12 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
     }));
   };
 
-  const toggleEmployee = (employeeId: string) => {
+  const toggleEmployee = (employeeName: string) => {
     setFormData(prev => ({
       ...prev,
-      assignedEmployees: prev.assignedEmployees.includes(employeeId)
-        ? prev.assignedEmployees.filter(id => id !== employeeId)
-        : [...prev.assignedEmployees, employeeId]
+      assignedEmployees: prev.assignedEmployees.includes(employeeName)
+        ? prev.assignedEmployees.filter(n => n !== employeeName)
+        : [...prev.assignedEmployees, employeeName]
     }));
   };
 
@@ -547,13 +557,13 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
             </div>
           </div>
 
-          {/* Assign Employees */}
+          {/* Assign Members */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
               <div className="w-6 h-6 bg-[#033620] rounded flex items-center justify-center">
                 <span className="text-white text-xs">6</span>
               </div>
-              <h3 className="text-gray-900 font-medium">Assign Employees</h3>
+              <h3 className="text-gray-900 font-medium">Assign Members</h3>
             </div>
             <div className="space-y-3">
               <Popover open={openEmployees} onOpenChange={setOpenEmployees}>
@@ -564,28 +574,36 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
                     aria-expanded={openEmployees}
                     className="w-full h-10 justify-between shadow-sm hover:bg-gray-50"
                   >
-                    <span className="text-gray-500">Select employees</span>
+                    <span className="text-gray-500">Select members</span>
                     <IconSelector className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 shadow-lg" align="start">
                   <Command>
-                    <CommandInput placeholder="Search employees..." className="h-9" />
+                    <CommandInput placeholder="Search members..." className="h-9" />
                     <CommandList>
-                      <CommandEmpty>No employee found.</CommandEmpty>
+                      <CommandEmpty>No member found.</CommandEmpty>
                       <CommandGroup>
-                        {mockEmployees.filter(employee => !formData.assignedEmployees.includes(employee.id)).map((employee) => (
+                        {teamMembers.filter(m => !formData.assignedEmployees.includes(m.name)).map((member) => (
                           <CommandItem
-                            key={employee.id}
-                            value={employee.name}
+                            key={member.id}
+                            value={member.name}
                             onSelect={() => {
-                              if (!formData.assignedEmployees.includes(employee.id)) {
-                                setFormData({ ...formData, assignedEmployees: [...formData.assignedEmployees, employee.id] });
-                              }
+                              toggleEmployee(member.name);
                               setOpenEmployees(false);
                             }}
                           >
-                            {employee.name}
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-[#033620] rounded-full flex items-center justify-center shrink-0">
+                                <span className="text-white text-xs font-medium">
+                                  {member.name.split(' ').map(n => n[0]).join('')}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-sm">{member.name}</span>
+                                {member.role && <span className="text-xs text-gray-500">{member.role.charAt(0).toUpperCase() + member.role.slice(1)}</span>}
+                              </div>
+                            </div>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -595,27 +613,24 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
               </Popover>
               {formData.assignedEmployees.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {formData.assignedEmployees.map((employeeId) => {
-                    const employee = mockEmployees.find(e => e.id === employeeId);
-                    return employee ? (
-                      <div
-                        key={employeeId}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#033620] text-white rounded-md shadow-sm"
+                  {formData.assignedEmployees.map((name) => (
+                    <div
+                      key={name}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#033620] text-white rounded-md shadow-sm"
+                    >
+                      <span className="text-sm">{name}</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleEmployee(name)}
+                        className="hover:bg-[#044d2e] rounded-full p-0.5 transition-colors"
                       >
-                        <span className="text-sm">{employee.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleEmployee(employeeId)}
-                          className="hover:bg-[#044d2e] rounded-full p-0.5 transition-colors"
-                        >
-                          <IconX className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : null;
-                  })}
+                        <IconX className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 italic">No employees assigned yet</p>
+                <p className="text-sm text-gray-500 italic">No members assigned yet</p>
               )}
             </div>
           </div>
@@ -685,6 +700,26 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
           </div>
         </form>
       </div>
+
+      {/* Conflict error modal */}
+      <Dialog open={!!conflictError} onOpenChange={() => setConflictError(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <IconAlertTriangle className="w-5 h-5" />
+              Assignment Conflict
+            </DialogTitle>
+            <DialogDescription className="text-gray-700 pt-2">
+              {conflictError}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button className="bg-[#033620] hover:bg-[#022819] text-white" onClick={() => setConflictError(null)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

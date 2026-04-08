@@ -19,12 +19,13 @@ interface OrdersListProps {
   onCreateOrder?: () => void;
   searchQuery?: string;
   filter?: string;
+  cleanerFilter?: string;
   fromDate?: string;
   toDate?: string;
   orders?: Order[]; // External orders prop
 }
 
-export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filter, fromDate, toDate, orders }: OrdersListProps) {
+export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filter, cleanerFilter, fromDate, toDate, orders }: OrdersListProps) {
   // Use external orders if provided, otherwise use mock orders
   const sourceOrders = orders || mockOrders;
   let filteredOrders = sourceOrders;
@@ -32,6 +33,13 @@ export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filt
   // Filter by status
   if (filter && filter !== 'all') {
     filteredOrders = filteredOrders.filter(order => order.status === filter);
+  }
+
+  // Filter by assigned cleaner
+  if (cleanerFilter) {
+    filteredOrders = filteredOrders.filter(order =>
+      order.assignedEmployees?.some(name => name === cleanerFilter)
+    );
   }
 
   // Filter by search query
@@ -113,7 +121,7 @@ export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filt
   // Reset to page 1 when filters or sort change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filter, fromDate, toDate, sortOrder]);
+  }, [searchQuery, filter, cleanerFilter, fromDate, toDate, sortOrder]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

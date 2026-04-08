@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { IconPlus, IconFilter } from '@tabler/icons-react';
+import { IconPlus, IconFilter, IconSelector } from '@tabler/icons-react';
 import { OrdersList } from '../orders/OrdersList';
 import { DateRangePicker } from '../ui/date-range-picker';
 import {
@@ -12,18 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { PageType } from '../Dashboard';
+import { TeamMemberAPI } from '../../services/api';
 
 interface OrdersPageProps {
   user: any;
   onViewOrder?: (orderId: string) => void;
   onNavigate?: (page: PageType) => void;
   orders?: any[];
+  teamMembers?: TeamMemberAPI[];
 }
 
-export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPageProps) {
+export function OrdersPage({ user, onViewOrder, onNavigate, orders, teamMembers = [] }: OrdersPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [cleanerFilter, setCleanerFilter] = useState('all');
+  const [cleanerOpen, setCleanerOpen] = useState(false);
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [toDate, setToDate] = useState<Date | undefined>(undefined);
 
@@ -49,23 +55,23 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
           <span className="font-medium text-gray-900">Filter Orders</span>
         </div>
 
-        <div className="p-4 flex flex-row gap-4 flex-wrap">
-          {/* Search — takes remaining space */}
-          <div className="flex-1 min-w-0">
+        <div className="p-4" style={{ display: 'grid', gridTemplateColumns: '4fr 2fr 2fr 2fr', gap: '1rem', width: '100%' }}>
+          {/* Search — 4/10 columns */}
+          <div>
             <label className="block text-xs text-gray-600 mb-2">Search</label>
             <Input
               placeholder="Customer name or order code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="shadow-sm h-10"
+              className="shadow-sm h-10 w-full"
             />
           </div>
 
-          {/* Status — fixed width */}
-          <div className="w-44 shrink-0">
+          {/* Status — 2/10 columns */}
+          <div>
             <label className="block text-xs text-gray-600 mb-2">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="shadow-sm h-10 w-full">
+              <SelectTrigger className="shadow-sm h-10 w-full bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -78,8 +84,61 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
             </Select>
           </div>
 
-          {/* Date Range — same fixed width as Status */}
-          <div className="w-44 shrink-0">
+          {/* Member — 2/10 columns, searchable combobox */}
+          <div>
+            <label className="block text-xs text-gray-600 mb-2">Member</label>
+            <Popover open={cleanerOpen} onOpenChange={setCleanerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={cleanerOpen}
+                  className="shadow-sm h-10 w-full justify-between font-normal text-sm px-3"
+                >
+                  <span className="truncate">
+                    {cleanerFilter === 'all'
+                      ? 'All Members'
+                      : cleanerFilter}
+                  </span>
+                  <IconSelector className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                <Command>
+                  <CommandInput placeholder="Search member..." />
+                  <CommandList>
+                    <CommandEmpty>No member found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="all"
+                        onSelect={() => {
+                          setCleanerFilter('all');
+                          setCleanerOpen(false);
+                        }}
+                      >
+                        All Members
+                      </CommandItem>
+                      {teamMembers.map((member) => (
+                        <CommandItem
+                          key={member.id}
+                          value={member.name}
+                          onSelect={() => {
+                            setCleanerFilter(member.name);
+                            setCleanerOpen(false);
+                          }}
+                        >
+                          {member.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Date Range — 2/10 columns */}
+          <div>
             <label className="block text-xs text-gray-600 mb-2">Date Range</label>
             <DateRangePicker
               from={fromDate}
@@ -97,6 +156,7 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
         onCreateOrder={() => onNavigate?.('create-order')}
         searchQuery={searchQuery}
         filter={statusFilter === 'all' ? undefined : statusFilter}
+        cleanerFilter={cleanerFilter === 'all' ? undefined : cleanerFilter}
         fromDate={fromDate ? format(fromDate, 'yyyy-MM-dd') : ''}
         toDate={toDate ? format(toDate, 'yyyy-MM-dd') : ''}
         orders={orders}

@@ -52,7 +52,19 @@ export async function register(data: { email: string; password: string; name: st
 
 // ─── Users ──────────────────────────────────────────────────────────────────
 
-export async function updateUser(id: string, data: { name?: string; phone?: string }): Promise<any> {
+export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_URL}/auth/change-password`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ userId, currentPassword, newPassword }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Password change failed');
+  }
+}
+
+export async function updateUser(id: string, data: { name?: string; phone?: string; company?: string; company_phone?: string; address?: string; city?: string; zip_code?: string }): Promise<any> {
   const res = await fetch(`${API_URL}/users/${id}`, {
     method: 'PATCH',
     headers: authHeaders(),
@@ -289,5 +301,60 @@ export async function checkApiHealth(): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+// ─── Areas ──────────────────────────────────────────────────────────────────
+
+export interface AreaAPI {
+  id: string;
+  businessId: string;
+  name: string;
+  description: string;
+  estimatedDuration: number;
+  checklist: string[];
+  createdAt?: string;
+}
+
+export async function fetchAreas(): Promise<AreaAPI[]> {
+  const res = await fetch(`${API_URL}/areas`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch areas');
+  return res.json();
+}
+
+export async function createArea(data: { name: string; estimatedDuration?: number; checklist: string[] }): Promise<AreaAPI> {
+  const res = await fetch(`${API_URL}/areas`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to create area');
+  }
+  return res.json();
+}
+
+export async function updateArea(id: string, data: { name: string; estimatedDuration?: number; checklist: string[] }): Promise<AreaAPI> {
+  const res = await fetch(`${API_URL}/areas/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update area');
+  }
+  return res.json();
+}
+
+export async function deleteArea(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/areas/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to delete area');
   }
 }

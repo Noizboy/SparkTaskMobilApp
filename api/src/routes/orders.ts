@@ -199,6 +199,18 @@ ordersRouter.post('/', async (req: Request, res: Response) => {
       );
     }
 
+    // Check schedule conflicts before inserting employees
+    if (assignedEmployees.length > 0) {
+      const scheduleCheck = await checkScheduleConflict(null, assignedEmployees, date, time, duration, client);
+      if (scheduleCheck.conflict) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          error: `Schedule conflict: ${scheduleCheck.cleanerName} is already assigned to order ${scheduleCheck.orderNumber} at ${scheduleCheck.conflictTime} on this date. Please choose a different time or assign a different team member.`,
+          type: 'schedule_conflict',
+        });
+      }
+    }
+
     // Insert assigned employees
     for (const emp of assignedEmployees) {
       await client.query(
@@ -322,8 +334,24 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
       }
     }
 
-    // Replace employees if provided
+    // Replace employees if provided — check schedule conflicts first
     if (assignedEmployees) {
+      // Use updated date/time/duration for conflict check
+      const checkDate = date ?? (await client.query('SELECT date, time, duration FROM orders WHERE id = $1', [orderId])).rows[0]?.date;
+      const checkTime = time ?? (await client.query('SELECT time FROM orders WHERE id = $1', [orderId])).rows[0]?.time;
+      const checkDuration = duration || (await client.query('SELECT duration FROM orders WHERE id = $1', [orderId])).rows[0]?.duration;
+
+      if (assignedEmployees.length > 0) {
+        const scheduleCheck = await checkScheduleConflict(orderId, assignedEmployees, checkDate, checkTime, checkDuration, client);
+        if (scheduleCheck.conflict) {
+          await client.query('ROLLBACK');
+          return res.status(409).json({
+            error: `Schedule conflict: ${scheduleCheck.cleanerName} is already assigned to order ${scheduleCheck.orderNumber} at ${scheduleCheck.conflictTime} on this date. Please choose a different time or assign a different team member.`,
+            type: 'schedule_conflict',
+          });
+        }
+      }
+
       await client.query('DELETE FROM assigned_employees WHERE order_id = $1', [orderId]);
       for (const emp of assignedEmployees) {
         await client.query(
@@ -346,6 +374,84 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
     client.release();
   }
 });
+
+// ─── Helper: parse "9:00 AM" or "14:30" → minutes since midnight ─────────────
+function parseTimeToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const upper = timeStr.trim().toUpperCase();
+  const ampm = upper.includes('AM') || upper.includes('PM');
+  if (ampm) {
+    const [timePart, period] = upper.split(/\s+/);
+    const [hStr, mStr = '0'] = timePart.split(':');
+    let h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (period === 'PM' && h !== 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  const [hStr, mStr = '0'] = upper.split(':');
+  return parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+}
+
+// ─── Helper: parse "2 hours 30 min" / "90 min" / "2 hours" → minutes ─────────
+function parseDurationToMinutes(durationStr: string): number {
+  if (!durationStr) return 0;
+  let total = 0;
+  const hourMatch = durationStr.match(/(\d+)\s*hour/i);
+  const minMatch = durationStr.match(/(\d+)\s*min/i);
+  if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
+  if (minMatch) total += parseInt(minMatch[1], 10);
+  return total || 60; // default 60 min if unparseable
+}
+
+// ─── Helper: check schedule conflicts for a set of employees ─────────────────
+// Returns the first conflict found or null.
+async function checkScheduleConflict(
+  orderId: string | null, // null when creating a new order
+  employees: string[],
+  date: string,
+  time: string,
+  durationStr: string,
+  db: any = pool
+): Promise<{ conflict: true; cleanerName: string; orderNumber: string; conflictTime: string } | { conflict: false }> {
+  if (!employees.length || !date || !time) return { conflict: false };
+
+  const startMin = parseTimeToMinutes(time);
+  const durationMin = parseDurationToMinutes(durationStr);
+  const endMin = startMin + durationMin;
+
+  for (const emp of employees) {
+    // Find all scheduled/in-progress orders on the same date assigned to this employee
+    const result = await db.query(
+      `SELECT o.id, o.order_number, o.time, o.duration
+       FROM orders o
+       JOIN assigned_employees ae ON ae.order_id = o.id
+       WHERE ae.employee_name = $1
+         AND o.date = $2
+         AND o.status IN ('scheduled', 'in-progress')
+         ${orderId ? 'AND o.id <> $3' : ''}`,
+      orderId ? [emp, date, orderId] : [emp, date]
+    );
+
+    for (const row of result.rows) {
+      const otherStart = parseTimeToMinutes(row.time || '');
+      const otherDuration = parseDurationToMinutes(row.duration || '');
+      const otherEnd = otherStart + otherDuration;
+
+      // Overlap: new order starts before other ends AND new order ends after other starts
+      const overlaps = startMin < otherEnd && endMin > otherStart;
+      if (overlaps) {
+        return {
+          conflict: true,
+          cleanerName: emp,
+          orderNumber: row.order_number,
+          conflictTime: `${row.time}${row.duration ? ` (${row.duration})` : ''}`,
+        };
+      }
+    }
+  }
+  return { conflict: false };
+}
 
 // ─── Helper: check if any assigned cleaner already has an in-progress order ──
 async function checkCleanerInProgressConflict(

@@ -9,23 +9,23 @@ import { Checkbox } from '../ui/checkbox';
 import { IconPlus, IconX, IconAlertTriangle } from '@tabler/icons-react';
 import { Alert, AlertDescription } from '../ui/alert';
 
+interface TeamMember {
+  id: string;
+  name: string;
+  role?: string;
+}
+
 interface CreateOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (orderData: any) => Promise<void>;
+  teamMembers?: TeamMember[];
 }
 
 const mockServiceTypes = ['Regular Cleaning', 'Deep Cleaning', 'Move-in Cleaning', 'Move-out Cleaning', 'Quick Cleaning', 'Office Cleaning', 'Post-Construction Cleaning'];
 const mockAreas = ['Kitchen', 'Bathroom', 'Living Room', 'Dining Room', 'Bedroom', 'Master Bedroom', 'Laundry'];
 const mockAddons = ['Microwave', 'Refrigerator', 'Oven', 'Windows', 'Balcony', 'Cabinets'];
-const mockEmployees = [
-  { id: '1', name: 'John Perez' },
-  { id: '2', name: 'Anna Lopez' },
-  { id: '3', name: 'Peter Sanchez' },
-  { id: '4', name: 'Maria Torres' },
-];
-
-export function CreateOrderDialog({ open, onOpenChange, onSubmit }: CreateOrderDialogProps) {
+export function CreateOrderDialog({ open, onOpenChange, onSubmit, teamMembers = [] }: CreateOrderDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflictError, setConflictError] = useState<string | null>(null);
@@ -277,22 +277,22 @@ export function CreateOrderDialog({ open, onOpenChange, onSubmit }: CreateOrderD
             </div>
           </div>
 
-          {/* Assign Employees */}
+          {/* Assign Members */}
           <div className="space-y-4">
-            <h3 className="text-gray-900">Assign Employees</h3>
+            <h3 className="text-gray-900">Assign Members</h3>
             <div className="grid grid-cols-2 gap-3">
-              {mockEmployees.map((employee) => (
-                <div key={employee.id} className="flex items-center space-x-2">
+              {teamMembers.map((member) => (
+                <div key={member.id} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`employee-${employee.id}`}
-                    checked={formData.assignedEmployees.includes(employee.id)}
-                    onCheckedChange={() => toggleEmployee(employee.id)}
+                    id={`employee-${member.id}`}
+                    checked={formData.assignedEmployees.includes(member.name)}
+                    onCheckedChange={() => toggleEmployee(member.name)}
                   />
                   <label
-                    htmlFor={`employee-${employee.id}`}
+                    htmlFor={`employee-${member.id}`}
                     className="text-sm cursor-pointer"
                   >
-                    {employee.name}
+                    {member.name}
                   </label>
                 </div>
               ))}

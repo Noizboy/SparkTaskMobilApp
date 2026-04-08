@@ -6,6 +6,7 @@ import { ordersRouter } from './routes/orders';
 import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
 import { servicesRouter } from './routes/services';
+import { areasRouter } from './routes/areas';
 import { sseHandler } from './sse';
 
 const app = express();
@@ -39,6 +40,41 @@ async function runMigrations() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS areas (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      business_id UUID NOT NULL REFERENCES users(id),
+      name VARCHAR(255) NOT NULL,
+      estimated_duration INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS area_checklist_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      area_id UUID NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
+      text VARCHAR(255) NOT NULL,
+      sort_order INT DEFAULT 0
+    )
+  `);
+
+  // Add company-related columns to users table
+  const companyColumns = [
+    { name: 'company_phone', type: 'VARCHAR(50)' },
+    { name: 'address', type: 'TEXT' },
+    { name: 'city', type: 'VARCHAR(255)' },
+    { name: 'zip_code', type: 'VARCHAR(20)' },
+  ];
+  for (const col of companyColumns) {
+    await pool.query(`
+      DO $$ BEGIN
+        ALTER TABLE users ADD COLUMN ${col.name} ${col.type};
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
+    `);
+  }
+
   console.log('✓ Migrations applied');
 }
 
@@ -59,6 +95,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/services', servicesRouter);
+app.use('/api/areas', areasRouter);
 
 app.listen(PORT, () => {
   console.log(`\n🚀 SparkTask API running at http://localhost:${PORT}`);

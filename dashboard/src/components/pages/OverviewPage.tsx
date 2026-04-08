@@ -5,10 +5,10 @@ import { PageType } from '../Dashboard';
 import { Order, getOrderTaskCounts } from '../../data/mockOrders';
 
 const mockTeamMembers = [
-  { id: '1', name: 'John Perez', email: 'john@email.com', role: 'Employee', status: 'active', ordersCompleted: 45 },
-  { id: '2', name: 'Anna Lopez', email: 'anna@email.com', role: 'Employee', status: 'active', ordersCompleted: 38 },
-  { id: '3', name: 'Peter Sanchez', email: 'peter@email.com', role: 'Employee', status: 'active', ordersCompleted: 52 },
-  { id: '4', name: 'Maria Torres', email: 'maria@email.com', role: 'Employee', status: 'active', ordersCompleted: 31 },
+  { id: '1', name: 'John Perez', email: 'john@email.com', role: 'Member', status: 'active', ordersCompleted: 45 },
+  { id: '2', name: 'Anna Lopez', email: 'anna@email.com', role: 'Member', status: 'active', ordersCompleted: 38 },
+  { id: '3', name: 'Peter Sanchez', email: 'peter@email.com', role: 'Member', status: 'active', ordersCompleted: 52 },
+  { id: '4', name: 'Maria Torres', email: 'maria@email.com', role: 'Member', status: 'active', ordersCompleted: 31 },
   { id: '5', name: 'Carlos Ramirez', email: 'carlos@email.com', role: 'Supervisor', status: 'active', ordersCompleted: 67 },
 ];
 
@@ -67,7 +67,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
             </CardContent>
           </Card>
 
-          {/* Active Cleaners Card */}
+          {/* Members Card */}
           <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-4 md:p-6">
               <div className="flex items-start justify-between mb-3">
@@ -75,7 +75,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
                   <IconUsers className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div className="text-right">
-                  <span className="text-xs md:text-sm text-gray-600 block mb-1 md:mb-2">Active Cleaners</span>
+                  <span className="text-xs md:text-sm text-gray-600 block mb-1 md:mb-2">Active Members</span>
                   <div className="text-gray-900 font-bold text-[24px] md:text-[32px] font-[Poppins] leading-none">{activeCleaners}</div>
                 </div>
               </div>
