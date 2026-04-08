@@ -183,7 +183,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-sm text-gray-500 mb-1">Order Code</p>
-                          <p className="font-[Poppins] text-gray-900">{order.orderNumber}</p>
+                          <p className="font-[Poppins] text-gray-900">#{order.orderNumber.replace(/^#/, '')}</p>
                         </div>
                         <span className={`px-3 py-1 text-xs rounded-full font-medium ${statusCfg?.className}`}>
                           {statusCfg?.label}
@@ -207,7 +207,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
                     </div>
                     {/* Desktop Layout */}
                     <div className="hidden md:flex items-center">
-                      <p className="font-sans text-gray-900 text-base">{order.orderNumber}</p>
+                      <p className="font-sans text-gray-900 text-base">#{order.orderNumber.replace(/^#/, '')}</p>
                     </div>
                     <div className="hidden md:flex flex-col justify-center">
                       <p className="text-gray-900">{order.clientName}</p>

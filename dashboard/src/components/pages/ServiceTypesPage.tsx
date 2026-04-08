@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { IconPlus, IconTrash, IconPencil } from '@tabler/icons-react';
@@ -22,6 +22,13 @@ interface ServiceTypesPageProps {
 
 export function ServiceTypesPage({ user, serviceTypes: externalServiceTypes, onCreateService, onUpdateService, onDeleteService }: ServiceTypesPageProps) {
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>(externalServiceTypes || getServiceTypes());
+  
+  useEffect(() => {
+    if (externalServiceTypes) {
+      setServiceTypes(externalServiceTypes);
+    }
+  }, [externalServiceTypes]);
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<ServiceType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

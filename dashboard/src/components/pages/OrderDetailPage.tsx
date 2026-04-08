@@ -21,7 +21,6 @@ import { TimePicker } from '../ui/time-picker';
 import { format, parse } from 'date-fns';
 import { toast } from 'sonner';
 import {
-  IconArrowLeft,
   IconUser,
   IconMapPin,
   IconPhone,
@@ -184,17 +183,8 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
       <div className="flex-1 p-4 md:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6 md:mb-8">
-          <Button 
-            variant="ghost" 
-            onClick={onBack}
-            className="mb-4 text-[#033620] hover:text-[#044d2e] hover:bg-[#033620]/5"
-          >
-            <IconArrowLeft className="w-4 h-4 mr-2" />
-            Back to Orders
-          </Button>
-          
           <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h1>Order {currentOrder.orderNumber}</h1>
+            <h1>Order #{currentOrder.orderNumber.replace(/^#/, '')}</h1>
             {getStatusBadge(currentOrder.status)}
           </div>
         </div>

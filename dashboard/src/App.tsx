@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { ForgotPassword } from './components/ForgotPassword';
@@ -8,34 +8,29 @@ import * as api from './services/api';
 import { Toaster } from './components/ui/sonner';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'login' | 'register' | 'forgot-password' | 'register-cleaner' | 'dashboard'>('login');
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('sparkTaskUser');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        if (parsed?.token) {
-          setUser(parsed);
-          setCurrentView('dashboard');
-          return;
-        }
+  const [user, setUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('sparkTaskUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.token) return parsed;
         // Stale session without token — clear it and require re-login
         localStorage.removeItem('sparkTaskUser');
-      } catch {
-        localStorage.removeItem('sparkTaskUser');
       }
+    } catch {
+      localStorage.removeItem('sparkTaskUser');
     }
+    return null;
+  });
 
+  const [currentView, setCurrentView] = useState<'login' | 'register' | 'forgot-password' | 'register-cleaner' | 'dashboard'>(() => {
+    // If user was restored from localStorage, go straight to dashboard
+    if (user) return 'dashboard';
     // Check if accessing cleaner registration link
     const urlParams = new URLSearchParams(window.location.search);
-    const inviteToken = urlParams.get('invite');
-    if (inviteToken) {
-      setCurrentView('register-cleaner');
-    }
-  }, []);
+    if (urlParams.get('invite')) return 'register-cleaner';
+    return 'login';
+  });
 
   const handleLogin = (userData: any) => {
     setUser(userData);

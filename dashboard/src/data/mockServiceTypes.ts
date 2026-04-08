@@ -8,22 +8,37 @@ let serviceTypes: ServiceType[] = [
   {
     id: '1',
     name: 'Regular Cleaning',
-    description: 'Standard cleaning service for residential and commercial properties',
+    description: 'Standard recurring cleaning service for homes and offices',
   },
   {
     id: '2',
     name: 'Deep Cleaning',
-    description: 'Thorough cleaning including hard-to-reach areas and detailed work',
+    description: 'Thorough and intensive cleaning for all areas including hard-to-reach spots',
   },
   {
     id: '3',
+    name: 'Move-in Cleaning',
+    description: 'Full sanitization and deep clean for new tenants moving in',
+  },
+  {
+    id: '4',
     name: 'Move-out Cleaning',
     description: 'Complete cleaning service for properties after tenants move out',
   },
   {
-    id: '4',
+    id: '5',
+    name: 'Quick Cleaning',
+    description: 'Fast surface-level tidy-up for small spaces or touch-ups',
+  },
+  {
+    id: '6',
+    name: 'Office Cleaning',
+    description: 'Professional cleaning for office and commercial spaces',
+  },
+  {
+    id: '7',
     name: 'Post-Construction Cleaning',
-    description: 'Specialized cleaning after construction or renovation work',
+    description: 'Specialized deep cleaning after construction or renovation work',
   },
 ];
 

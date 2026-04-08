@@ -17,6 +17,7 @@ import { IconMenu2 } from '@tabler/icons-react';
 import { Button } from './ui/button';
 import { Order } from '../data/mockOrders';
 import * as api from '../services/api';
+import { OverviewSkeleton, OrdersSkeleton, OrderDetailSkeleton } from './skeletons';
 
 interface DashboardProps {
   user: any;
@@ -42,22 +43,37 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [apiOnline, setApiOnline] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [services, setServices] = useState<api.ServiceAPI[]>([]);
 
   // Check API health and load orders
   const loadOrders = useCallback(async () => {
     try {
+      setOrdersLoading(true);
       const data = await api.fetchOrders();
       setOrders(data);
       setApiOnline(true);
     } catch {
       setApiOnline(false);
       console.warn('API offline — using empty state');
+    } finally {
+      setOrdersLoading(false);
     }
   }, []);
 
+  const loadServices = useCallback(async () => {
+    try {
+      const data = await api.fetchServices(user?.id);
+      setServices(data);
+    } catch {
+      console.warn('Failed to load services');
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     loadOrders();
-  }, [loadOrders]);
+    loadServices();
+  }, [loadOrders, loadServices]);
 
   // Real-time updates via SSE — no polling, no F5 needed
   useSSE({
@@ -77,6 +93,8 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
 
   const handleNavigateToOrderDetail = async (orderId: string) => {
     setSelectedOrderId(orderId);
+    setSelectedOrder(null);
+    setCurrentPage('order-detail');
     try {
       const order = await api.fetchOrder(orderId);
       setSelectedOrder(order);
@@ -84,7 +102,6 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
       // Fallback: find in local state
       setSelectedOrder(orders.find(o => o.id === orderId) || null);
     }
-    setCurrentPage('order-detail');
   };
 
   const handleBackFromOrderDetail = () => {
@@ -114,12 +131,12 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
     }
   };
 
-  // Guard: if order-detail is active but selectedOrder was cleared, navigate back
+  // Guard: if order-detail is active but selectedOrder was cleared and no order is being fetched, navigate back
   useEffect(() => {
-    if (currentPage === 'order-detail' && !selectedOrder) {
+    if (currentPage === 'order-detail' && !selectedOrder && !selectedOrderId) {
       setCurrentPage('orders');
     }
-  }, [currentPage, selectedOrder]);
+  }, [currentPage, selectedOrder, selectedOrderId]);
 
   // Restrict supervisor access to allowed pages only
   const supervisorAllowedPages: PageType[] = ['overview', 'orders', 'order-detail', 'create-order', 'settings-account'];
@@ -133,14 +150,16 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const renderPage = () => {
     switch (currentPage) {
       case 'overview':
+        if (ordersLoading) return <OverviewSkeleton />;
         return <OverviewPage user={user} onNavigate={setCurrentPage} onViewOrder={handleNavigateToOrderDetail} orders={orders} />;
       case 'orders':
+        if (ordersLoading) return <OrdersSkeleton />;
         return <OrdersPage user={user} onViewOrder={handleNavigateToOrderDetail} onNavigate={setCurrentPage} orders={orders} />;
       case 'create-order':
         return <CreateOrderPage onBack={() => setCurrentPage('orders')} onOrderCreated={() => console.log('Order created!')} />;
       case 'order-detail':
         if (!selectedOrder) {
-          return <OrdersPage user={user} onViewOrder={handleNavigateToOrderDetail} onNavigate={setCurrentPage} orders={orders} />;
+          return <OrderDetailSkeleton />;
         }
         return <OrderDetailPage order={selectedOrder} onBack={handleBackFromOrderDetail} onUpdateOrder={handleUpdateOrder} onDeleteOrder={handleDeleteOrder} />;
       case 'team':
@@ -148,7 +167,22 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
       case 'checklist':
         return <ChecklistManagementPage user={user} />;
       case 'service-types':
-        return <ServiceTypesPage user={user} />;
+        return <ServiceTypesPage
+          user={user}
+          serviceTypes={services.map(s => ({ id: s.id, name: s.name, description: s.description || '' }))}
+          onCreateService={async (data) => {
+            await api.createService({ name: data.name, description: data.description, businessId: user.id });
+            await loadServices();
+          }}
+          onUpdateService={async (id, data) => {
+            await api.updateService(id, { name: data.name, description: data.description });
+            await loadServices();
+          }}
+          onDeleteService={async (id) => {
+            await api.deleteService(id);
+            await loadServices();
+          }}
+        />;
       case 'addons':
         return <AddonsPage user={user} />;
       case 'settings':
@@ -160,6 +194,7 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
       case 'settings-renewal':
         return <SettingsRenewalPage user={user} />;
       default:
+        if (ordersLoading) return <OverviewSkeleton />;
         return <OverviewPage user={user} onNavigate={setCurrentPage} onViewOrder={handleNavigateToOrderDetail} orders={orders} />;
     }
   };

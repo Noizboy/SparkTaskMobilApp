@@ -74,6 +74,8 @@ export function ProfileScreen() {
         const updatedUser = { ...currentUser, avatar_url: updated.avatar_url };
         setCurrentUser(updatedUser);
         await storage.setJSON('currentUser', updatedUser);
+        // Use server URL as the canonical image — survives logout/login
+        setProfileImage(updated.avatar_url);
       }
     } catch (err) {
       console.error('[API] uploadAvatar failed:', err);

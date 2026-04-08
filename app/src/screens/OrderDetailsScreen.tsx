@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   Linking,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -90,10 +91,21 @@ export function OrderDetailsScreen() {
           {job.status !== 'completed' && (
             <>
               <Text style={styles.clientName}>{job.clientName}</Text>
-              <View style={styles.addressRow}>
-                <MapPin size={13} color={COLORS.mutedForeground} />
-                <Text style={styles.address}>{job.address}</Text>
-              </View>
+              <TouchableOpacity
+                style={styles.addressRow}
+                onPress={() => {
+                  const encoded = encodeURIComponent(job.address);
+                  const url = Platform.select({
+                    ios: `maps:0,0?q=${encoded}`,
+                    default: `https://www.google.com/maps/search/?api=1&query=${encoded}`,
+                  });
+                  Linking.openURL(url);
+                }}
+                activeOpacity={0.7}
+              >
+                <MapPin size={13} color={COLORS.primary} />
+                <Text style={[styles.address, styles.addressLink]}>{job.address}</Text>
+              </TouchableOpacity>
               {job.phone && (
                 <TouchableOpacity
                   style={styles.phoneRow}
@@ -448,6 +460,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.mutedForeground,
     flex: 1,
+  },
+  addressLink: {
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
   },
   phoneRow: {
     flexDirection: 'row',

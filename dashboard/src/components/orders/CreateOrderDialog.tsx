@@ -6,7 +6,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
-import { IconPlus, IconX } from '@tabler/icons-react';
+import { IconPlus, IconX, IconAlertTriangle } from '@tabler/icons-react';
 import { Alert, AlertDescription } from '../ui/alert';
 
 interface CreateOrderDialogProps {
@@ -15,7 +15,7 @@ interface CreateOrderDialogProps {
   onSubmit?: (orderData: any) => Promise<void>;
 }
 
-const mockServiceTypes = ['Regular Cleaning', 'Deep Cleaning', 'Move-out Cleaning', 'Post-Construction Cleaning'];
+const mockServiceTypes = ['Regular Cleaning', 'Deep Cleaning', 'Move-in Cleaning', 'Move-out Cleaning', 'Quick Cleaning', 'Office Cleaning', 'Post-Construction Cleaning'];
 const mockAreas = ['Kitchen', 'Bathroom', 'Living Room', 'Dining Room', 'Bedroom', 'Master Bedroom', 'Laundry'];
 const mockAddons = ['Microwave', 'Refrigerator', 'Oven', 'Windows', 'Balcony', 'Cabinets'];
 const mockEmployees = [
@@ -28,6 +28,7 @@ const mockEmployees = [
 export function CreateOrderDialog({ open, onOpenChange, onSubmit }: CreateOrderDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflictError, setConflictError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     customerName: '',
     customerAddress: '',
@@ -85,7 +86,12 @@ export function CreateOrderDialog({ open, onOpenChange, onSubmit }: CreateOrderD
       onOpenChange(false);
       resetForm();
     } catch (err: any) {
-      setError(err.message || 'Failed to create order. Please try again.');
+      const msg: string = err.message || 'Failed to create order. Please try again.';
+      if (msg.includes('in-progress order')) {
+        setConflictError(msg);
+      } else {
+        setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -345,6 +351,29 @@ export function CreateOrderDialog({ open, onOpenChange, onSubmit }: CreateOrderD
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+
+    {/* Conflict error modal */}
+    <Dialog open={!!conflictError} onOpenChange={() => setConflictError(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <IconAlertTriangle className="w-5 h-5" />
+            Assignment Conflict
+          </DialogTitle>
+          <DialogDescription className="text-gray-700 pt-2">
+            {conflictError}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            className="bg-[#033620] hover:bg-[#022819] text-white"
+            onClick={() => setConflictError(null)}
+          >
+            OK
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

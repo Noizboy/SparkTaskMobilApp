@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   Linking,
+  Platform,
   TextInput as RNTextInput,
 } from 'react-native';
 import {
@@ -815,12 +816,23 @@ export function ChecklistScreen() {
                 )}
 
                 {/* Address */}
-                <View style={settingsStyles.infoRowFull}>
+                <TouchableOpacity
+                  style={settingsStyles.infoRowFull}
+                  onPress={() => {
+                    const encoded = encodeURIComponent(job.address);
+                    const url = Platform.select({
+                      ios: `maps:0,0?q=${encoded}`,
+                      default: `https://www.google.com/maps/search/?api=1&query=${encoded}`,
+                    });
+                    Linking.openURL(url);
+                  }}
+                  activeOpacity={0.7}
+                >
                   <View style={settingsStyles.infoRowIcon}>
                     <MapPin size={15} color={COLORS.primary} />
                   </View>
-                  <Text style={settingsStyles.infoRowText}>{job.address}</Text>
-                </View>
+                  <Text style={[settingsStyles.infoRowText, { color: COLORS.primary, textDecorationLine: 'underline' }]}>{job.address}</Text>
+                </TouchableOpacity>
 
                 {job.specialInstructions && (
                   <View style={settingsStyles.infoRowFull}>

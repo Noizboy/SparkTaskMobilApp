@@ -11,6 +11,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Alert, AlertDescription } from '../ui/alert';
+import { TeamMembersSkeleton } from '../skeletons';
 
 export type TeamMember = {
   id: string;
@@ -47,10 +48,12 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchLoading, setFetchLoading] = useState(!externalTeamMembers);
 
   useEffect(() => {
-    if (externalTeamMembers) { setTeamMembers(externalTeamMembers); return; }
+    if (externalTeamMembers) { setTeamMembers(externalTeamMembers); setFetchLoading(false); return; }
     setFetchError(null);
+    setFetchLoading(true);
     fetchTeamMembers().then((members) => {
       setTeamMembers(members.map((u) => ({
         id: u.id,
@@ -64,6 +67,8 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
     }).catch((err: Error) => {
       setFetchError(err.message || 'Failed to load team members');
       setTeamMembers([]);
+    }).finally(() => {
+      setFetchLoading(false);
     });
   }, [externalTeamMembers]);
 
@@ -177,6 +182,10 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
     }
   };
 
+  if (fetchLoading) {
+    return <TeamMembersSkeleton />;
+  }
+
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-8">
@@ -214,6 +223,34 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
         <Alert className="mb-6 border-red-300 bg-red-50">
           <AlertDescription className="text-red-700">{fetchError}</AlertDescription>
         </Alert>
+      )}
+
+      {filteredMembers.length === 0 && !fetchError && (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <IconUserPlus className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">
+            {searchQuery ? 'No members found' : 'No team members yet'}
+          </h3>
+          <p className="text-sm text-gray-500 mb-6 max-w-sm">
+            {searchQuery
+              ? 'Try a different search term.'
+              : 'Invite or link employees to start building your team.'}
+          </p>
+          {!searchQuery && (
+            <div className="flex gap-2">
+              <Button onClick={() => setIsInviteDialogOpen(true)} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
+                <IconUserPlus className="w-4 h-4 mr-2" />
+                Invite Member
+              </Button>
+              <Button variant="outline" onClick={() => { setError(null); setIsLinkDialogOpen(true); }} className="shadow-md">
+                <IconLink className="w-4 h-4 mr-2" />
+                Link Existing
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

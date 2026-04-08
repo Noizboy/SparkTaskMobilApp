@@ -8,7 +8,7 @@ import { Calendar } from '../ui/calendar';
 import { TimePicker } from '../ui/time-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { IconArrowLeft, IconCheck, IconCalendar, IconClock, IconX, IconSelector } from '@tabler/icons-react';
+import { IconCheck, IconCalendar, IconClock, IconX, IconSelector } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { getServiceTypes } from '../../data/mockServiceTypes';
 import { getAreas } from '../../data/mockAreas';
@@ -198,15 +198,6 @@ export function CreateOrderPage({ onBack, onOrderCreated }: CreateOrderPageProps
     <div className="p-4 md:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={onBack}
-          className="mb-4 text-[#033620] hover:text-[#044d2e] hover:bg-[#033620]/5"
-        >
-          <IconArrowLeft className="w-4 h-4 mr-2" />
-          Back to Orders
-        </Button>
-        
         <div>
           <h1 className="mb-1 font-[Poppins] font-bold text-[24px]">New Order</h1>
           <p className="text-gray-600 text-sm">Create a new cleaning service order</p>

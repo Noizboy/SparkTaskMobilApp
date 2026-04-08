@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { IconPlus, IconFilter, IconX } from '@tabler/icons-react';
+import { IconPlus, IconFilter } from '@tabler/icons-react';
 import { OrdersList } from '../orders/OrdersList';
 import { DateRangePicker } from '../ui/date-range-picker';
 import {
@@ -27,29 +27,6 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [toDate, setToDate] = useState<Date | undefined>(undefined);
 
-  const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
-  const [appliedStatusFilter, setAppliedStatusFilter] = useState('all');
-  const [appliedFromDate, setAppliedFromDate] = useState('');
-  const [appliedToDate, setAppliedToDate] = useState('');
-
-  const handleApplyFilters = () => {
-    setAppliedSearchQuery(searchQuery);
-    setAppliedStatusFilter(statusFilter);
-    setAppliedFromDate(fromDate ? format(fromDate, 'yyyy-MM-dd') : '');
-    setAppliedToDate(toDate ? format(toDate, 'yyyy-MM-dd') : '');
-  };
-
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setStatusFilter('all');
-    setFromDate(undefined);
-    setToDate(undefined);
-    setAppliedSearchQuery('');
-    setAppliedStatusFilter('all');
-    setAppliedFromDate('');
-    setAppliedToDate('');
-  };
-
   return (
     <div className="p-4 md:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -72,9 +49,9 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
           <span className="font-medium text-gray-900">Filter Orders</span>
         </div>
 
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-          {/* Search */}
-          <div className="lg:col-span-3">
+        <div className="p-4 flex flex-row gap-4 flex-wrap">
+          {/* Search — takes remaining space */}
+          <div className="flex-1 min-w-0">
             <label className="block text-xs text-gray-600 mb-2">Search</label>
             <Input
               placeholder="Customer name or order code..."
@@ -84,11 +61,11 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
             />
           </div>
 
-          {/* Status */}
-          <div className="lg:col-span-2">
+          {/* Status — fixed width */}
+          <div className="w-44 shrink-0">
             <label className="block text-xs text-gray-600 mb-2">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="shadow-sm h-10">
+              <SelectTrigger className="shadow-sm h-10 w-full">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -101,8 +78,8 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
             </Select>
           </div>
 
-          {/* Date Range */}
-          <div className="lg:col-span-4">
+          {/* Date Range — same fixed width as Status */}
+          <div className="w-44 shrink-0">
             <label className="block text-xs text-gray-600 mb-2">Date Range</label>
             <DateRangePicker
               from={fromDate}
@@ -112,41 +89,16 @@ export function OrdersPage({ user, onViewOrder, onNavigate, orders }: OrdersPage
               placeholder="Select date range"
             />
           </div>
-
-          {/* Buttons */}
-          <div className="lg:col-span-3 grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-transparent mb-2 select-none">-</label>
-              <Button
-                onClick={handleApplyFilters}
-                className="w-full bg-[#033620] hover:bg-[#022819] text-white shadow-sm h-10"
-              >
-                <IconFilter className="w-4 h-4 mr-2" />
-                Apply
-              </Button>
-            </div>
-            <div>
-              <label className="block text-xs text-transparent mb-2 select-none">-</label>
-              <Button
-                onClick={handleResetFilters}
-                variant="outline"
-                className="w-full border-gray-300 hover:bg-gray-50 shadow-sm h-10"
-              >
-                <IconX className="w-4 h-4 mr-2" />
-                Reset
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
 
       <OrdersList
         onOrderClick={onViewOrder}
         onCreateOrder={() => onNavigate?.('create-order')}
-        searchQuery={appliedSearchQuery}
-        filter={appliedStatusFilter === 'all' ? undefined : appliedStatusFilter}
-        fromDate={appliedFromDate}
-        toDate={appliedToDate}
+        searchQuery={searchQuery}
+        filter={statusFilter === 'all' ? undefined : statusFilter}
+        fromDate={fromDate ? format(fromDate, 'yyyy-MM-dd') : ''}
+        toDate={toDate ? format(toDate, 'yyyy-MM-dd') : ''}
         orders={orders}
       />
     </div>

@@ -51,7 +51,7 @@ export function InProgressOrdersCarousel({ onViewOrder, orders }: InProgressOrde
             <div className="bg-[#033620] text-white px-2.5 py-0.5 rounded-full text-xs">
               In progress
             </div>
-            <div className="text-xs text-gray-500">Order {order.orderNumber}</div>
+            <div className="text-xs text-gray-500">Order #{order.orderNumber.replace(/^#/, '')}</div>
           </div>
 
           {/* Tasks Completed */}

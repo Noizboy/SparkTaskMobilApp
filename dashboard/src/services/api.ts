@@ -225,6 +225,62 @@ export async function deleteOrder(id: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed to delete order: ${res.statusText}`);
 }
 
+// ─── Services ───────────────────────────────────────────────────────────────
+
+export interface ServiceAPI {
+  id: string;
+  businessId: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export async function fetchServices(businessId?: string): Promise<ServiceAPI[]> {
+  const params = new URLSearchParams();
+  if (businessId) params.set('business_id', businessId);
+  const qs = params.toString();
+  const res = await fetch(`${API_URL}/services${qs ? `?${qs}` : ''}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch services');
+  return res.json();
+}
+
+export async function createService(data: { name: string; description?: string; businessId: string }): Promise<ServiceAPI> {
+  const res = await fetch(`${API_URL}/services`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to create service');
+  }
+  return res.json();
+}
+
+export async function updateService(id: string, data: { name: string; description?: string }): Promise<ServiceAPI> {
+  const res = await fetch(`${API_URL}/services/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update service');
+  }
+  return res.json();
+}
+
+export async function deleteService(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/services/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to delete service');
+  }
+}
+
 // ─── Health check ───────────────────────────────────────────────────────────
 
 export async function checkApiHealth(): Promise<boolean> {

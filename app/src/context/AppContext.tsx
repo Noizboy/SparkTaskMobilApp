@@ -95,6 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const savedUser = await storage.getJSON<CurrentUser>('currentUser');
         if (savedUser) {
           setCurrentUser(savedUser);
+          if (savedUser.avatar_url) setProfileImage(savedUser.avatar_url);
           setIsAuthenticated(true);
         } else {
           // Stale session — no user data. Force re-login.
@@ -184,6 +185,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storage.set(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN, 'true');
     await storage.setJSON('currentUser', user);
     setCurrentUser(user);
+    if (user.avatar_url) setProfileImage(user.avatar_url);
     setIsAuthenticated(true);
     const hasOnboarded = await storage.get(AUTH_CONFIG.STORAGE_KEYS.ONBOARDING_COMPLETED);
     if (!hasOnboarded) setShowOnboarding(true);
@@ -198,6 +200,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setShowOnboarding(false);
     setJobs([]);
     setCurrentUser(null);
+    setProfileImage(null);
   };
 
   const handleOnboardingComplete = async () => {

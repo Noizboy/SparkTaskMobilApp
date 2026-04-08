@@ -123,3 +123,13 @@ npm run build    # Production build
 
 - React 18 + TypeScript + Vite + Tailwind
 - Icons: `@tabler/icons-react`
+
+## Agent Roles
+
+This repo defines specialist agent personas in `.github/agents/`. When working on a task, adopt the role of the appropriate agent:
+
+- **Backend tasks** (APIs, DB, auth, server logic) → read `.github/agents/Backend-Agent.agent.md`
+- **Frontend tasks** (UI, components, styling, state) → read `.github/agents/Frontend-Agent.agent.md`
+- **QA / security tasks** (audits, tests, code review) → read `.github/agents/QA-Agent.agent.md`
+
+The PM-Agent (`.github/agents/PM-Agent.agent.md`) defines routing rules — use it to decide which specialist role applies when the task spans multiple concerns.

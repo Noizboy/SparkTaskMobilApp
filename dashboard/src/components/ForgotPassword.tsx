@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Button } from './ui/button';
-import { IconSparkles, IconArrowLeft, IconCircleCheck } from '@tabler/icons-react';
+import { IconSparkles, IconCircleCheck } from '@tabler/icons-react';
 import { Alert, AlertDescription } from './ui/alert';
 
 interface ForgotPasswordProps {
@@ -65,13 +65,6 @@ export function ForgotPassword({ onBackToLogin, onSubmit }: ForgotPasswordProps)
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button 
-              type="button" 
-              onClick={onBackToLogin}
-              className="w-full bg-[#033620] hover:bg-[#022819] shadow-md text-white"
-            >
-              Back to Sign In
-            </Button>
             <button
               type="button"
               onClick={() => setEmailSent(false)}
@@ -125,14 +118,6 @@ export function ForgotPassword({ onBackToLogin, onSubmit }: ForgotPasswordProps)
             <Button type="submit" className="w-full bg-[#033620] hover:bg-[#022819] shadow-md text-white" disabled={isLoading}>
               {isLoading ? 'Sending...' : 'Send reset link'}
             </Button>
-            <button
-              type="button"
-              onClick={onBackToLogin}
-              className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-[#033620] font-medium"
-            >
-              <IconArrowLeft className="w-4 h-4" />
-              Back to Sign In
-            </button>
           </CardFooter>
         </form>
       </Card>

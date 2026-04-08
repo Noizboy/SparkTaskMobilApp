@@ -32,7 +32,7 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Order {order.orderNumber}</DialogTitle>
+            <DialogTitle>Order #{order.orderNumber.replace(/^#/, '')}</DialogTitle>
             {getStatusBadge(order.status)}
           </div>
           <DialogDescription>

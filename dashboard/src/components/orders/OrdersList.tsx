@@ -202,10 +202,16 @@ export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filt
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Table Header */}
       <div className="hidden md:grid grid-cols-[1fr_2fr_1.5fr_1.5fr_1fr_80px] gap-4 px-6 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+        <button
+          onClick={cycleSortOrder}
+          className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 hover:text-gray-800 transition-colors"
+        >
           <IconHash className="w-3.5 h-3.5" />
           Order
-        </div>
+          {sortOrder === 'asc' && <IconArrowUp className="w-3.5 h-3.5 text-[#033620]" />}
+          {sortOrder === 'desc' && <IconArrowDown className="w-3.5 h-3.5 text-[#033620]" />}
+          {sortOrder === null && <IconArrowsSort className="w-3.5 h-3.5 opacity-40" />}
+        </button>
         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
           <IconUser className="w-3.5 h-3.5" />
           Customer Name
@@ -214,16 +220,10 @@ export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filt
           <IconBriefcase className="w-3.5 h-3.5" />
           Service
         </div>
-        <button
-          onClick={cycleSortOrder}
-          className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 hover:text-gray-800 transition-colors"
-        >
+        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
           <IconCalendar className="w-3.5 h-3.5" />
           Scheduled
-          {sortOrder === 'asc' && <IconArrowUp className="w-3.5 h-3.5 text-[#033620]" />}
-          {sortOrder === 'desc' && <IconArrowDown className="w-3.5 h-3.5 text-[#033620]" />}
-          {sortOrder === null && <IconArrowsSort className="w-3.5 h-3.5 opacity-40" />}
-        </button>
+        </div>
         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
           <IconActivity className="w-3.5 h-3.5" />
           Status
@@ -250,7 +250,7 @@ export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filt
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Order Code</p>
-                    <p className="font-sans text-gray-900 text-base">{order.orderNumber}</p>
+                    <p className="font-sans text-gray-900 text-base">#{order.orderNumber.replace(/^#/, '')}</p>
                   </div>
                   <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${getStatusClass(order.status)}`}>
                     {getStatusBadge(order.status)}
@@ -285,7 +285,7 @@ export function OrdersList({ onOrderClick, onCreateOrder, searchQuery = '', filt
 
               {/* Desktop Layout */}
               <div className="hidden md:flex items-center">
-                <p className="font-sans text-gray-900 text-base">{order.orderNumber}</p>
+                <p className="font-sans text-gray-900 text-base">#{order.orderNumber.replace(/^#/, '')}</p>
               </div>
               <div className="hidden md:flex flex-col justify-center">
                 <p className="text-sm text-gray-900">{order.clientName}</p>

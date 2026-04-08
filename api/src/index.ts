@@ -5,6 +5,7 @@ import { pool } from './db';
 import { ordersRouter } from './routes/orders';
 import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
+import { servicesRouter } from './routes/services';
 import { sseHandler } from './sse';
 
 const app = express();
@@ -27,6 +28,17 @@ async function runMigrations() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS services (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      business_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name        VARCHAR(255) NOT NULL,
+      description TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
   console.log('✓ Migrations applied');
 }
 
@@ -46,6 +58,7 @@ app.get('/api/events', sseHandler);
 app.use('/api/auth', authRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/services', servicesRouter);
 
 app.listen(PORT, () => {
   console.log(`\n🚀 SparkTask API running at http://localhost:${PORT}`);
