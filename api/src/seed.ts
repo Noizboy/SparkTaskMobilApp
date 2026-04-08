@@ -1,8 +1,12 @@
+import bcrypt from 'bcrypt';
 import { pool } from './db';
 
 /**
- * Seed script — creates realistic SparkTask data matching the mobile app's mock jobs.
- * Same clients, order numbers, and structures appear in both the app and dashboard.
+ * Seed script — wipes the entire database and recreates with demo data.
+ *
+ * 1 Admin:    admin@sparktask.com / demo
+ * 4 Cleaners: maria@demo.com, carlos@demo.com, sofia@demo.com, diego@demo.com (all pw: demo)
+ * 10 Orders with mixed statuses
  *
  * Run: npm run seed
  */
@@ -11,7 +15,7 @@ type TodoRow = [string, boolean];
 type SectionData = {
   name: string;
   icon: string;
-  time: number; // minutes
+  time: number;
   completed?: boolean;
   skipReason?: string;
   todos: Array<string | TodoRow>;
@@ -71,7 +75,6 @@ async function insertSections(client: any, orderId: string, sections: SectionDat
       );
     }
   }
-  // Update order duration based on sum of section times
   const h = Math.floor(totalMinutes / 60), m = totalMinutes % 60;
   const duration = totalMinutes <= 0 ? '' : h > 0 && m > 0 ? `${h} ${h === 1 ? 'hour' : 'hours'} ${m} min` : h > 0 ? `${h} ${h === 1 ? 'hour' : 'hours'}` : `${m} min`;
   await client.query(`UPDATE orders SET duration = $1 WHERE id = $2`, [duration, orderId]);
@@ -95,8 +98,6 @@ async function insertEmployees(client: any, orderId: string, employees: string[]
   }
 }
 
-// ─── Timestamps ────────────────────────────────────────────────────────────────
-
 const ts = (dateStr: string) => new Date(dateStr).getTime();
 
 // ─── Main seed ─────────────────────────────────────────────────────────────────
@@ -107,54 +108,82 @@ async function seed() {
   try {
     await client.query('BEGIN');
 
-    // Wipe everything in dependency order (cascades handled manually)
+    // Wipe everything in dependency order
     await client.query('DELETE FROM assigned_employees');
     await client.query('DELETE FROM photos');
     await client.query('DELETE FROM todos');
     await client.query('DELETE FROM sections');
     await client.query('DELETE FROM add_ons');
     await client.query('DELETE FROM orders');
-    await client.query('DELETE FROM users WHERE email != $1', ['admin@sparktask.com']);
+    await client.query('DELETE FROM pending_invites');
+    await client.query('DELETE FROM users');
 
-    // ── Seed admin user (dashboard login) ────────────────────────────────────
-    await client.query(
-      `INSERT INTO users (email, password, name, company, role) VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (email) DO NOTHING`,
-      ['admin@sparktask.com', 'admin123', 'Sarah Admin', 'SparkTask Cleaning', 'admin']
-    );
-    await client.query(
-      `INSERT INTO users (email, password, name, company, role) VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (email) DO NOTHING`,
-      ['demo@demo.com', 'demo', 'Demo User', 'SparkTask Cleaning', 'cleaner']
-    );
+    const SALT_ROUNDS = 12;
+    const demoHash = await bcrypt.hash('demo', SALT_ROUNDS);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // UPCOMING / SCHEDULED ORDERS (mobile shows as 'upcoming', DB stores 'scheduled')
+    // USERS
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // ── Order #2847 — Emma Richardson — Deep clean ────────────────────────────
+    // ── Admin (business owner) — business_id is NULL ─────────────────────────
+    const adminRes = await client.query(
+      `INSERT INTO users (email, password, name, company, role)
+       VALUES ($1,$2,$3,$4,$5)
+       RETURNING id`,
+      ['admin@sparktask.com', demoHash, 'Admin SparkTask', 'SparkTask', 'admin']
+    );
+    const adminId: string = adminRes.rows[0].id;
+
+    // ── 4 Cleaners linked to admin's business_id ────────────────────────────
+    const cleaners = [
+      { email: 'maria@demo.com', name: 'María García' },
+      { email: 'carlos@demo.com', name: 'Carlos López' },
+      { email: 'sofia@demo.com', name: 'Sofía Martínez' },
+      { email: 'diego@demo.com', name: 'Diego Hernández' },
+    ];
+
+    for (const c of cleaners) {
+      await client.query(
+        `INSERT INTO users (email, password, name, company, role, business_id)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [c.email, demoHash, c.name, 'SparkTask', 'cleaner', adminId]
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ORDERS — 10 orders with mixed statuses
+    // assigned_employees.employee_name must match user.name exactly for the
+    // team-page completed-orders count to work.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SCHEDULED (pending/upcoming) — 3 orders
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Order #3001 — Deep clean ────────────────────────────────────────────
     const o1 = await insertOrder(client, {
-      orderNumber: '2847', clientName: 'Emma Richardson', clientEmail: 'emma.richardson@email.com',
-      address: '456 Maple Drive, Apt 3B', phone: '+1 (555) 234-8471',
-      status: 'scheduled', date: '2026-04-07', time: '09:00 AM',
+      orderNumber: '3001', clientName: 'Emily Watson', clientEmail: 'emily.watson@email.com',
+      address: '742 Evergreen Terrace, Apt 4B', phone: '+1 (555) 301-4821',
+      status: 'scheduled', date: '2026-04-10', time: '09:00 AM',
       serviceType: 'Deep clean',
-      specialInstructions: 'Focus on the stove and shower. Pet in the apartment (friendly dog).',
-      accessInfo: 'Door code: 4582 · Guard at reception',
-      goal: 'Deliver move-out level clean',
+      specialInstructions: 'Allergic to bleach — use natural products only. Two cats in the house.',
+      accessInfo: 'Door code: 7734 · Ring doorbell twice',
+      goal: 'Spring deep clean before guests arrive',
     });
     await insertSections(client, o1, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 45, todos: [
-        'Wipe down countertops and backsplash', 'Clean stovetop and exterior of appliances',
-        'Clean sink and faucet', 'Sweep and mop floor', 'Empty trash and replace liner',
+      { name: 'Kitchen', icon: 'ChefHat', time: 50, todos: [
+        'Deep clean all countertops and backsplash', 'Scrub stovetop and oven exterior',
+        'Clean inside microwave', 'Sanitize sink and faucet', 'Sweep and mop floor', 'Empty trash and replace liner',
       ]},
-      { name: 'Bathroom', icon: 'Bath', time: 30, todos: [
-        'Clean and sanitize toilet', 'Clean shower/tub and tiles', 'Clean sink and mirror', 'Sweep and mop floor',
+      { name: 'Bathroom', icon: 'Bath', time: 40, todos: [
+        'Sanitize toilet inside and out', 'Scrub shower tiles and glass door',
+        'Remove soap scum from bathtub', 'Clean sink and vanity', 'Polish mirror', 'Mop floor',
       ]},
       { name: 'Master Bedroom', icon: 'Bed', time: 30, todos: [
-        'Change bed linens', 'Dust all surfaces', 'Vacuum floor', 'Empty trash',
+        'Change bed linens', 'Dust all surfaces and nightstands', 'Vacuum carpet thoroughly', 'Empty trash',
       ]},
       { name: 'Living Room', icon: 'Sofa', time: 25, todos: [
-        'Dust all surfaces and shelves', 'Vacuum sofa and cushions', 'Vacuum floor', 'Clean windows and mirrors',
+        'Dust all surfaces and shelves', 'Vacuum sofa and cushions', 'Vacuum floor', 'Clean windows',
       ]},
     ]);
     await insertAddOns(client, o1, [
@@ -162,398 +191,692 @@ async function seed() {
       { name: 'Inside Fridge', icon: 'Snowflake', price: 20, selected: false },
       { name: 'Laundry', icon: 'Shirt', price: 30, selected: false },
     ]);
-    await insertEmployees(client, o1, ['Ana Lopez', 'Maria Garcia']);
+    await insertEmployees(client, o1, ['María García', 'Sofía Martínez']);
 
-    // ── Order #2851 — Marcus Johnson — Standard clean ─────────────────────────
+    // ── Order #3002 — Standard clean ────────────────────────────────────────
     const o2 = await insertOrder(client, {
-      orderNumber: '2851', clientName: 'Marcus Johnson', clientEmail: 'marcus.j@email.com',
-      address: '89 Oak Street, Suite 5A', phone: '+1 (555) 891-3024',
-      status: 'scheduled', date: '2026-04-07', time: '02:00 PM',
+      orderNumber: '3002', clientName: 'Robert Chen', clientEmail: 'robert.chen@email.com',
+      address: '88 Oakwood Boulevard, Suite 12A', phone: '+1 (555) 482-9317',
+      status: 'scheduled', date: '2026-04-11', time: '02:00 PM',
       serviceType: 'Standard clean',
-      specialInstructions: 'Please use eco-friendly products only.',
-      accessInfo: 'Key under doormat',
-      goal: 'Leave the place spotless',
+      specialInstructions: 'Please use eco-friendly products. Small dog (friendly).',
+      accessInfo: 'Key in lockbox #4291 beside front door',
+      goal: 'Bi-weekly maintenance clean',
     });
     await insertSections(client, o2, [
       { name: 'Kitchen', icon: 'ChefHat', time: 30, todos: [
-        'Wipe countertops', 'Clean sink', 'Mop floor',
-      ]},
-      { name: 'Bathroom', icon: 'Bath', time: 20, todos: [
-        'Sanitize toilet', 'Clean shower', 'Mop floor',
-      ]},
-    ]);
-    await insertAddOns(client, o2, [
-      { name: 'Window Cleaning', icon: 'Sparkles', price: 35, selected: false },
-    ]);
-    await insertEmployees(client, o2, ['Carlos Ruiz']);
-
-    // ── Order #2855 — Sophia Martinez — Move-out clean ────────────────────────
-    const o3 = await insertOrder(client, {
-      orderNumber: '2855', clientName: 'Sophia Martinez', clientEmail: 'sophia.m@email.com',
-      address: '12 Sunset Blvd, Unit 8', phone: '+1 (555) 672-1935',
-      status: 'scheduled', date: '2026-04-10', time: '10:00 AM',
-      serviceType: 'Move-out clean',
-      specialInstructions: 'Tenant moving out. Full deep clean needed.',
-      accessInfo: 'Contact property manager: (555) 987-6543',
-      goal: 'Restore to original condition for new tenants',
-    });
-    await insertSections(client, o3, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 60, todos: [
-        'Deep clean all appliances', 'Clean inside cabinets', 'Scrub countertops',
-        'Clean sink and faucet', 'Mop floor thoroughly',
-      ]},
-      { name: 'Bathroom', icon: 'Bath', time: 45, todos: [
-        'Deep clean toilet inside and out', 'Remove soap scum from shower',
-        'Clean all tiles and grout', 'Polish mirrors',
-      ]},
-      { name: 'Bedroom', icon: 'Bed', time: 30, todos: [
-        'Clean inside closets', 'Dust all surfaces', 'Vacuum carpet thoroughly',
-      ]},
-    ]);
-    await insertAddOns(client, o3, [
-      { name: 'Inside Oven', icon: 'Flame', price: 25, selected: false },
-      { name: 'Inside Fridge', icon: 'Snowflake', price: 20, selected: false },
-      { name: 'Carpet Shampoo', icon: 'Sparkles', price: 50, selected: false },
-    ]);
-    await insertEmployees(client, o3, ['Ana Lopez', 'Emma Wilson', 'James Rodriguez']);
-
-    // ── Order #2860 — James Whitfield — Standard clean ───────────────────────
-    const o4 = await insertOrder(client, {
-      orderNumber: '2860', clientName: 'James Whitfield', clientEmail: 'james.w@email.com',
-      address: '14 Birchwood Lane, Apt 4D', phone: '+1 (555) 418-7260',
-      status: 'scheduled', date: '2026-04-08', time: '08:30 AM',
-      serviceType: 'Standard clean',
-      specialInstructions: 'Focus on kitchen and bathrooms.',
-      accessInfo: 'Doorbell code: 1234',
-      goal: 'Weekly maintenance clean',
-    });
-    await insertSections(client, o4, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 35, todos: [
         'Wipe countertops and backsplash', 'Clean stovetop', 'Clean sink and faucet', 'Mop floor',
       ]},
       { name: 'Bathroom', icon: 'Bath', time: 25, todos: [
         'Sanitize toilet', 'Clean shower and tiles', 'Wipe sink and mirror', 'Mop floor',
       ]},
-    ]);
-    await insertAddOns(client, o4, [
-      { name: 'Inside Oven', icon: 'Flame', price: 25, selected: false },
-    ]);
-    await insertEmployees(client, o4, ['Maria Garcia']);
-
-    // ── Order #2863 — Priya Nair — Deep clean ────────────────────────────────
-    const o5 = await insertOrder(client, {
-      orderNumber: '2863', clientName: 'Priya Nair', clientEmail: 'priya.n@email.com',
-      address: '501 Elmwood Ave, Unit 2', phone: '+1 (555) 539-4187',
-      status: 'scheduled', date: '2026-04-09', time: '10:00 AM',
-      serviceType: 'Deep clean',
-      specialInstructions: 'New client — extra attention to detail.',
-      accessInfo: 'Key in lockbox: #9182',
-      goal: 'First-time deep clean',
-    });
-    await insertSections(client, o5, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 50, todos: [
-        'Deep clean appliances exterior', 'Scrub countertops', 'Clean sink and faucet',
-        'Sweep and mop floor', 'Empty trash',
-      ]},
-      { name: 'Bathroom', icon: 'Bath', time: 40, todos: [
-        'Scrub toilet inside and out', 'Clean shower and glass door',
-        'Remove soap scum from tiles', 'Clean sink and mirror', 'Mop floor',
-      ]},
-      { name: 'Bedroom', icon: 'Bed', time: 30, todos: [
-        'Change bed linens', 'Dust all surfaces', 'Vacuum floor',
-      ]},
-      { name: 'Living Room', icon: 'Sofa', time: 25, todos: [
-        'Dust surfaces and shelves', 'Vacuum sofa', 'Vacuum floor',
+      { name: 'Living Room', icon: 'Sofa', time: 20, todos: [
+        'Dust all surfaces', 'Vacuum floor and rugs', 'Wipe down coffee table',
       ]},
     ]);
-    await insertAddOns(client, o5, [
-      { name: 'Inside Fridge', icon: 'Snowflake', price: 20, selected: false },
-      { name: 'Laundry', icon: 'Shirt', price: 30, selected: false },
-    ]);
-    await insertEmployees(client, o5, ['Carlos Ruiz', 'Ana Lopez']);
-
-    // ── Order #2867 — Carlos Reyes — Standard clean ──────────────────────────
-    const o6 = await insertOrder(client, {
-      orderNumber: '2867', clientName: 'Carlos Reyes', clientEmail: 'carlos.r@email.com',
-      address: '88 Maplewood Court, Suite 1', phone: '+1 (555) 762-0394',
-      status: 'scheduled', date: '2026-04-12', time: '01:00 PM',
-      serviceType: 'Standard clean',
-      accessInfo: 'Open door — client works from home',
-      goal: 'Bi-weekly routine clean',
-    });
-    await insertSections(client, o6, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 30, todos: ['Wipe countertops', 'Clean sink', 'Mop floor'] },
-      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Sanitize toilet', 'Clean shower', 'Mop floor'] },
-      { name: 'Living Room', icon: 'Sofa', time: 20, todos: ['Dust surfaces', 'Vacuum floor'] },
-    ]);
-    await insertEmployees(client, o6, ['James Rodriguez']);
-
-    // ── Order #2871 — Natalie Brooks — Move-in clean ─────────────────────────
-    const o7 = await insertOrder(client, {
-      orderNumber: '2871', clientName: 'Natalie Brooks', clientEmail: 'natalie.b@email.com',
-      address: '220 Cedar Street, Apt 7F', phone: '+1 (555) 183-6742',
-      status: 'scheduled', date: '2026-04-14', time: '09:00 AM',
-      serviceType: 'Move-in clean',
-      specialInstructions: 'New tenant moving in. Property was vacant for 2 months.',
-      accessInfo: 'Key at front desk, ask for Luis',
-      goal: 'Sanitize and freshen entire unit',
-    });
-    await insertSections(client, o7, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 55, todos: [
-        'Deep clean all appliances', 'Wipe inside cabinets', 'Scrub countertops',
-        'Clean sink and faucet', 'Mop floor',
-      ]},
-      { name: 'Bathroom', icon: 'Bath', time: 40, todos: [
-        'Disinfect toilet', 'Scrub shower and tub', 'Clean tiles',
-        'Clean sink and mirror', 'Mop floor',
-      ]},
-      { name: 'Bedroom', icon: 'Bed', time: 30, todos: [
-        'Wipe inside closets', 'Dust all surfaces', 'Vacuum floor',
-      ]},
-    ]);
-    await insertAddOns(client, o7, [
+    await insertAddOns(client, o2, [
       { name: 'Window Cleaning', icon: 'Sparkles', price: 35, selected: false },
-      { name: 'Inside Oven', icon: 'Flame', price: 25, selected: false },
     ]);
-    await insertEmployees(client, o7, ['Emma Wilson', 'Maria Garcia']);
+    await insertEmployees(client, o2, ['Carlos López']);
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // IN-PROGRESS ORDERS
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // ── Order #2839 — David Chen — Standard clean (in progress) ──────────────
-    const o8 = await insertOrder(client, {
-      orderNumber: '2839', clientName: 'David Chen', clientEmail: 'david.c@email.com',
-      address: '303 Pine Avenue, Apt 2C', phone: '+1 (555) 294-8103',
-      status: 'in-progress', date: '2026-04-07', time: '11:00 AM',
-      serviceType: 'Standard clean',
-      specialInstructions: 'Be quiet — baby sleeping in second bedroom.',
-      accessInfo: 'Smart lock code: 7291',
-      goal: 'Fresh and tidy for family',
-      startedAt: ts('2026-04-07T11:00:00'),
+    // ── Order #3003 — Move-in clean ─────────────────────────────────────────
+    const o3 = await insertOrder(client, {
+      orderNumber: '3003', clientName: 'Jessica Thompson', clientEmail: 'jessica.t@email.com',
+      address: '220 Cedar Lane, Unit 7F', phone: '+1 (555) 671-2839',
+      status: 'scheduled', date: '2026-04-14', time: '10:00 AM',
+      serviceType: 'Move-in clean',
+      specialInstructions: 'New tenant moving in. Apartment vacant 3 months — very dusty.',
+      accessInfo: 'Key at front desk, ask for Miguel',
+      goal: 'Full sanitization before move-in',
     });
-    await insertSections(client, o8, [
+    await insertSections(client, o3, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 55, todos: [
+        'Deep clean all appliances', 'Wipe inside all cabinets and drawers',
+        'Scrub countertops', 'Clean sink and faucet', 'Mop floor thoroughly',
+      ]},
+      { name: 'Bathroom', icon: 'Bath', time: 40, todos: [
+        'Disinfect toilet inside and out', 'Scrub shower and bathtub',
+        'Clean all tiles and grout', 'Clean sink and mirror', 'Mop floor',
+      ]},
+      { name: 'Bedrooms', icon: 'Bed', time: 35, todos: [
+        'Wipe inside all closets', 'Dust all surfaces, baseboards, and vents',
+        'Vacuum entire floor', 'Clean windows interior',
+      ]},
+    ]);
+    await insertAddOns(client, o3, [
+      { name: 'Inside Oven', icon: 'Flame', price: 25, selected: false },
+      { name: 'Inside Fridge', icon: 'Snowflake', price: 20, selected: false },
+      { name: 'Window Cleaning', icon: 'Sparkles', price: 35, selected: false },
+    ]);
+    await insertEmployees(client, o3, ['María García', 'Diego Hernández']);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // IN-PROGRESS — 2 orders
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Order #3004 — Standard clean (partially done) ───────────────────────
+    const o4 = await insertOrder(client, {
+      orderNumber: '3004', clientName: 'Andrew Park', clientEmail: 'andrew.park@email.com',
+      address: '505 Maple Drive, Apt 2C', phone: '+1 (555) 390-7142',
+      status: 'in-progress', date: '2026-04-08', time: '09:00 AM',
+      serviceType: 'Standard clean',
+      specialInstructions: 'Baby sleeping in nursery — please be quiet near back rooms.',
+      accessInfo: 'Smart lock code: 8461',
+      goal: 'Quick weekly tidy-up',
+      startedAt: ts('2026-04-08T09:05:00'),
+    });
+    await insertSections(client, o4, [
       { name: 'Kitchen', icon: 'ChefHat', time: 30, completed: false, todos: [
         ['Wipe down countertops', true] as TodoRow,
         ['Clean stovetop', true] as TodoRow,
         ['Clean sink and faucet', false] as TodoRow,
         ['Sweep and mop floor', false] as TodoRow,
       ]},
-      { name: 'Main Bathroom', icon: 'Bath', time: 25, completed: false, todos: [
+      { name: 'Bathroom', icon: 'Bath', time: 25, todos: [
         'Sanitize toilet', 'Clean shower', 'Wipe sink and mirror', 'Mop floor',
       ]},
-      { name: 'Living Room', icon: 'Sofa', time: 20, completed: false, todos: [
-        'Dust surfaces', 'Vacuum floor and sofa', 'Clean windows',
+      { name: 'Living Room', icon: 'Sofa', time: 20, todos: [
+        'Dust all surfaces', 'Vacuum floor and sofa', 'Clean windows',
       ]},
     ]);
-    await insertAddOns(client, o8, [
+    await insertAddOns(client, o4, [
       { name: 'Laundry', icon: 'Shirt', price: 30, selected: true },
     ]);
-    await insertEmployees(client, o8, ['Ana Lopez']);
+    await insertEmployees(client, o4, ['Sofía Martínez']);
 
-    // ── Order #2843 — Robert Kim — Deep clean (in progress, further along) ───
-    const o9 = await insertOrder(client, {
-      orderNumber: '2843', clientName: 'Robert Kim', clientEmail: 'robert.kim@email.com',
-      address: '730 Westside Ave, Unit 12', phone: '+1 (555) 310-8824',
-      status: 'in-progress', date: '2026-04-07', time: '09:00 AM',
+    // ── Order #3005 — Deep clean (kitchen done, bathroom in progress) ───────
+    const o5 = await insertOrder(client, {
+      orderNumber: '3005', clientName: 'Michelle Rivera', clientEmail: 'michelle.r@email.com',
+      address: '730 Westside Ave, Unit 12', phone: '+1 (555) 814-3390',
+      status: 'in-progress', date: '2026-04-08', time: '08:00 AM',
       serviceType: 'Deep clean',
-      specialInstructions: 'Focus on master bathroom — heavy buildup.',
-      accessInfo: 'Garage code: 5523',
-      goal: 'Thorough deep clean, especially wet areas',
-      startedAt: ts('2026-04-07T09:00:00'),
+      specialInstructions: 'Focus on master bathroom — heavy calcium buildup on shower.',
+      accessInfo: 'Garage code: 5523 · Side door unlocked',
+      goal: 'Monthly deep clean, especially wet areas',
+      startedAt: ts('2026-04-08T08:10:00'),
     });
-    await insertSections(client, o9, [
+    await insertSections(client, o5, [
       { name: 'Kitchen', icon: 'ChefHat', time: 50, completed: true, todos: [
         ['Deep clean stovetop and oven exterior', true] as TodoRow,
-        ['Scrub countertops', true] as TodoRow,
+        ['Scrub all countertops', true] as TodoRow,
         ['Clean sink and faucet', true] as TodoRow,
         ['Mop floor', true] as TodoRow,
         ['Empty trash', true] as TodoRow,
       ]},
       { name: 'Master Bathroom', icon: 'Bath', time: 45, completed: false, todos: [
         ['Scrub toilet inside and out', true] as TodoRow,
-        ['Remove soap scum from shower', false] as TodoRow,
+        ['Remove calcium buildup from shower', false] as TodoRow,
         ['Clean all tiles and grout', false] as TodoRow,
         ['Polish mirror and vanity', false] as TodoRow,
         ['Mop floor', false] as TodoRow,
       ]},
-      { name: 'Guest Bathroom', icon: 'Bath', time: 25, completed: false, todos: [
+      { name: 'Guest Bathroom', icon: 'Bath', time: 25, todos: [
         'Sanitize toilet', 'Clean sink and mirror', 'Mop floor',
       ]},
-      { name: 'Bedrooms', icon: 'Bed', time: 30, completed: false, todos: [
+      { name: 'Bedrooms', icon: 'Bed', time: 30, todos: [
         'Change all bed linens', 'Dust all surfaces', 'Vacuum floors',
       ]},
     ]);
-    await insertAddOns(client, o9, [
+    await insertAddOns(client, o5, [
       { name: 'Window Cleaning', icon: 'Sparkles', price: 35, selected: true },
       { name: 'Inside Fridge', icon: 'Snowflake', price: 20, selected: false },
     ]);
-    await insertEmployees(client, o9, ['Carlos Ruiz', 'Emma Wilson']);
+    await insertEmployees(client, o5, ['Carlos López', 'Diego Hernández']);
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // COMPLETED ORDERS
-    // ═══════════════════════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────────────────────
+    // COMPLETED — 4 orders (spread across cleaners for team stats)
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // ── Order #2831 — Olivia Thompson — Deep clean (completed) ───────────────
-    const o10 = await insertOrder(client, {
-      orderNumber: '2831', clientName: 'Olivia Thompson', clientEmail: 'olivia.t@email.com',
+    // ── Order #3006 — Deep clean (completed) — María + Carlos ───────────────
+    const o6 = await insertOrder(client, {
+      orderNumber: '3006', clientName: 'Sarah Mitchell', clientEmail: 'sarah.m@email.com',
       address: '77 River Road, Apt 1A', phone: '+1 (555) 847-2016',
       status: 'completed', date: '2026-04-04', time: '09:00 AM',
       serviceType: 'Deep clean',
-      goal: 'Thorough cleaning after renovation',
-      startedAt: ts('2026-04-04T09:00:00'),
-      completedAt: ts('2026-04-04T10:27:00'),
+      goal: 'Post-renovation thorough cleaning',
+      startedAt: ts('2026-04-04T09:05:00'),
+      completedAt: ts('2026-04-04T11:32:00'),
     });
-    await insertSections(client, o10, [
+    await insertSections(client, o6, [
       { name: 'Kitchen', icon: 'ChefHat', time: 45, completed: true, todos: [
-        'Wipe down countertops', 'Clean stovetop', 'Clean sink', 'Mop floor',
+        'Wipe down all countertops', 'Clean stovetop and oven exterior',
+        'Clean sink and faucet', 'Sweep and mop floor',
       ]},
-      { name: 'Bathroom', icon: 'Bath', time: 30, completed: true, todos: [
-        'Sanitize toilet', 'Clean shower', 'Mop floor',
+      { name: 'Bathroom', icon: 'Bath', time: 35, completed: true, todos: [
+        'Sanitize toilet', 'Deep clean shower tiles', 'Clean sink and mirror', 'Mop floor',
+      ]},
+      { name: 'Living Room', icon: 'Sofa', time: 25, completed: true, todos: [
+        'Dust all surfaces', 'Vacuum floor', 'Clean windows interior',
       ]},
     ]);
-    await insertAddOns(client, o10, [
+    await insertAddOns(client, o6, [
       { name: 'Window Cleaning', icon: 'Sparkles', price: 35, selected: true },
     ]);
-    await insertEmployees(client, o10, ['Ana Lopez']);
+    await insertEmployees(client, o6, ['María García', 'Carlos López']);
 
-    // ── Order #2825 — Lucas Rivera — Quick clean (completed) ─────────────────
-    const o11 = await insertOrder(client, {
-      orderNumber: '2825', clientName: 'Lucas Rivera', clientEmail: 'lucas.r@email.com',
+    // ── Order #3007 — Standard clean (completed) — Diego ────────────────────
+    const o7 = await insertOrder(client, {
+      orderNumber: '3007', clientName: 'David Nguyen', clientEmail: 'david.n@email.com',
       address: '33 Oak Street, Unit 5', phone: '+1 (555) 630-5928',
       status: 'completed', date: '2026-04-03', time: '02:00 PM',
-      serviceType: 'Quick clean',
+      serviceType: 'Standard clean',
       startedAt: ts('2026-04-03T14:00:00'),
-      completedAt: ts('2026-04-03T14:32:00'),
+      completedAt: ts('2026-04-03T15:15:00'),
     });
-    await insertSections(client, o11, [
+    await insertSections(client, o7, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, completed: true, todos: [
+        'Wipe countertops', 'Clean sink', 'Sweep and mop floor',
+      ]},
+      { name: 'Bathroom', icon: 'Bath', time: 20, completed: true, todos: [
+        'Clean toilet', 'Wipe mirror and sink', 'Mop floor',
+      ]},
+    ]);
+    await insertEmployees(client, o7, ['Diego Hernández']);
+
+    // ── Order #3008 — Move-out clean (completed) — Sofía + Carlos ───────────
+    const o8 = await insertOrder(client, {
+      orderNumber: '3008', clientName: 'Laura Fernández', clientEmail: 'laura.f@email.com',
+      address: '88 Pine Court, Suite 2B', phone: '+1 (555) 415-3087',
+      status: 'completed', date: '2026-04-01', time: '01:00 PM',
+      serviceType: 'Move-out clean',
+      specialInstructions: 'Empty apartment — clean every surface for deposit return.',
+      startedAt: ts('2026-04-01T13:00:00'),
+      completedAt: ts('2026-04-01T15:20:00'),
+    });
+    await insertSections(client, o8, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 40, completed: true, todos: [
+        'Deep clean oven interior', 'Clean inside all cabinets', 'Scrub countertops',
+        'Clean sink and faucet', 'Mop floor',
+      ]},
+      { name: 'Bathroom', icon: 'Bath', time: 30, completed: true, todos: [
+        'Deep clean toilet', 'Scrub shower tiles and grout', 'Clean vanity and mirror', 'Mop floor',
+      ]},
+      { name: 'Living Room', icon: 'Sofa', time: 25, completed: true, todos: [
+        'Dust all surfaces', 'Clean windows interior', 'Vacuum and mop floor',
+      ]},
+    ]);
+    await insertAddOns(client, o8, [
+      { name: 'Inside Oven', icon: 'Flame', price: 25, selected: true },
+      { name: 'Carpet Shampoo', icon: 'Sparkles', price: 50, selected: true },
+    ]);
+    await insertEmployees(client, o8, ['Sofía Martínez', 'Carlos López']);
+
+    // ── Order #3009 — Quick clean (completed) — María + Diego ───────────────
+    const o9 = await insertOrder(client, {
+      orderNumber: '3009', clientName: 'Michael Torres', clientEmail: 'michael.t@email.com',
+      address: '567 Lakewood Ave, Apt 5C', phone: '+1 (555) 884-9123',
+      status: 'completed', date: '2026-03-28', time: '10:00 AM',
+      serviceType: 'Quick clean',
+      startedAt: ts('2026-03-28T10:00:00'),
+      completedAt: ts('2026-03-28T10:45:00'),
+    });
+    await insertSections(client, o9, [
       { name: 'Kitchen', icon: 'ChefHat', time: 15, completed: true, todos: [
         'Wipe countertops', 'Clean sink', 'Sweep floor',
       ]},
       { name: 'Bathroom', icon: 'Bath', time: 15, completed: true, todos: [
-        'Clean toilet', 'Wipe mirror',
+        'Sanitize toilet', 'Wipe mirror',
       ]},
     ]);
-    await insertEmployees(client, o11, ['James Rodriguez']);
+    await insertEmployees(client, o9, ['María García', 'Diego Hernández']);
 
-    // ── Order #2819 — Sophia Martinez — Standard clean (completed) ───────────
-    const o12 = await insertOrder(client, {
-      orderNumber: '2819', clientName: 'Sophia Martinez', clientEmail: 'sophia.m2@email.com',
-      address: '120 Elm Avenue, Apt 8C', phone: '+1 (555) 672-1935',
-      status: 'completed', date: '2026-04-02', time: '10:00 AM',
-      serviceType: 'Standard clean',
-      startedAt: ts('2026-04-02T10:00:00'),
-      completedAt: ts('2026-04-02T11:02:00'),
-    });
-    await insertSections(client, o12, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 20, completed: true, todos: [
-        'Wipe countertops and backsplash', 'Clean stovetop', 'Clean sink and faucet', 'Mop floor',
-      ]},
-      { name: 'Bathroom', icon: 'Bath', time: 20, completed: true, todos: [
-        'Sanitize toilet', 'Clean shower', 'Clean sink and mirror', 'Mop floor',
-      ]},
-      { name: 'Bedroom', icon: 'Bed', time: 15, completed: true, todos: [
-        'Change bed linens', 'Dust furniture', 'Vacuum floor',
-      ]},
-    ]);
-    await insertEmployees(client, o12, ['Maria Garcia']);
+    // ─────────────────────────────────────────────────────────────────────────
+    // CANCELLED — 1 order
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // ── Order #2812 — James Wilson — Move-out clean (completed) ──────────────
-    const o13 = await insertOrder(client, {
-      orderNumber: '2812', clientName: 'James Wilson', clientEmail: 'james.wilson@email.com',
-      address: '88 Pine Court, Suite 2B', phone: '+1 (555) 415-3087',
-      status: 'completed', date: '2026-04-01', time: '01:00 PM',
-      serviceType: 'Move-out clean',
-      specialInstructions: 'Empty apartment, clean all surfaces thoroughly.',
-      startedAt: ts('2026-04-01T13:00:00'),
-      completedAt: ts('2026-04-01T14:28:00'),
-    });
-    await insertSections(client, o13, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 30, completed: true, todos: [
-        'Deep clean oven interior', 'Clean inside cabinets', 'Scrub countertops',
-        'Clean sink and faucet', 'Mop floor',
-      ]},
-      { name: 'Bathroom', icon: 'Bath', time: 25, completed: true, todos: [
-        'Deep clean toilet', 'Scrub shower tiles', 'Clean vanity and mirror', 'Mop floor',
-      ]},
-      { name: 'Living Room', icon: 'Sofa', time: 20, completed: true, todos: [
-        'Dust all surfaces', 'Clean windows interior', 'Vacuum and mop floor',
-      ]},
-    ]);
-    await insertAddOns(client, o13, [
-      { name: 'Wall spot cleaning', icon: 'Paintbrush', price: 25, selected: true },
-    ]);
-    await insertEmployees(client, o13, ['Emma Wilson', 'Carlos Ruiz']);
-
-    // ── Order #2803 — Angela Foster — Deep clean (completed, older) ──────────
-    const o14 = await insertOrder(client, {
-      orderNumber: '2803', clientName: 'Angela Foster', clientEmail: 'angela.f@email.com',
-      address: '14 Hillside Drive, Unit 3', phone: '+1 (555) 720-3341',
-      status: 'completed', date: '2026-03-31', time: '11:00 AM',
-      serviceType: 'Deep clean',
-      goal: 'Post-party deep clean',
-      startedAt: ts('2026-03-31T11:00:00'),
-      completedAt: ts('2026-03-31T13:05:00'),
-    });
-    await insertSections(client, o14, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 45, completed: true, todos: [
-        'Clean all surfaces', 'Clean appliances', 'Mop floor', 'Empty trash',
-      ]},
-      { name: 'Living Room', icon: 'Sofa', time: 35, completed: true, todos: [
-        'Vacuum all furniture and floors', 'Dust shelves', 'Clean windows',
-      ]},
-      { name: 'Bathrooms', icon: 'Bath', time: 30, completed: true, todos: [
-        'Deep clean all fixtures', 'Sanitize thoroughly', 'Mop floors',
-      ]},
-    ]);
-    await insertEmployees(client, o14, ['Ana Lopez', 'Maria Garcia']);
-
-    // ── Order #2795 — Michael Torres — Standard clean (completed, older) ─────
-    const o15 = await insertOrder(client, {
-      orderNumber: '2795', clientName: 'Michael Torres', clientEmail: 'michael.t@email.com',
-      address: '567 Lakewood Ave, Apt 5C', phone: '+1 (555) 884-9123',
-      status: 'completed', date: '2026-03-29', time: '10:00 AM',
-      serviceType: 'Standard clean',
-      startedAt: ts('2026-03-29T10:00:00'),
-      completedAt: ts('2026-03-29T11:15:00'),
-    });
-    await insertSections(client, o15, [
-      { name: 'Kitchen', icon: 'ChefHat', time: 20, completed: true, todos: [
-        'Wipe countertops', 'Clean sink', 'Mop floor',
-      ]},
-      { name: 'Bathroom', icon: 'Bath', time: 20, completed: true, todos: [
-        'Sanitize toilet', 'Clean shower', 'Clean sink', 'Mop floor',
-      ]},
-      { name: 'Bedroom', icon: 'Bed', time: 15, completed: true, todos: [
-        'Dust surfaces', 'Vacuum floor',
-      ]},
-    ]);
-    await insertEmployees(client, o15, ['James Rodriguez']);
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // CANCELED ORDER
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // ── Order #2878 — Diana Prince — Standard clean (canceled) ───────────────
-    const o16 = await insertOrder(client, {
-      orderNumber: '2878', clientName: 'Diana Prince', clientEmail: 'diana.p@email.com',
+    // ── Order #3010 — Standard clean (canceled) — Sofía ─────────────────────
+    const o10 = await insertOrder(client, {
+      orderNumber: '3010', clientName: 'Patricia Holmes', clientEmail: 'patricia.h@email.com',
       address: '999 Highland Park, Suite 8', phone: '+1 (555) 601-2234',
       status: 'canceled', date: '2026-04-06', time: '03:00 PM',
       serviceType: 'Standard clean',
-      specialInstructions: 'Client canceled — schedule conflict.',
+      specialInstructions: 'Client canceled — family emergency.',
     });
-    await insertSections(client, o16, [
+    await insertSections(client, o10, [
       { name: 'Kitchen', icon: 'ChefHat', time: 30, todos: ['Wipe countertops', 'Clean sink', 'Mop floor'] },
       { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Sanitize toilet', 'Clean shower'] },
     ]);
-    await insertEmployees(client, o16, ['Ana Lopez']);
+    await insertEmployees(client, o10, ['Sofía Martínez']);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ADDITIONAL ORDERS — Fill April 2026 (orders #3011–#3038)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Helper for quick order+sections+employees
+    async function quickOrder(
+      num: string, client_: any, data: Parameters<typeof insertOrder>[1],
+      sections: SectionData[], employees: string[], addons?: Parameters<typeof insertAddOns>[2]
+    ) {
+      const oid = await insertOrder(client_, data);
+      await insertSections(client_, oid, sections);
+      if (addons) await insertAddOns(client_, oid, addons);
+      await insertEmployees(client_, oid, employees);
+    }
+
+    // ─── PAST: Apr 1 ────────────────────────────────────────────────────────
+    await quickOrder('3011', client, {
+      orderNumber: '3011', clientName: 'Angela Brooks', clientEmail: 'angela.b@email.com',
+      address: '15 Sunflower Lane, Apt 3', phone: '+1 (555) 220-4410',
+      status: 'completed', date: '2026-04-01', time: '09:00 AM',
+      serviceType: 'Standard clean',
+      startedAt: ts('2026-04-01T09:05:00'), completedAt: ts('2026-04-01T10:30:00'),
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, completed: true, todos: ['Wipe countertops', 'Clean sink', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, completed: true, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 20, completed: true, todos: ['Dust surfaces', 'Vacuum floor'] },
+    ], ['María García']);
+
+    // ─── PAST: Apr 2 ────────────────────────────────────────────────────────
+    await quickOrder('3012', client, {
+      orderNumber: '3012', clientName: 'Thomas Wright', clientEmail: 'thomas.w@email.com',
+      address: '450 Birch Street, Suite 9', phone: '+1 (555) 339-8715',
+      status: 'completed', date: '2026-04-02', time: '10:00 AM',
+      serviceType: 'Deep clean',
+      specialInstructions: 'Two large dogs — please close doors behind you.',
+      startedAt: ts('2026-04-02T10:10:00'), completedAt: ts('2026-04-02T12:45:00'),
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 45, completed: true, todos: ['Deep clean countertops', 'Scrub stovetop', 'Clean inside microwave', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 35, completed: true, todos: ['Sanitize toilet', 'Scrub shower tiles', 'Clean vanity', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 30, completed: true, todos: ['Dust all surfaces', 'Vacuum carpet', 'Change linens'] },
+    ], ['Carlos López', 'Diego Hernández']);
+
+    await quickOrder('3013', client, {
+      orderNumber: '3013', clientName: 'Rebecca Stone', clientEmail: 'rebecca.s@email.com',
+      address: '89 Willow Way, Unit 4A', phone: '+1 (555) 507-2193',
+      status: 'completed', date: '2026-04-02', time: '03:00 PM',
+      serviceType: 'Office cleaning',
+      startedAt: ts('2026-04-02T15:00:00'), completedAt: ts('2026-04-02T16:40:00'),
+    }, [
+      { name: 'Main Office', icon: 'Sofa', time: 35, completed: true, todos: ['Wipe desks and monitors', 'Vacuum floor', 'Empty trash bins'] },
+      { name: 'Kitchen Area', icon: 'ChefHat', time: 20, completed: true, todos: ['Clean countertop', 'Wash dishes', 'Wipe microwave'] },
+      { name: 'Restroom', icon: 'Bath', time: 20, completed: true, todos: ['Sanitize toilet', 'Refill soap', 'Mop floor'] },
+    ], ['Sofía Martínez']);
+
+    // ─── PAST: Apr 3 (3007 already exists) ──────────────────────────────────
+    await quickOrder('3014', client, {
+      orderNumber: '3014', clientName: 'Kevin Patel', clientEmail: 'kevin.p@email.com',
+      address: '310 Redwood Circle', phone: '+1 (555) 443-6621',
+      status: 'completed', date: '2026-04-03', time: '09:00 AM',
+      serviceType: 'Standard clean',
+      startedAt: ts('2026-04-03T09:00:00'), completedAt: ts('2026-04-03T10:20:00'),
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, completed: true, todos: ['Wipe countertops', 'Clean stovetop', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, completed: true, todos: ['Clean toilet', 'Wipe mirror and sink', 'Mop floor'] },
+      { name: 'Bedroom', icon: 'Bed', time: 15, completed: true, todos: ['Dust surfaces', 'Vacuum floor'] },
+    ], ['María García']);
+
+    // ─── PAST: Apr 4 (3006 already exists) — cancelled ──────────────────────
+    await quickOrder('3015', client, {
+      orderNumber: '3015', clientName: 'Donna Reeves', clientEmail: 'donna.r@email.com',
+      address: '201 Elmwood Ave, Unit 6', phone: '+1 (555) 810-3345',
+      status: 'canceled', date: '2026-04-04', time: '11:00 AM',
+      serviceType: 'Deep clean',
+      specialInstructions: 'Cancelled due to water damage — rescheduling later.',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 40, todos: ['Deep clean countertops', 'Scrub oven', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 30, todos: ['Scrub shower', 'Clean toilet', 'Mop floor'] },
+    ], ['Diego Hernández']);
+
+    // ─── PAST: Apr 5 ────────────────────────────────────────────────────────
+    await quickOrder('3016', client, {
+      orderNumber: '3016', clientName: 'James Kim', clientEmail: 'james.k@email.com',
+      address: '678 Magnolia Blvd, Apt 11B', phone: '+1 (555) 772-0094',
+      status: 'completed', date: '2026-04-05', time: '08:00 AM',
+      serviceType: 'Move-out clean',
+      specialInstructions: 'Empty unit. Need deposit-return level clean.',
+      startedAt: ts('2026-04-05T08:05:00'), completedAt: ts('2026-04-05T10:50:00'),
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 45, completed: true, todos: ['Clean inside cabinets', 'Scrub countertops', 'Deep clean oven', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 35, completed: true, todos: ['Scrub shower and tub', 'Clean toilet', 'Wipe vanity', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 30, completed: true, todos: ['Wipe closet interiors', 'Dust baseboards', 'Vacuum floor'] },
+    ], ['Sofía Martínez', 'Carlos López']);
+
+    await quickOrder('3017', client, {
+      orderNumber: '3017', clientName: 'Natalie Cooper', clientEmail: 'natalie.c@email.com',
+      address: '42 Cherry Blossom St', phone: '+1 (555) 661-5578',
+      status: 'completed', date: '2026-04-05', time: '01:00 PM',
+      serviceType: 'Standard clean',
+      startedAt: ts('2026-04-05T13:00:00'), completedAt: ts('2026-04-05T14:10:00'),
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 20, completed: true, todos: ['Wipe counters', 'Clean sink', 'Sweep floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, completed: true, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+    ], ['María García']);
+
+    // ─── PAST: Apr 6 (3010 cancelled exists) ────────────────────────────────
+    await quickOrder('3018', client, {
+      orderNumber: '3018', clientName: 'Brian Morales', clientEmail: 'brian.m@email.com',
+      address: '155 Spruce Lane, Apt 8D', phone: '+1 (555) 934-2207',
+      status: 'completed', date: '2026-04-06', time: '10:00 AM',
+      serviceType: 'Deep clean',
+      startedAt: ts('2026-04-06T10:00:00'), completedAt: ts('2026-04-06T12:15:00'),
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 40, completed: true, todos: ['Deep clean stovetop', 'Scrub countertops', 'Clean microwave', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 35, completed: true, todos: ['Scrub shower tiles', 'Clean toilet', 'Polish mirror', 'Mop floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 25, completed: true, todos: ['Dust surfaces', 'Vacuum floor', 'Clean windows'] },
+    ], ['Diego Hernández', 'Carlos López']);
+
+    // ─── PAST: Apr 7 ────────────────────────────────────────────────────────
+    await quickOrder('3019', client, {
+      orderNumber: '3019', clientName: 'Lisa Chang', clientEmail: 'lisa.c@email.com',
+      address: '900 Sycamore Ave, Suite 3C', phone: '+1 (555) 412-8839',
+      status: 'completed', date: '2026-04-07', time: '09:00 AM',
+      serviceType: 'Standard clean',
+      startedAt: ts('2026-04-07T09:05:00'), completedAt: ts('2026-04-07T10:25:00'),
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, completed: true, todos: ['Wipe countertops', 'Clean sink', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, completed: true, todos: ['Clean toilet', 'Wipe sink and mirror', 'Mop floor'] },
+      { name: 'Bedroom', icon: 'Bed', time: 20, completed: true, todos: ['Dust surfaces', 'Vacuum floor', 'Make bed'] },
+    ], ['María García', 'Sofía Martínez']);
+
+    await quickOrder('3020', client, {
+      orderNumber: '3020', clientName: 'Victor Salazar', clientEmail: 'victor.s@email.com',
+      address: '64 Aspen Court, Unit 2', phone: '+1 (555) 288-4456',
+      status: 'canceled', date: '2026-04-07', time: '02:00 PM',
+      serviceType: 'Office cleaning',
+      specialInstructions: 'Cancelled — office closed for renovation.',
+    }, [
+      { name: 'Main Office', icon: 'Sofa', time: 30, todos: ['Wipe desks', 'Vacuum floor', 'Empty trash'] },
+      { name: 'Restroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Refill soap', 'Mop floor'] },
+    ], ['Diego Hernández']);
+
+    // ─── TODAY: Apr 8 (3004 in-progress, 3005 in-progress exist) ────────────
+    await quickOrder('3021', client, {
+      orderNumber: '3021', clientName: 'Pamela Green', clientEmail: 'pamela.g@email.com',
+      address: '322 Laurel Drive, Apt 7A', phone: '+1 (555) 177-3302',
+      status: 'scheduled', date: '2026-04-08', time: '02:00 PM',
+      serviceType: 'Standard clean',
+      specialInstructions: 'Please ring buzzer for 7A.',
+      accessInfo: 'Buzzer code: 7A then #',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean stovetop', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 20, todos: ['Dust surfaces', 'Vacuum floor'] },
+    ], ['María García']);
+
+    await quickOrder('3022', client, {
+      orderNumber: '3022', clientName: 'Frank Delgado', clientEmail: 'frank.d@email.com',
+      address: '810 Chestnut Place, Unit 5B', phone: '+1 (555) 992-1187',
+      status: 'scheduled', date: '2026-04-08', time: '04:00 PM',
+      serviceType: 'Deep clean',
+      accessInfo: 'Key under welcome mat',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 40, todos: ['Deep clean countertops', 'Scrub stovetop', 'Clean microwave', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 35, todos: ['Scrub shower', 'Clean toilet', 'Polish mirror', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 25, todos: ['Dust surfaces', 'Vacuum carpet', 'Change linens'] },
+    ], ['Diego Hernández', 'Carlos López']);
+
+    // ─── FUTURE: Apr 9 ──────────────────────────────────────────────────────
+    await quickOrder('3023', client, {
+      orderNumber: '3023', clientName: 'Sandra Owens', clientEmail: 'sandra.o@email.com',
+      address: '275 Poplar Road, Apt 1C', phone: '+1 (555) 543-6672',
+      status: 'scheduled', date: '2026-04-09', time: '09:00 AM',
+      serviceType: 'Standard clean',
+      goal: 'Weekly maintenance clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean sink', 'Sweep and mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+    ], ['Sofía Martínez']);
+
+    await quickOrder('3024', client, {
+      orderNumber: '3024', clientName: 'Raymond Hart', clientEmail: 'raymond.h@email.com',
+      address: '130 Walnut Street, Suite 10', phone: '+1 (555) 873-4419',
+      status: 'scheduled', date: '2026-04-09', time: '01:00 PM',
+      serviceType: 'Office cleaning',
+      specialInstructions: 'Conference room needs special attention before board meeting.',
+    }, [
+      { name: 'Conference Room', icon: 'Sofa', time: 30, todos: ['Wipe table and chairs', 'Clean whiteboard', 'Vacuum floor'] },
+      { name: 'Main Office', icon: 'Sofa', time: 25, todos: ['Wipe desks', 'Empty trash', 'Vacuum floor'] },
+      { name: 'Restroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Refill supplies', 'Mop floor'] },
+    ], ['María García', 'Carlos López']);
+
+    // ─── FUTURE: Apr 10 (3001 exists) ───────────────────────────────────────
+    await quickOrder('3025', client, {
+      orderNumber: '3025', clientName: 'Heather Flynn', clientEmail: 'heather.f@email.com',
+      address: '55 Ivy Lane, Unit 3F', phone: '+1 (555) 319-7780',
+      status: 'scheduled', date: '2026-04-10', time: '02:00 PM',
+      serviceType: 'Standard clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean sink', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+      { name: 'Bedroom', icon: 'Bed', time: 15, todos: ['Dust surfaces', 'Vacuum floor'] },
+    ], ['Diego Hernández']);
+
+    // ─── FUTURE: Apr 12 ─────────────────────────────────────────────────────
+    await quickOrder('3026', client, {
+      orderNumber: '3026', clientName: 'Catherine Bell', clientEmail: 'catherine.b@email.com',
+      address: '408 Hazel Terrace, Apt 9E', phone: '+1 (555) 451-3328',
+      status: 'scheduled', date: '2026-04-12', time: '10:00 AM',
+      serviceType: 'Deep clean',
+      specialInstructions: 'Three cats — keep exterior doors closed.',
+      goal: 'Spring deep clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 45, todos: ['Deep clean countertops', 'Scrub stovetop and oven', 'Clean sink', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 35, todos: ['Scrub shower tiles', 'Clean toilet', 'Polish fixtures', 'Mop floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 25, todos: ['Dust shelves and surfaces', 'Vacuum sofa', 'Vacuum floor'] },
+      { name: 'Bedroom', icon: 'Bed', time: 20, todos: ['Dust surfaces', 'Vacuum carpet', 'Change linens'] },
+    ], ['Sofía Martínez', 'María García']);
+
+    // ─── FUTURE: Apr 13 ─────────────────────────────────────────────────────
+    await quickOrder('3027', client, {
+      orderNumber: '3027', clientName: 'Edward Sullivan', clientEmail: 'edward.s@email.com',
+      address: '92 Dogwood Drive', phone: '+1 (555) 608-9934',
+      status: 'scheduled', date: '2026-04-13', time: '11:00 AM',
+      serviceType: 'Standard clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean stovetop', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe sink and mirror', 'Mop floor'] },
+    ], ['Carlos López']);
+
+    // ─── FUTURE: Apr 14 (3003 exists) ───────────────────────────────────────
+    await quickOrder('3028', client, {
+      orderNumber: '3028', clientName: 'Amanda Perry', clientEmail: 'amanda.p@email.com',
+      address: '330 Juniper Court, Unit 2A', phone: '+1 (555) 744-1156',
+      status: 'scheduled', date: '2026-04-14', time: '03:00 PM',
+      serviceType: 'Standard clean',
+      accessInfo: 'Lockbox code: 5891',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean sink', 'Sweep and mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Sanitize toilet', 'Wipe mirror', 'Mop floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 20, todos: ['Dust surfaces', 'Vacuum floor', 'Wipe coffee table'] },
+    ], ['Sofía Martínez']);
+
+    // ─── FUTURE: Apr 15 ─────────────────────────────────────────────────────
+    await quickOrder('3029', client, {
+      orderNumber: '3029', clientName: 'George Ramirez', clientEmail: 'george.r@email.com',
+      address: '517 Alder Boulevard, Apt 6D', phone: '+1 (555) 205-8843',
+      status: 'scheduled', date: '2026-04-15', time: '08:00 AM',
+      serviceType: 'Move-in clean',
+      specialInstructions: 'New tenants arriving afternoon — must finish by noon.',
+      goal: 'Full sanitization before move-in',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 50, todos: ['Clean inside all cabinets', 'Scrub countertops', 'Deep clean oven', 'Clean sink', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 40, todos: ['Disinfect toilet', 'Scrub shower and tub', 'Clean grout', 'Wipe vanity', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 30, todos: ['Clean closet interiors', 'Dust baseboards', 'Vacuum floor'] },
+    ], ['María García', 'Diego Hernández']);
+
+    // ─── FUTURE: Apr 16 ─────────────────────────────────────────────────────
+    await quickOrder('3030', client, {
+      orderNumber: '3030', clientName: 'Nicole Foster', clientEmail: 'nicole.f@email.com',
+      address: '103 Cypress Row, Suite 14', phone: '+1 (555) 366-7729',
+      status: 'scheduled', date: '2026-04-16', time: '10:00 AM',
+      serviceType: 'Office cleaning',
+    }, [
+      { name: 'Main Office', icon: 'Sofa', time: 35, todos: ['Wipe all desks', 'Vacuum carpets', 'Empty trash bins', 'Dust shelves'] },
+      { name: 'Break Room', icon: 'ChefHat', time: 20, todos: ['Clean countertop and sink', 'Wipe fridge exterior', 'Mop floor'] },
+      { name: 'Restrooms', icon: 'Bath', time: 25, todos: ['Sanitize toilets', 'Refill soap dispensers', 'Mop floors'] },
+    ], ['Carlos López', 'Sofía Martínez']);
+
+    // ─── FUTURE: Apr 17 ─────────────────────────────────────────────────────
+    await quickOrder('3031', client, {
+      orderNumber: '3031', clientName: 'Daniel Murphy', clientEmail: 'daniel.m@email.com',
+      address: '740 Ash Street, Apt 4G', phone: '+1 (555) 821-5504',
+      status: 'scheduled', date: '2026-04-17', time: '09:00 AM',
+      serviceType: 'Standard clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Clean countertops', 'Wipe stovetop', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 15, todos: ['Dust surfaces', 'Vacuum floor'] },
+    ], ['Diego Hernández']);
+
+    // ─── FUTURE: Apr 18 ─────────────────────────────────────────────────────
+    await quickOrder('3032', client, {
+      orderNumber: '3032', clientName: 'Stephanie Cruz', clientEmail: 'stephanie.c@email.com',
+      address: '260 Beechwood Lane, Unit 10C', phone: '+1 (555) 493-2218',
+      status: 'scheduled', date: '2026-04-18', time: '11:00 AM',
+      serviceType: 'Deep clean',
+      goal: 'Pre-party deep clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 45, todos: ['Deep clean all surfaces', 'Scrub oven', 'Clean fridge exterior', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 35, todos: ['Scrub shower enclosure', 'Clean toilet', 'Polish fixtures', 'Mop floor'] },
+      { name: 'Dining Room', icon: 'Sofa', time: 20, todos: ['Dust table and chairs', 'Wipe sideboard', 'Vacuum floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 25, todos: ['Dust all surfaces', 'Vacuum sofa', 'Clean windows'] },
+    ], ['María García', 'Carlos López']);
+
+    // ─── FUTURE: Apr 20 ─────────────────────────────────────────────────────
+    await quickOrder('3033', client, {
+      orderNumber: '3033', clientName: 'Martin O\'Brien', clientEmail: 'martin.o@email.com',
+      address: '185 Sequoia Park, Apt 2F', phone: '+1 (555) 714-3360',
+      status: 'scheduled', date: '2026-04-20', time: '09:00 AM',
+      serviceType: 'Standard clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean sink', 'Sweep and mop'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+    ], ['Sofía Martínez']);
+
+    // ─── FUTURE: Apr 21 ─────────────────────────────────────────────────────
+    await quickOrder('3034', client, {
+      orderNumber: '3034', clientName: 'Claire Jenkins', clientEmail: 'claire.j@email.com',
+      address: '621 Hickory Place, Suite 8A', phone: '+1 (555) 540-9982',
+      status: 'scheduled', date: '2026-04-21', time: '10:00 AM',
+      serviceType: 'Move-out clean',
+      specialInstructions: 'Entire unit empty. Need deep clean for landlord inspection.',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 50, todos: ['Clean inside cabinets', 'Scrub countertops', 'Deep clean oven and fridge', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 40, todos: ['Scrub shower and tub', 'Clean grout', 'Sanitize toilet', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 30, todos: ['Wipe closet interiors', 'Dust baseboards and vents', 'Vacuum floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 20, todos: ['Dust all surfaces', 'Clean windows interior', 'Vacuum and mop'] },
+    ], ['Diego Hernández', 'María García']);
+
+    // ─── FUTURE: Apr 22 ─────────────────────────────────────────────────────
+    await quickOrder('3035', client, {
+      orderNumber: '3035', clientName: 'Oscar Gutierrez', clientEmail: 'oscar.g@email.com',
+      address: '490 Cottonwood Trail', phone: '+1 (555) 399-1147',
+      status: 'scheduled', date: '2026-04-22', time: '02:00 PM',
+      serviceType: 'Standard clean',
+      accessInfo: 'Key under the flower pot on the porch',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean stovetop', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe sink and mirror', 'Mop floor'] },
+      { name: 'Bedroom', icon: 'Bed', time: 15, todos: ['Dust surfaces', 'Vacuum floor'] },
+    ], ['Carlos López']);
+
+    // ─── FUTURE: Apr 23 ─────────────────────────────────────────────────────
+    await quickOrder('3036', client, {
+      orderNumber: '3036', clientName: 'Diana Warren', clientEmail: 'diana.w@email.com',
+      address: '77 Palmetto Drive, Apt 5A', phone: '+1 (555) 625-8801',
+      status: 'scheduled', date: '2026-04-23', time: '09:00 AM',
+      serviceType: 'Deep clean',
+      goal: 'Allergy season deep clean — focus on dusting',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 40, todos: ['Deep clean all surfaces', 'Clean inside microwave', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 30, todos: ['Scrub shower', 'Clean toilet', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 30, todos: ['Dust all surfaces thoroughly', 'Vacuum carpet', 'Wipe baseboards'] },
+      { name: 'Living Room', icon: 'Sofa', time: 25, todos: ['Dust shelves and blinds', 'Vacuum sofa', 'Vacuum floor'] },
+    ], ['Sofía Martínez', 'Diego Hernández']);
+
+    // ─── FUTURE: Apr 25 ─────────────────────────────────────────────────────
+    await quickOrder('3037', client, {
+      orderNumber: '3037', clientName: 'Aaron Woods', clientEmail: 'aaron.w@email.com',
+      address: '830 Catalpa Court, Unit 1B', phone: '+1 (555) 280-4493',
+      status: 'scheduled', date: '2026-04-25', time: '10:00 AM',
+      serviceType: 'Standard clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean sink', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+    ], ['María García']);
+
+    // ─── FUTURE: Apr 27 ─────────────────────────────────────────────────────
+    await quickOrder('3038', client, {
+      orderNumber: '3038', clientName: 'Julia Simmons', clientEmail: 'julia.s@email.com',
+      address: '360 Creekview Drive, Suite 6', phone: '+1 (555) 711-5526',
+      status: 'scheduled', date: '2026-04-27', time: '01:00 PM',
+      serviceType: 'Office cleaning',
+      specialInstructions: 'Server room off-limits. Clean all common areas.',
+    }, [
+      { name: 'Main Office', icon: 'Sofa', time: 35, todos: ['Wipe desks and monitors', 'Vacuum floor', 'Empty trash bins'] },
+      { name: 'Break Room', icon: 'ChefHat', time: 20, todos: ['Clean countertop', 'Wash dishes', 'Mop floor'] },
+      { name: 'Restrooms', icon: 'Bath', time: 25, todos: ['Sanitize toilets', 'Refill supplies', 'Mop floors'] },
+    ], ['Carlos López', 'Sofía Martínez']);
+
+    // ─── FUTURE: Apr 28 ─────────────────────────────────────────────────────
+    await quickOrder('3039', client, {
+      orderNumber: '3039', clientName: 'Philip West', clientEmail: 'philip.w@email.com',
+      address: '54 Maplewood Heights, Apt 12A', phone: '+1 (555) 832-6614',
+      status: 'scheduled', date: '2026-04-28', time: '09:00 AM',
+      serviceType: 'Deep clean',
+      goal: 'End-of-month deep clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 45, todos: ['Deep clean countertops', 'Scrub stovetop', 'Clean inside microwave', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 35, todos: ['Scrub shower tiles', 'Clean toilet', 'Polish mirror', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 25, todos: ['Dust all surfaces', 'Vacuum carpet', 'Change bed linens'] },
+    ], ['Diego Hernández', 'María García']);
+
+    // ─── FUTURE: Apr 29 ─────────────────────────────────────────────────────
+    await quickOrder('3040', client, {
+      orderNumber: '3040', clientName: 'Irene Castillo', clientEmail: 'irene.c@email.com',
+      address: '115 Linden Avenue, Unit 4D', phone: '+1 (555) 467-3398',
+      status: 'scheduled', date: '2026-04-29', time: '11:00 AM',
+      serviceType: 'Standard clean',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 25, todos: ['Wipe countertops', 'Clean sink', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 20, todos: ['Clean toilet', 'Wipe mirror', 'Mop floor'] },
+      { name: 'Living Room', icon: 'Sofa', time: 15, todos: ['Dust surfaces', 'Vacuum floor'] },
+    ], ['Carlos López']);
+
+    // ─── FUTURE: Apr 30 ─────────────────────────────────────────────────────
+    await quickOrder('3041', client, {
+      orderNumber: '3041', clientName: 'Teresa Hoffman', clientEmail: 'teresa.h@email.com',
+      address: '705 Bayview Terrace, Apt 8B', phone: '+1 (555) 590-2274',
+      status: 'scheduled', date: '2026-04-30', time: '09:00 AM',
+      serviceType: 'Move-in clean',
+      specialInstructions: 'New tenant arriving May 1st — full sanitization needed.',
+      accessInfo: 'Property manager will let you in — call (555) 100-2000',
+    }, [
+      { name: 'Kitchen', icon: 'ChefHat', time: 50, todos: ['Clean inside all cabinets', 'Scrub countertops', 'Deep clean oven', 'Mop floor'] },
+      { name: 'Bathroom', icon: 'Bath', time: 40, todos: ['Disinfect toilet', 'Scrub shower', 'Clean grout', 'Mop floor'] },
+      { name: 'Bedrooms', icon: 'Bed', time: 30, todos: ['Clean closet interiors', 'Dust baseboards', 'Vacuum floor'] },
+    ], ['Sofía Martínez', 'Diego Hernández']);
 
     await client.query('COMMIT');
 
-    console.log('✓ Seed complete — 16 orders, 2 users inserted');
-    console.log('  Scheduled: 7  |  In-progress: 2  |  Completed: 6  |  Canceled: 1');
-    console.log('\nDashboard login: admin@sparktask.com / admin123');
-    console.log('Mobile demo login: demo@demo.com / demo');
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('  ✓ Seed complete — 5 users, 41 orders');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('');
+    console.log('  Original orders (#3001–#3010):');
+    console.log('    Scheduled:   3  (#3001, #3002, #3003)');
+    console.log('    In-progress: 2  (#3004, #3005)');
+    console.log('    Completed:   4  (#3006, #3007, #3008, #3009)');
+    console.log('    Canceled:    1  (#3010)');
+    console.log('');
+    console.log('  New orders (#3011–#3041):');
+    console.log('    Completed:  11  (Apr 1-7)');
+    console.log('    Canceled:    3  (Apr 4, Apr 7)');
+    console.log('    Scheduled:  17  (Apr 8-30)');
+    console.log('');
+    console.log('  TOTALS:');
+    console.log('    Scheduled:  20 | In-progress: 2 | Completed: 15 | Canceled: 4');
+    console.log('');
+    console.log('  Dashboard login:');
+    console.log('    admin@sparktask.com / demo');
+    console.log('');
+    console.log('  Cleaner logins (all password: demo):');
+    console.log('    maria@demo.com   — María García');
+    console.log('    carlos@demo.com  — Carlos López');
+    console.log('    sofia@demo.com   — Sofía Martínez');
+    console.log('    diego@demo.com   — Diego Hernández');
+    console.log('');
 
   } catch (err) {
     await client.query('ROLLBACK');

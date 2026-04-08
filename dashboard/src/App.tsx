@@ -5,6 +5,7 @@ import { ForgotPassword } from './components/ForgotPassword';
 import { RegisterCleanerPage } from './components/pages/RegisterCleanerPage';
 import { Dashboard } from './components/Dashboard';
 import * as api from './services/api';
+import { Toaster } from './components/ui/sonner';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'login' | 'register' | 'forgot-password' | 'register-cleaner' | 'dashboard'>('login');
@@ -14,9 +15,18 @@ export default function App() {
     // Check if user is logged in
     const storedUser = localStorage.getItem('sparkTaskUser');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setCurrentView('dashboard');
-      return;
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (parsed?.token) {
+          setUser(parsed);
+          setCurrentView('dashboard');
+          return;
+        }
+        // Stale session without token — clear it and require re-login
+        localStorage.removeItem('sparkTaskUser');
+      } catch {
+        localStorage.removeItem('sparkTaskUser');
+      }
     }
 
     // Check if accessing cleaner registration link
@@ -105,5 +115,15 @@ export default function App() {
     );
   }
 
-  return <Dashboard user={user} onLogout={handleLogout} />;
+  const handleUserUpdate = (updated: any) => {
+    setUser(updated);
+    localStorage.setItem('sparkTaskUser', JSON.stringify(updated));
+  };
+
+  return (
+    <>
+      <Dashboard user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />
+      <Toaster richColors position="top-right" />
+    </>
+  );
 }

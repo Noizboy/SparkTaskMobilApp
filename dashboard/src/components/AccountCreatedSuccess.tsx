@@ -61,7 +61,7 @@ export function AccountCreatedSuccess({ email, onBackToLogin, onResendEmail }: A
         <CardContent className="space-y-6">
           {/* Email Icon with Alert */}
           <Alert className="bg-[#033620]/5 border-[#033620]/20">
-            <IconCircleCheck className="h-50 w-50 text-[#033620]" />
+            <IconCircleCheck className="h-10 w-10 text-[#033620]" />
             <AlertDescription className="ml-2">
               <span className="font-medium text-[#033620]">Check your email</span>
               <p className="text-sm text-gray-600 mt-1">

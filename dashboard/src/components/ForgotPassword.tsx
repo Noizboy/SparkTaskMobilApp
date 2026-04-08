@@ -47,13 +47,11 @@ export function ForgotPassword({ onBackToLogin, onSubmit }: ForgotPasswordProps)
                   <IconSparkles className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-[#033620] font-semibold text-xl">SparkTask</span>
-              </div>
             </div>
-            <div className="flex items-center justify-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <IconCircleCheck className="w-10 h-10 text-[#033620]" />
-              </div>
-            </div>
+          </div>
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <IconCircleCheck className="w-10 h-10 text-[#033620]" />
+          </div>
             <CardTitle className="text-center">Check your email</CardTitle>
             <CardDescription className="text-center">
               We've sent a password reset link to <span className="font-medium text-gray-900">{email}</span>

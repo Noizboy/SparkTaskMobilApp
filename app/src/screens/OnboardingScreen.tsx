@@ -85,11 +85,9 @@ export function OnboardingScreen() {
       style={[styles.container, { paddingTop: insets.top }]}
     >
       {/* Skip */}
-      {currentIndex < SLIDES.length - 1 && (
-        <TouchableOpacity onPress={skip} style={styles.skipBtn}>
-          <Text style={styles.skipText}>{t('skip')}</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity onPress={skip} style={styles.skipBtn}>
+        <Text style={styles.skipText}>{t('skip')}</Text>
+      </TouchableOpacity>
 
       {/* Slides */}
       <FlatList
@@ -99,7 +97,11 @@ export function OnboardingScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        scrollEnabled={false}
+        scrollEnabled
+        onMomentumScrollEnd={(e) => {
+          const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+          setCurrentIndex(index);
+        }}
         renderItem={({ item }) => {
           const Icon = item.Icon;
           return (

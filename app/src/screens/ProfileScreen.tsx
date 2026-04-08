@@ -17,13 +17,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
+import { API_BASE } from '../services/api';
+import { storage } from '../utils/storage';
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { handleLogout, profileImage, setProfileImage } = useApp();
+  const { handleLogout, profileImage, setProfileImage, currentUser, setCurrentUser } = useApp();
   const { language: currentLangCode, setLanguage: setLangFromContext, t } = useLanguage();
 
-  const [phone, setPhone] = useState('+1 (555) 123-4567');
+  const [phone, setPhone] = useState(currentUser?.phone ?? '');
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [isChangingPwd, setIsChangingPwd] = useState(false);
@@ -31,7 +33,7 @@ export function ProfileScreen() {
   const [newPwd, setNewPwd] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
 
-  const USER = { name: 'Sarah Johnson', email: 'sarah.johnson@cleaningco.com', version: '1.0.0' };
+  const APP_VERSION = process.env.EXPO_PUBLIC_APP_VERSION ?? '1.0.0';
 
   const LANGUAGES = [
     { code: 'en', label: 'English' },
@@ -42,7 +44,10 @@ export function ProfileScreen() {
 
   const currentLang = LANGUAGES.find((l) => l.code === currentLangCode) ?? LANGUAGES[0];
 
+  const displayImage = profileImage ?? currentUser?.avatar_url ?? null;
+
   const pickImage = async () => {
+    if (!currentUser) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(t('permissionNeeded'), t('allowPhotos'));
@@ -54,10 +59,48 @@ export function ProfileScreen() {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!result.canceled) setProfileImage(result.assets[0].uri);
+    if (result.canceled) return;
+    const localUri = result.assets[0].uri;
+    setProfileImage(localUri);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', { uri: localUri, name: 'avatar.jpg', type: 'image/jpeg' } as any);
+      const res = await fetch(`${API_BASE}/users/${currentUser.id}/avatar`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        const updatedUser = { ...currentUser, avatar_url: updated.avatar_url };
+        setCurrentUser(updatedUser);
+        await storage.setJSON('currentUser', updatedUser);
+      }
+    } catch (err) {
+      console.error('[API] uploadAvatar failed:', err);
+    }
   };
 
-  const handleSavePhone = () => setIsEditingPhone(false);
+  const handleSavePhone = async () => {
+    if (!currentUser) {
+      Alert.alert(t('error'), 'Session expired. Please log out and log back in.');
+      return;
+    }
+    try {
+      const updated = { ...currentUser, phone };
+      setCurrentUser(updated);
+      await storage.setJSON('currentUser', updated);
+      const res = await fetch(`${API_BASE}/users/${currentUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err: any) {
+      console.error('[API] updatePhone failed:', err);
+      Alert.alert(t('error'), 'Could not save phone number. Check your connection.');
+    }
+    setIsEditingPhone(false);
+  };
 
   const handleChangePwd = () => {
     if (newPwd === confirmPwd && newPwd.length >= 6) {
@@ -93,8 +136,8 @@ export function ProfileScreen() {
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={pickImage} activeOpacity={0.85} style={styles.avatarWrap}>
-            {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.avatar} />
+            {displayImage ? (
+              <Image source={{ uri: displayImage }} style={styles.avatar} />
             ) : (
               <View style={[styles.avatar, styles.avatarFallback]}>
                 <User size={44} color={COLORS.white} />
@@ -104,15 +147,17 @@ export function ProfileScreen() {
               <Camera size={14} color={COLORS.white} />
             </View>
           </TouchableOpacity>
-          <Text style={styles.userName}>{USER.name}</Text>
-          <Text style={styles.userEmail}>{USER.email}</Text>
+          <Text style={styles.userName}>{currentUser?.name ?? ''}</Text>
+          <Text style={styles.userEmail}>
+            {currentUser?.role === 'admin' ? 'Administrator' : currentUser?.role === 'supervisor' ? 'Supervisor' : 'Cleaner'}
+          </Text>
         </View>
 
         {/* Account Info */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t('account')}</Text>
           <View style={styles.card}>
-            <InfoRow icon={<Mail size={17} color={COLORS.white} />} label={t('email')} value={USER.email} />
+            <InfoRow icon={<Mail size={17} color={COLORS.white} />} label={t('email')} value={currentUser?.email ?? ''} />
             <View style={styles.divider} />
             {isEditingPhone ? (
               <View style={styles.editRow}>
@@ -237,7 +282,7 @@ export function ProfileScreen() {
             <InfoRow
               icon={<Info size={17} color={COLORS.white} />}
               label={t('appVersion')}
-              value={USER.version}
+              value={APP_VERSION}
             />
           </View>
         </View>
@@ -475,7 +520,7 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: 16,
     color: COLORS.mutedForeground,
   },
   section: {

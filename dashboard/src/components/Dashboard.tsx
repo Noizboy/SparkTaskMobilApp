@@ -21,12 +21,22 @@ import * as api from '../services/api';
 interface DashboardProps {
   user: any;
   onLogout: () => void;
+  onUserUpdate: (updated: any) => void;
 }
 
 export type PageType = 'overview' | 'orders' | 'create-order' | 'order-detail' | 'team' | 'checklist' | 'service-types' | 'addons' | 'settings' | 'settings-account' | 'settings-general' | 'settings-renewal';
 
-export function Dashboard({ user, onLogout }: DashboardProps) {
-  const [currentPage, setCurrentPage] = useState<PageType>('overview');
+export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
+  const [currentPage, setCurrentPageState] = useState<PageType>(() => {
+    const saved = localStorage.getItem('dashboard_currentPage') as PageType | null;
+    // order-detail depends on transient state that won't survive a refresh
+    if (saved && saved !== 'order-detail') return saved;
+    return 'overview';
+  });
+  const setCurrentPage = (page: PageType) => {
+    setCurrentPageState(page);
+    localStorage.setItem('dashboard_currentPage', page);
+  };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -104,6 +114,22 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
     }
   };
 
+  // Guard: if order-detail is active but selectedOrder was cleared, navigate back
+  useEffect(() => {
+    if (currentPage === 'order-detail' && !selectedOrder) {
+      setCurrentPage('orders');
+    }
+  }, [currentPage, selectedOrder]);
+
+  // Restrict supervisor access to allowed pages only
+  const supervisorAllowedPages: PageType[] = ['overview', 'orders', 'order-detail', 'create-order', 'settings-account'];
+
+  useEffect(() => {
+    if (user?.role === 'supervisor' && !supervisorAllowedPages.includes(currentPage)) {
+      setCurrentPage('overview');
+    }
+  }, [currentPage, user?.role]);
+
   const renderPage = () => {
     switch (currentPage) {
       case 'overview':
@@ -114,8 +140,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         return <CreateOrderPage onBack={() => setCurrentPage('orders')} onOrderCreated={() => console.log('Order created!')} />;
       case 'order-detail':
         if (!selectedOrder) {
-          setCurrentPage('orders');
-          return <OrdersPage user={user} onViewOrder={handleNavigateToOrderDetail} onNavigate={setCurrentPage} />;
+          return <OrdersPage user={user} onViewOrder={handleNavigateToOrderDetail} onNavigate={setCurrentPage} orders={orders} />;
         }
         return <OrderDetailPage order={selectedOrder} onBack={handleBackFromOrderDetail} onUpdateOrder={handleUpdateOrder} onDeleteOrder={handleDeleteOrder} />;
       case 'team':
@@ -129,7 +154,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       case 'settings':
         return <CompanySettingsPage user={user} />;
       case 'settings-account':
-        return <SettingsAccountPage user={user} />;
+        return <SettingsAccountPage user={user} onUserUpdate={onUserUpdate} />;
       case 'settings-general':
         return <SettingsGeneralPage user={user} />;
       case 'settings-renewal':

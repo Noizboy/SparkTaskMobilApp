@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   IconHome,
   IconClipboardList,
@@ -42,24 +42,24 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
   const [isMobileServicesOpen, setIsMobileServicesOpen] = useState(servicePages.includes(currentPage));
 
   // Update dropdown state when page changes
-  if (currentPage.startsWith('settings') && !isSettingsOpen) {
-    setIsSettingsOpen(true);
-  }
-  if (currentPage.startsWith('settings') && !isMobileSettingsOpen) {
-    setIsMobileSettingsOpen(true);
-  }
-  if (servicePages.includes(currentPage) && !isServicesOpen) {
-    setIsServicesOpen(true);
-  }
-  if (servicePages.includes(currentPage) && !isMobileServicesOpen) {
-    setIsMobileServicesOpen(true);
-  }
+  useEffect(() => {
+    if (currentPage.startsWith('settings')) {
+      setIsSettingsOpen(true);
+      setIsMobileSettingsOpen(true);
+    }
+    if (servicePages.includes(currentPage)) {
+      setIsServicesOpen(true);
+      setIsMobileServicesOpen(true);
+    }
+  }, [currentPage]);
 
   const menuItems = [
     { id: 'overview' as PageType, label: 'Dashboard', icon: IconHome },
     { id: 'orders' as PageType, label: 'Orders', icon: IconClipboardList },
-    { id: 'team' as PageType, label: 'Team Member', icon: IconUsers },
+    ...(user?.role !== 'supervisor' ? [{ id: 'team' as PageType, label: 'Team Member', icon: IconUsers }] : []),
   ];
+
+  const isSupervisor = user?.role === 'supervisor';
 
   const servicesSubMenu = [
     { id: 'service-types' as PageType, label: 'Service Types', icon: IconBriefcase },
@@ -67,11 +67,13 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
     { id: 'addons' as PageType, label: 'Add-ons', icon: IconCirclePlus },
   ];
 
-  const settingsSubMenu = [
-    { id: 'settings-account' as PageType, label: 'Account', icon: IconUser },
-    { id: 'settings-general' as PageType, label: 'General', icon: IconBuilding },
-    { id: 'settings-renewal' as PageType, label: 'Renewal Center', icon: IconCreditCard },
-  ];
+  const settingsSubMenu = isSupervisor
+    ? [{ id: 'settings-account' as PageType, label: 'Account', icon: IconUser }]
+    : [
+        { id: 'settings-account' as PageType, label: 'Account', icon: IconUser },
+        { id: 'settings-general' as PageType, label: 'General', icon: IconBuilding },
+        { id: 'settings-renewal' as PageType, label: 'Renewal Center', icon: IconCreditCard },
+      ];
 
   return (
     <>
@@ -91,9 +93,9 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            // Mark Orders as active when on order-detail or order-edit pages
+            // Mark Orders as active when on order-detail page
             const isActive = currentPage === item.id || 
-                           (item.id === 'orders' && (currentPage === 'order-detail' || currentPage === 'order-edit'));
+                           (item.id === 'orders' && currentPage === 'order-detail');
             
             return (
               <button
@@ -112,6 +114,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
           })}
 
           {/* Services Dropdown */}
+          {!isSupervisor && (
           <div>
             <button
               onClick={() => setIsServicesOpen(!isServicesOpen)}
@@ -151,6 +154,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
               </div>
             )}
           </div>
+          )}
 
           {/* Settings Dropdown */}
           <div>
@@ -248,9 +252,9 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            // Mark Orders as active when on order-detail or order-edit pages
+            // Mark Orders as active when on order-detail page
             const isActive = currentPage === item.id || 
-                           (item.id === 'orders' && (currentPage === 'order-detail' || currentPage === 'order-edit'));
+                           (item.id === 'orders' && currentPage === 'order-detail');
             
             return (
               <button
@@ -269,6 +273,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
           })}
 
           {/* Services Dropdown */}
+          {!isSupervisor && (
           <div>
             <button
               onClick={() => setIsMobileServicesOpen(!isMobileServicesOpen)}
@@ -308,6 +313,7 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
               </div>
             )}
           </div>
+          )}
 
           {/* Settings Dropdown */}
           <div>

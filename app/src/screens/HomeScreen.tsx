@@ -30,7 +30,7 @@ export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const tabNavigation = useNavigation<TabNav>();
   const insets = useSafeAreaInsets();
-  const { jobs, jobsLoaded, profileImage, unreadCount } = useApp();
+  const { jobs, jobsLoaded, profileImage, unreadCount, currentUser } = useApp();
   const { t } = useLanguage();
 
   const today = new Date();
@@ -82,15 +82,15 @@ export function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={() => tabNavigation.navigate('Profile')} activeOpacity={0.85}>
-              {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.avatar} />
+              {(profileImage ?? currentUser?.avatar_url) ? (
+                <Image source={{ uri: (profileImage ?? currentUser?.avatar_url)! }} style={styles.avatar} />
               ) : (
                 <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarText}>S</Text>
+                  <Text style={styles.avatarText}>{currentUser?.name?.[0]?.toUpperCase() ?? '?'}</Text>
                 </View>
               )}
             </TouchableOpacity>
-            <Text style={styles.name}>{t('welcome') + ', Sarah'}</Text>
+            <Text style={styles.name}>{t('welcome') + ', ' + (currentUser?.name?.split(' ')[0] ?? '')}</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity

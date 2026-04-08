@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-const SSE_URL = 'http://localhost:3001/api/events';
+const SSE_URL = `${import.meta.env.VITE_API_URL}/events`;
 
 interface SSEHandlers {
   onOrderCreated?: (order: any) => void;

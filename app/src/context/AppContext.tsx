@@ -26,6 +26,16 @@ const MOCK_REVIEWS: Review[] = [
   { id: 'r8', clientName: 'David Chen', rating: 5, comment: 'Exceeded expectations. Will definitely request Sarah again.', date: '2026-03-10', orderNumber: '2800' },
 ];
 
+export interface CurrentUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role?: string;
+  company?: string;
+  avatar_url?: string;
+}
+
 interface AppContextType {
   jobs: Job[];
   reviews: Review[];
@@ -38,7 +48,9 @@ interface AppContextType {
   showOnboarding: boolean;
   profileImage: string | null;
   isLoading: boolean;
-  handleLogin: () => Promise<void>;
+  currentUser: CurrentUser | null;
+  setCurrentUser: (user: CurrentUser | null) => void;
+  handleLogin: (user: CurrentUser) => Promise<void>;
   handleLogout: () => Promise<void>;
   handleOnboardingComplete: () => Promise<void>;
   toggleTodo: (jobId: string, sectionId: string, todoId: string) => void;
@@ -62,6 +74,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
   const [jobsLoaded, setJobsLoaded] = useState(false);
 
@@ -79,7 +92,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       const saved = await storage.get(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
       if (saved === 'true') {
-        setIsAuthenticated(true);
+        const savedUser = await storage.getJSON<CurrentUser>('currentUser');
+        if (savedUser) {
+          setCurrentUser(savedUser);
+          setIsAuthenticated(true);
+        } else {
+          // Stale session — no user data. Force re-login.
+          await storage.remove(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+          await storage.remove(AUTH_CONFIG.STORAGE_KEYS.ONBOARDING_COMPLETED);
+        }
       }
       setIsLoading(false);
     };
@@ -87,11 +108,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !currentUser) return;
     const loadJobs = async () => {
       try {
-        const apiJobs = await fetchJobs();
-        console.log('[API] Loaded', apiJobs.length, 'jobs from server');
+        const apiJobs = await fetchJobs(currentUser.name);
+        console.log('[API] Loaded', apiJobs.length, 'jobs from server for', currentUser.name);
         setJobs(apiJobs);
         await storage.setJSON('cleanerJobs', apiJobs);
       } catch (err) {
@@ -109,7 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setJobsLoaded(true);
     };
     loadJobs();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentUser]);
 
   const saveJobs = useCallback(async (updated: Job[]) => {
     setJobs(updated);
@@ -159,8 +180,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
   }, isAuthenticated);
 
-  const handleLogin = async () => {
+  const handleLogin = async (user: CurrentUser) => {
     await storage.set(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN, 'true');
+    await storage.setJSON('currentUser', user);
+    setCurrentUser(user);
     setIsAuthenticated(true);
     const hasOnboarded = await storage.get(AUTH_CONFIG.STORAGE_KEYS.ONBOARDING_COMPLETED);
     if (!hasOnboarded) setShowOnboarding(true);
@@ -170,9 +193,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storage.remove(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
     await storage.remove(AUTH_CONFIG.STORAGE_KEYS.ONBOARDING_COMPLETED);
     await storage.remove('cleanerJobs');
+    await storage.remove('currentUser');
     setIsAuthenticated(false);
     setShowOnboarding(false);
     setJobs([]);
+    setCurrentUser(null);
   };
 
   const handleOnboardingComplete = async () => {
@@ -385,6 +410,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         showOnboarding,
         profileImage,
         isLoading,
+        currentUser,
+        setCurrentUser,
         handleLogin,
         handleLogout,
         handleOnboardingComplete,

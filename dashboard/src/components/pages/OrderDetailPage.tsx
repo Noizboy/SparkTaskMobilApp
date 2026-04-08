@@ -19,6 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from '../ui/calendar';
 import { TimePicker } from '../ui/time-picker';
 import { format, parse } from 'date-fns';
+import { toast } from 'sonner';
 import {
   IconArrowLeft,
   IconUser,
@@ -921,7 +922,10 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
                             setCurrentOrder(updated);
                             setEditedStatus(updated.status);
                             onUpdateOrder?.(updated);
-                          }).catch((err) => console.error('Failed to update status:', err));
+                          }).catch((err) => {
+                            toast.error(err.message || 'Failed to update status');
+                            setEditedStatus(currentOrder.status);
+                          });
                         }
                       }}
                     >
@@ -1164,8 +1168,9 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder }:
                     setCurrentOrder(updated);
                     setEditedStatus(updated.status);
                     onUpdateOrder?.(updated);
-                  } catch (err) {
-                    console.error('Failed to update status:', err);
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to update status');
+                    setEditedStatus(currentOrder.status);
                   }
                 }
                 setPendingStatusChange(null);

@@ -1,6 +1,6 @@
 export const AUTH_CONFIG = {
   DEMO_CREDENTIALS: {
-    email: 'demo@demo.com',
+    email: 'alejandro@sparktask.com',
     password: 'demo',
   },
   API_ENDPOINTS: {

@@ -1,8 +1,6 @@
 import { Job } from '../types';
 
-// Use your LAN IP so the physical device can reach the API
-// Change this to your machine's IP if it differs
-export const API_BASE = 'http://192.168.1.221:3001/api';
+export const API_BASE = process.env.EXPO_PUBLIC_API_URL as string;
 
 /** Map API 'scheduled' status to mobile 'upcoming' */
 function mapStatusIn(status: string): Job['status'] {
@@ -36,8 +34,12 @@ function toJob(order: any): Job {
   };
 }
 
-export async function fetchJobs(): Promise<Job[]> {
-  const res = await fetch(`${API_BASE}/orders`);
+export async function fetchJobs(employeeName?: string): Promise<Job[]> {
+  const url = new URL(`${API_BASE}/orders`);
+  if (employeeName) {
+    url.searchParams.set('employee', employeeName);
+  }
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`fetchJobs failed: ${res.status}`);
   const orders = await res.json();
   return orders.map(toJob);

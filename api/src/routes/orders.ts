@@ -88,7 +88,7 @@ async function buildFullOrder(orderId: string) {
 // ─── GET /api/orders — list all orders (with optional filters) ──────────────
 ordersRouter.get('/', async (req: Request, res: Response) => {
   try {
-    const { status, from, to, search } = req.query;
+    const { status, from, to, search, employee } = req.query;
 
     let query = 'SELECT id FROM orders WHERE 1=1';
     const params: any[] = [];
@@ -110,6 +110,10 @@ ordersRouter.get('/', async (req: Request, res: Response) => {
       query += ` AND (order_number ILIKE $${idx} OR client_name ILIKE $${idx})`;
       params.push(`%${search}%`);
       idx++;
+    }
+    if (employee) {
+      query += ` AND id IN (SELECT order_id FROM assigned_employees WHERE employee_name = $${idx++})`;
+      params.push(employee);
     }
 
     query += ' ORDER BY date DESC, time ASC';
@@ -239,6 +243,17 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
       ? (totalMinutes <= 0 ? '' : (() => { const h = Math.floor(totalMinutes / 60); const m = totalMinutes % 60; return h > 0 && m > 0 ? `${h} ${h === 1 ? 'hour' : 'hours'} ${m} min` : h > 0 ? `${h} ${h === 1 ? 'hour' : 'hours'}` : `${m} min`; })())
       : (existing?.rows[0]?.duration ?? '');
 
+    // Enforce: a cleaner cannot have more than 1 in-progress order
+    if (status === 'in-progress') {
+      const check = await checkCleanerInProgressConflict(orderId, client);
+      if (check.conflict) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          error: `${check.cleanerName} already has an in-progress order (${check.orderNumber}). A cleaner cannot have more than one in-progress order at a time.`
+        });
+      }
+    }
+
     await client.query(
       `UPDATE orders SET
         order_number=$1, client_name=$2, client_email=$3, address=$4, phone=$5,
@@ -332,11 +347,44 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// ─── Helper: check if any assigned cleaner already has an in-progress order ──
+async function checkCleanerInProgressConflict(
+  orderId: string,
+  client?: any // pg PoolClient; falls back to pool
+): Promise<{ conflict: true; cleanerName: string; orderNumber: string } | { conflict: false }> {
+  const db = client || pool;
+  const result = await db.query(
+    `SELECT ae.employee_name, o.order_number
+     FROM assigned_employees ae
+     JOIN assigned_employees ae2 ON ae.employee_name = ae2.employee_name
+     JOIN orders o ON ae2.order_id = o.id
+     WHERE ae.order_id = $1
+       AND ae2.order_id <> $1
+       AND o.status = 'in-progress'
+     LIMIT 1`,
+    [orderId]
+  );
+  if (result.rows.length > 0) {
+    return { conflict: true, cleanerName: result.rows[0].employee_name, orderNumber: result.rows[0].order_number };
+  }
+  return { conflict: false };
+}
+
 // ─── PATCH /api/orders/:id/status — change status only ─────────────────────
 ordersRouter.patch('/:id/status', async (req: Request, res: Response) => {
   try {
     const { status, startedAt, completedAt } = req.body;
     const toMs = (v: any) => v == null ? null : typeof v === 'number' ? v : new Date(v).getTime();
+
+    // Enforce: a cleaner cannot have more than 1 in-progress order
+    if (status === 'in-progress') {
+      const check = await checkCleanerInProgressConflict(req.params.id);
+      if (check.conflict) {
+        return res.status(409).json({
+          error: `${check.cleanerName} already has an in-progress order (${check.orderNumber}). A cleaner cannot have more than one in-progress order at a time.`
+        });
+      }
+    }
 
     await pool.query(
       `UPDATE orders SET status=$1, started_at=COALESCE($2, started_at), completed_at=COALESCE($3, completed_at), updated_at=NOW() WHERE id=$4`,

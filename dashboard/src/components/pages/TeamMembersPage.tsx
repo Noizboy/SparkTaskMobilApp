@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { IconUserPlus, IconCheck, IconCopy, IconSearch, IconPencil, IconTrash } from '@tabler/icons-react';
+import { fetchTeamMembers, updateTeamMember, deleteTeamMember, inviteTeamMember, linkTeamMember } from '../../services/api';
+import { IconUserPlus, IconCheck, IconCopy, IconSearch, IconPencil, IconTrash, IconLink } from '@tabler/icons-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Input } from '../ui/input';
@@ -18,15 +19,8 @@ export type TeamMember = {
   role: string;
   status: string;
   ordersCompleted: number;
+  avatar_url?: string;
 };
-
-const mockTeamMembers = [
-  { id: '1', name: 'John Perez', email: 'john@email.com', role: 'Employee', status: 'active', ordersCompleted: 45 },
-  { id: '2', name: 'Anna Lopez', email: 'anna@email.com', role: 'Employee', status: 'active', ordersCompleted: 38 },
-  { id: '3', name: 'Peter Sanchez', email: 'peter@email.com', role: 'Employee', status: 'active', ordersCompleted: 52 },
-  { id: '4', name: 'Maria Torres', email: 'maria@email.com', role: 'Employee', status: 'active', ordersCompleted: 31 },
-  { id: '5', name: 'Carlos Ramirez', email: 'carlos@email.com', role: 'Supervisor', status: 'active', ordersCompleted: 67 },
-];
 
 interface TeamMembersPageProps {
   user: any;
@@ -38,32 +32,40 @@ interface TeamMembersPageProps {
 
 export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvite, onUpdateMember, onDeleteMember }: TeamMembersPageProps) {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
+  const [inviteSuccess, setInviteSuccess] = useState('');
   const [copied, setCopied] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [linkEmail, setLinkEmail] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [teamMembers, setTeamMembers] = useState(externalTeamMembers || mockTeamMembers);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(externalTeamMembers || []);
   const [editingMember, setEditingMember] = useState<any>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [editRole, setEditRole] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Update local state when external data changes
-  useState(() => {
-    if (externalTeamMembers) {
-      setTeamMembers(externalTeamMembers);
-    }
-  });
-
-  const generateInviteLink = () => {
-    const randomToken = Math.random().toString(36).substring(2, 15);
-    const baseUrl = window.location.origin;
-    const companyName = encodeURIComponent(user?.companyName || 'SparkTask Company');
-    const link = `${baseUrl}?invite=${randomToken}&company=${companyName}`;
-    setInviteLink(link);
-  };
+  useEffect(() => {
+    if (externalTeamMembers) { setTeamMembers(externalTeamMembers); return; }
+    setFetchError(null);
+    fetchTeamMembers().then((members) => {
+      setTeamMembers(members.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role.charAt(0).toUpperCase() + u.role.slice(1),
+        status: 'active',
+        ordersCompleted: u.orders_completed ?? 0,
+        avatar_url: u.avatar_url ?? undefined,
+      })));
+    }).catch((err: Error) => {
+      setFetchError(err.message || 'Failed to load team members');
+      setTeamMembers([]);
+    });
+  }, [externalTeamMembers]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(inviteLink);
@@ -72,21 +74,52 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
   };
 
   const handleSendInvite = async () => {
-    if (!inviteLink) {
-      generateInviteLink();
+    if (!inviteEmail) {
+      setError('Please enter an email address');
+      return;
     }
-    console.log('Sending invite to:', inviteEmail);
-    // Here you would typically send the email
-    if (onInvite) {
-      setIsLoading(true);
-      try {
-        await onInvite(inviteEmail);
-        setError(null);
-      } catch (err) {
-        setError('Failed to send invite');
-      } finally {
-        setIsLoading(false);
-      }
+    setIsLoading(true);
+    setError(null);
+    setInviteSuccess('');
+    try {
+      const result = await inviteTeamMember(inviteEmail);
+      setInviteLink(result.inviteLink);
+      setInviteSuccess(`Invite link generated for ${result.email}`);
+      if (onInvite) await onInvite(inviteEmail);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send invite');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLinkEmployee = async () => {
+    if (!linkEmail) {
+      setError('Please enter an employee email');
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const linked = await linkTeamMember(linkEmail);
+      setTeamMembers((prev) => [
+        ...prev,
+        {
+          id: linked.id,
+          name: linked.name,
+          email: linked.email,
+          role: linked.role.charAt(0).toUpperCase() + linked.role.slice(1),
+          status: 'active',
+          ordersCompleted: 0,
+          avatar_url: linked.avatar_url ?? undefined,
+        },
+      ]);
+      setLinkEmail('');
+      setIsLinkDialogOpen(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to link employee');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -105,21 +138,20 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
   };
 
   const handleSaveEdit = async () => {
-    if (editingMember && onUpdateMember) {
-      setIsLoading(true);
-      try {
-        await onUpdateMember(editingMember.id, { role: editRole });
-        const updatedMembers = teamMembers.map((member) =>
-          member.id === editingMember.id ? { ...member, role: editRole } : member
-        );
-        setTeamMembers(updatedMembers);
-        setEditingMember(null);
-        setError(null);
-      } catch (err) {
-        setError('Failed to update member');
-      } finally {
-        setIsLoading(false);
-      }
+    if (!editingMember) return;
+    setIsLoading(true);
+    try {
+      await updateTeamMember(editingMember.id, { role: editRole.toLowerCase() });
+      if (onUpdateMember) await onUpdateMember(editingMember.id, { role: editRole });
+      setTeamMembers(teamMembers.map((m) =>
+        m.id === editingMember.id ? { ...m, role: editRole } : m
+      ));
+      setEditingMember(null);
+      setError(null);
+    } catch (err) {
+      setError('Failed to update member');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -129,20 +161,19 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
   };
 
   const confirmDelete = async () => {
-    if (memberToDelete && onDeleteMember) {
-      setIsLoading(true);
-      try {
-        await onDeleteMember(memberToDelete);
-        const updatedMembers = teamMembers.filter((member) => member.id !== memberToDelete);
-        setTeamMembers(updatedMembers);
-        setDeleteDialogOpen(false);
-        setMemberToDelete(null);
-        setError(null);
-      } catch (err) {
-        setError('Failed to delete member');
-      } finally {
-        setIsLoading(false);
-      }
+    if (!memberToDelete) return;
+    setIsLoading(true);
+    try {
+      await deleteTeamMember(memberToDelete);
+      if (onDeleteMember) await onDeleteMember(memberToDelete);
+      setTeamMembers(teamMembers.filter((m) => m.id !== memberToDelete));
+      setDeleteDialogOpen(false);
+      setMemberToDelete(null);
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete member');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -153,10 +184,16 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
           <h1>Team Members</h1>
           <p className="text-gray-600">Manage your team members</p>
         </div>
-        <Button onClick={() => setIsInviteDialogOpen(true)} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-          <IconUserPlus className="w-4 h-4 mr-2" />
-          Invite Member
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsInviteDialogOpen(true)} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
+            <IconUserPlus className="w-4 h-4 mr-2" />
+            Invite Member
+          </Button>
+          <Button variant="outline" onClick={() => { setError(null); setIsLinkDialogOpen(true); }} className="shadow-md">
+            <IconLink className="w-4 h-4 mr-2" />
+            Link Existing
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -172,6 +209,12 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
           />
         </div>
       </div>
+
+      {fetchError && (
+        <Alert className="mb-6 border-red-300 bg-red-50">
+          <AlertDescription className="text-red-700">{fetchError}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredMembers.map((member) => (
@@ -195,7 +238,8 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
 
               <div className="flex flex-col items-center text-center">
                 <Avatar className="w-16 h-16 mb-4 shadow-sm">
-                  <AvatarFallback className="bg-[#033620] text-white">
+                  {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.name} />}
+                  <AvatarFallback className="bg-[#033620] text-white text-lg font-semibold">
                     {member.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
@@ -239,15 +283,15 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Or share this invitation link</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={inviteLink || 'Click "Generate Link"'}
-                  readOnly
-                  className="flex-1 shadow-sm"
-                />
-                {inviteLink ? (
+            {inviteSuccess && (
+              <p className="text-sm text-green-700 font-medium">{inviteSuccess}</p>
+            )}
+
+            {inviteLink && (
+              <div className="space-y-2">
+                <Label>Invitation link (share with employee)</Label>
+                <div className="flex gap-2">
+                  <Input value={inviteLink} readOnly className="flex-1 shadow-sm text-xs" />
                   <Button
                     type="button"
                     variant="outline"
@@ -256,26 +300,55 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
                   >
                     {copied ? <IconCheck className="w-4 h-4" /> : <IconCopy className="w-4 h-4" />}
                   </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={generateInviteLink}
-                    className="shrink-0 shadow-sm"
-                  >
-                    Generate Link
-                  </Button>
-                )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => { setIsInviteDialogOpen(false); setInviteEmail(''); setInviteLink(''); setInviteSuccess(''); setError(null); }}>
+              Close
+            </Button>
+            <Button onClick={handleSendInvite} disabled={isLoading} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
+              {isLoading ? 'Generating…' : 'Generate Invite Link'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Existing Employee Dialog */}
+      <Dialog open={isLinkDialogOpen} onOpenChange={(open) => { setIsLinkDialogOpen(open); if (!open) { setLinkEmail(''); setError(null); } }}>
+        <DialogContent className="shadow-xl" aria-describedby="link-dialog-description">
+          <DialogHeader>
+            <DialogTitle>Link Existing Employee</DialogTitle>
+            <DialogDescription id="link-dialog-description">
+              Link an existing employee account to your business by their email address.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="linkEmail">Employee email</Label>
+              <Input
+                id="linkEmail"
+                type="email"
+                placeholder="employee@email.com"
+                value={linkEmail}
+                onChange={(e) => setLinkEmail(e.target.value)}
+                className="shadow-sm"
+              />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsLinkDialogOpen(false); setLinkEmail(''); setError(null); }}>
               Cancel
             </Button>
-            <Button onClick={handleSendInvite} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-              Send Invitation
+            <Button onClick={handleLinkEmployee} disabled={isLoading} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
+              {isLoading ? 'Linking…' : 'Link Employee'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -299,7 +372,7 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Employee">Employee</SelectItem>
+                  <SelectItem value="Cleaner">Cleaner</SelectItem>
                   <SelectItem value="Supervisor">Supervisor</SelectItem>
                 </SelectContent>
               </Select>

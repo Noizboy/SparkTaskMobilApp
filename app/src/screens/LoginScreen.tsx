@@ -16,8 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
-import { AUTH_CONFIG } from '../config/auth';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../constants/theme';
+import { API_BASE } from '../services/api';
 
 export function LoginScreen() {
   const { handleLogin } = useApp();
@@ -29,20 +29,26 @@ export function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     setError('');
     setIsLoading(true);
-    setTimeout(() => {
-      if (
-        email === AUTH_CONFIG.DEMO_CREDENTIALS.email &&
-        password === AUTH_CONFIG.DEMO_CREDENTIALS.password
-      ) {
-        handleLogin();
-      } else {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
         setError(t('invalidCredentials'));
+        return;
       }
+      const user = await res.json();
+      await handleLogin({ id: String(user.id), name: user.name, email: user.email, role: user.role, company: user.company, phone: user.phone ?? undefined, avatar_url: user.avatar_url ?? undefined });
+    } catch {
+      setError(t('invalidCredentials'));
+    } finally {
       setIsLoading(false);
-    }, 900);
+    }
   };
 
   return (
@@ -139,7 +145,7 @@ export function LoginScreen() {
           <View style={styles.demoBox}>
             <Text style={styles.demoTitle}>{t('demoCredentials')}</Text>
             <Text style={styles.demoText}>
-              Email: <Text style={styles.demoValue}>demo@demo.com</Text>
+              Email: <Text style={styles.demoValue}>alejandro@sparktask.com</Text>
             </Text>
             <Text style={styles.demoText}>
               Password: <Text style={styles.demoValue}>demo</Text>

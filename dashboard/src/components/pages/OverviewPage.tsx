@@ -35,7 +35,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
       <div className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="font-[Poppins] font-bold">Welcome back, {user?.name}</h1>
+            <h1 className="font-[Poppins] font-bold">Welcome back, {user?.name?.split(' ')[0]}</h1>
             <p className="text-gray-600">Here's your cleaning company overview</p>
           </div>
           <Button 

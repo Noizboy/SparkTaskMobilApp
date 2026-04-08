@@ -25,6 +25,7 @@ export function CalendarScreen() {
   const todayStr = toDateString(new Date());
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [dayLoading, setDayLoading] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(todayStr); // YYYY-MM-DD string for Calendar `current`
 
   const handleDaySelect = useCallback((dateString: string) => {
     if (dateString === selectedDate) return;
@@ -97,31 +98,33 @@ export function CalendarScreen() {
 
         {/* Calendar */}
         <View style={[styles.calendarWrap]}>
-          <Calendar
-            current={todayStr}
-            onDayPress={(day: any) => handleDaySelect(day.dateString)}
-            markingType="dot"
-            markedDates={markedDates}
-            theme={{
-              backgroundColor: COLORS.white,
-              calendarBackground: COLORS.white,
-              todayTextColor: COLORS.primary,
-              selectedDayBackgroundColor: COLORS.primary,
-              selectedDayTextColor: COLORS.white,
-              dayTextColor: COLORS.foreground,
-              textDisabledColor: COLORS.gray300,
-              monthTextColor: COLORS.foreground,
-              arrowColor: COLORS.primary,
-              dotColor: COLORS.primary,
-              textDayFontFamily: FONTS.regular,
-              textMonthFontFamily: FONTS.semibold,
-              textDayHeaderFontFamily: FONTS.medium,
-              textDayFontSize: 14,
-              textMonthFontSize: 16,
-              textDayHeaderFontSize: 12,
-            }}
-          />
-        </View>
+            <Calendar
+              current={currentMonth}
+              enableSwipeMonths={true}
+              onDayPress={(day: any) => handleDaySelect(day.dateString)}
+              onMonthChange={(month: any) => setCurrentMonth(`${month.year}-${String(month.month).padStart(2, '0')}-01`)}
+              markingType="dot"
+              markedDates={markedDates}
+              theme={{
+                backgroundColor: COLORS.white,
+                calendarBackground: COLORS.white,
+                todayTextColor: COLORS.primary,
+                selectedDayBackgroundColor: COLORS.primary,
+                selectedDayTextColor: COLORS.white,
+                dayTextColor: COLORS.foreground,
+                textDisabledColor: COLORS.gray300,
+                monthTextColor: COLORS.foreground,
+                arrowColor: COLORS.primary,
+                dotColor: COLORS.primary,
+                textDayFontFamily: FONTS.regular,
+                textMonthFontFamily: FONTS.semibold,
+                textDayHeaderFontFamily: FONTS.medium,
+                textDayFontSize: 14,
+                textMonthFontSize: 16,
+                textDayHeaderFontSize: 12,
+              }}
+            />
+          </View>
 
         {/* Jobs for day */}
         <View style={styles.listSection}>
