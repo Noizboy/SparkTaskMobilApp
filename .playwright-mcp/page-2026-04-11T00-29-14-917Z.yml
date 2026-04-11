@@ -1,0 +1,122 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e10]: SparkTask
+      - navigation [ref=e11]:
+        - button "Dashboard" [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e17]: Dashboard
+        - button "Orders" [ref=e18]:
+          - img [ref=e19]
+          - generic [ref=e22]: Orders
+        - button "Team Member" [active] [ref=e23]:
+          - img [ref=e24]
+          - generic [ref=e29]: Team Member
+        - button "Services" [ref=e31]:
+          - img [ref=e32]
+          - generic [ref=e36]: Services
+          - img [ref=e37]
+        - button "Settings" [ref=e40]:
+          - img [ref=e41]
+          - generic [ref=e44]: Settings
+          - img [ref=e45]
+      - generic [ref=e179] [cursor=pointer]:
+        - generic [ref=e180]:
+          - generic [ref=e181]: In progress
+          - generic [ref=e182]: "Order #3005"
+        - generic [ref=e183]:
+          - paragraph [ref=e184]: Tasks completed
+          - generic [ref=e185]:
+            - img [ref=e186]
+            - generic [ref=e189]:
+              - generic [ref=e190]: "8"
+              - generic [ref=e191]: /
+              - generic [ref=e192]: "24"
+            - generic [ref=e194]: 33%
+        - progressbar [ref=e196]
+        - generic [ref=e198]: Deep Cleaning
+      - button "A Admin User SparkTask Inc." [ref=e49]:
+        - generic [ref=e51]: A
+        - generic [ref=e52]:
+          - paragraph [ref=e53]: Admin User
+          - paragraph [ref=e54]: SparkTask Inc.
+        - img [ref=e55]
+      - paragraph [ref=e60]: © 2025 SparkTask. All rights reserved.
+    - main [ref=e62]:
+      - generic [ref=e369]:
+        - generic [ref=e370]:
+          - generic [ref=e371]:
+            - heading "Team Members" [level=1] [ref=e372]
+            - paragraph [ref=e373]: Manage your team and their roles
+          - generic [ref=e374]:
+            - button "Export" [ref=e375]:
+              - img
+              - text: Export
+            - button "Invite Member" [ref=e376]:
+              - img
+              - text: Invite Member
+            - button "Link Existing" [ref=e377]:
+              - img
+              - text: Link Existing
+        - generic [ref=e378]:
+          - generic [ref=e380]:
+            - generic [ref=e381]:
+              - img [ref=e383]
+              - generic [ref=e388]:
+                - generic [ref=e389]: Total Members
+                - generic [ref=e390]: "0"
+            - paragraph [ref=e392]: All registered members
+          - generic [ref=e394]:
+            - generic [ref=e395]:
+              - img [ref=e397]
+              - generic [ref=e401]:
+                - generic [ref=e402]: Active Members
+                - generic [ref=e403]: "0"
+            - paragraph [ref=e405]: Available for work
+          - generic [ref=e407]:
+            - generic [ref=e408]:
+              - img [ref=e410]
+              - generic [ref=e412]:
+                - generic [ref=e413]: Supervisors
+                - generic [ref=e414]: "0"
+            - paragraph [ref=e416]: Team leads
+          - generic [ref=e418]:
+            - generic [ref=e419]:
+              - img [ref=e421]
+              - generic [ref=e424]:
+                - generic [ref=e425]: Orders Completed
+                - generic [ref=e426]: "0"
+            - paragraph [ref=e428]: Across all members
+        - alert [ref=e429]:
+          - generic [ref=e430]: Failed to fetch team members
+        - generic [ref=e431]:
+          - generic [ref=e433]:
+            - heading "All Members" [level=4] [ref=e434]
+            - generic [ref=e435]:
+              - generic [ref=e436]:
+                - img
+                - textbox "Search members…" [ref=e437]
+              - combobox [ref=e438]:
+                - generic: All Roles
+                - img
+              - combobox [ref=e439]:
+                - generic: All Statuses
+                - img
+          - table [ref=e442]:
+            - rowgroup [ref=e443]:
+              - row "Member Role Status Orders Actions" [ref=e444]:
+                - columnheader "Member" [ref=e445]
+                - columnheader "Role" [ref=e446]
+                - columnheader "Status" [ref=e447]
+                - columnheader "Orders" [ref=e448]
+                - columnheader "Actions" [ref=e449]
+            - rowgroup [ref=e450]:
+              - row "No team members yet Invite or link members to get started" [ref=e451]:
+                - cell "No team members yet Invite or link members to get started" [ref=e452]:
+                  - generic [ref=e453]:
+                    - img [ref=e455]
+                    - paragraph [ref=e460]: No team members yet
+                    - paragraph [ref=e461]: Invite or link members to get started
+  - region "Notifications alt+T"

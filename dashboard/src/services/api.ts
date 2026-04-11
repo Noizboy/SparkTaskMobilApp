@@ -1,12 +1,33 @@
 import { Order } from '../data/mockOrders';
 
-const API_URL = import.meta.env.VITE_API_URL as string;
+// Fallback to the default dev API URL so a missing/undefined env var doesn't
+// produce fetch URLs like "undefined/users/team" that Vite serves as HTML.
+const API_URL: string =
+  (import.meta.env.VITE_API_URL as string | undefined) ||
+  'http://localhost:3001/api';
+
+// ─── Safe JSON parser ─────────────────────────────────────────────────────────
+// Reads the response body only when Content-Type is application/json.
+// For any other content type (HTML error pages, plain text) it reads the body
+// as text and throws a descriptive error instead of the cryptic
+// "Unexpected token '<'" SyntaxError.
+async function safeJson<T = unknown>(res: Response): Promise<T> {
+  const ct = res.headers.get('content-type') ?? '';
+  if (!ct.includes('application/json')) {
+    const body = await res.text().catch(() => '');
+    throw new Error(
+      `API returned non-JSON response (${res.status} ${res.statusText})` +
+        (body ? ` — ${body.slice(0, 200)}` : '')
+    );
+  }
+  return res.json() as Promise<T>;
+}
 
 // ─── Token helpers ───────────────────────────────────────────────────────────
 
 function getToken(): string | null {
   try {
-    const stored = localStorage.getItem('sparkTaskUser');
+    const stored = localStorage.getItem('sparkTaskUser') || sessionStorage.getItem('sparkTaskUser');
     if (!stored) return null;
     const user = JSON.parse(stored);
     return user?.token ?? null;
@@ -31,10 +52,10 @@ export async function login(email: string, password: string): Promise<any> {
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) {
-    const data = await res.json();
+    const data = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(data.error || 'Invalid credentials');
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function register(data: { email: string; password: string; name: string; company?: string }): Promise<any> {
@@ -44,10 +65,10 @@ export async function register(data: { email: string; password: string; name: st
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Registration failed');
   }
-  return res.json();
+  return safeJson(res);
 }
 
 // ─── Users ──────────────────────────────────────────────────────────────────
@@ -59,7 +80,7 @@ export async function changePassword(userId: string, currentPassword: string, ne
     body: JSON.stringify({ userId, currentPassword, newPassword }),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Password change failed');
   }
 }
@@ -71,10 +92,10 @@ export async function updateUser(id: string, data: { name?: string; phone?: stri
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Update failed');
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function fetchUsers(): Promise<any[]> {
@@ -98,8 +119,15 @@ export interface TeamMemberAPI {
 
 export async function fetchTeamMembers(): Promise<TeamMemberAPI[]> {
   const res = await fetch(`${API_URL}/users/team`, { headers: authHeaders() });
-  if (!res.ok) throw new Error('Failed to fetch team members');
-  return res.json();
+  if (!res.ok) {
+    // Try to extract a JSON error message; if the body isn't JSON (HTML 404/500
+    // from a proxy etc.) fall back to the HTTP status line.
+    const errBody = await safeJson<{ error?: string }>(res).catch(() => ({}));
+    throw new Error(
+      errBody.error || `Failed to fetch team members (HTTP ${res.status})`
+    );
+  }
+  return safeJson<TeamMemberAPI[]>(res);
 }
 
 export async function updateTeamMember(id: string, data: { role?: string; name?: string; phone?: string }): Promise<any> {
@@ -109,10 +137,10 @@ export async function updateTeamMember(id: string, data: { role?: string; name?:
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Update failed');
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function deleteTeamMember(id: string): Promise<void> {
@@ -121,7 +149,7 @@ export async function deleteTeamMember(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Delete failed');
   }
 }
@@ -133,10 +161,10 @@ export async function inviteTeamMember(email: string): Promise<{ token: string; 
     body: JSON.stringify({ email }),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Invite failed');
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function linkTeamMember(employeeEmail: string): Promise<any> {
@@ -146,10 +174,10 @@ export async function linkTeamMember(employeeEmail: string): Promise<any> {
     body: JSON.stringify({ employee_email: employeeEmail }),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Link failed');
   }
-  return res.json();
+  return safeJson(res);
 }
 
 // ─── Orders ─────────────────────────────────────────────────────────────────
@@ -253,7 +281,7 @@ export async function fetchServices(businessId?: string): Promise<ServiceAPI[]> 
   const qs = params.toString();
   const res = await fetch(`${API_URL}/services${qs ? `?${qs}` : ''}`, { headers: authHeaders() });
   if (!res.ok) throw new Error('Failed to fetch services');
-  return res.json();
+  return safeJson<ServiceAPI[]>(res);
 }
 
 export async function createService(data: { name: string; description?: string; businessId: string }): Promise<ServiceAPI> {
@@ -263,10 +291,10 @@ export async function createService(data: { name: string; description?: string; 
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Failed to create service');
   }
-  return res.json();
+  return safeJson<ServiceAPI>(res);
 }
 
 export async function updateService(id: string, data: { name: string; description?: string }): Promise<ServiceAPI> {
@@ -276,10 +304,10 @@ export async function updateService(id: string, data: { name: string; descriptio
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Failed to update service');
   }
-  return res.json();
+  return safeJson<ServiceAPI>(res);
 }
 
 export async function deleteService(id: string): Promise<void> {
@@ -288,7 +316,7 @@ export async function deleteService(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Failed to delete service');
   }
 }
@@ -302,6 +330,15 @@ export async function checkApiHealth(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ─── App info ────────────────────────────────────────────────────────────────
+
+export async function fetchApiVersion(): Promise<string> {
+  const res = await fetch(`${API_URL}/info`);
+  if (!res.ok) throw new Error(`Failed to fetch version (HTTP ${res.status})`);
+  const data = await safeJson<{ version: string }>(res);
+  return data.version;
 }
 
 // ─── Areas ──────────────────────────────────────────────────────────────────
@@ -319,7 +356,7 @@ export interface AreaAPI {
 export async function fetchAreas(): Promise<AreaAPI[]> {
   const res = await fetch(`${API_URL}/areas`, { headers: authHeaders() });
   if (!res.ok) throw new Error('Failed to fetch areas');
-  return res.json();
+  return safeJson<AreaAPI[]>(res);
 }
 
 export async function createArea(data: { name: string; estimatedDuration?: number; checklist: string[] }): Promise<AreaAPI> {
@@ -329,10 +366,10 @@ export async function createArea(data: { name: string; estimatedDuration?: numbe
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Failed to create area');
   }
-  return res.json();
+  return safeJson<AreaAPI>(res);
 }
 
 export async function updateArea(id: string, data: { name: string; estimatedDuration?: number; checklist: string[] }): Promise<AreaAPI> {
@@ -342,10 +379,10 @@ export async function updateArea(id: string, data: { name: string; estimatedDura
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Failed to update area');
   }
-  return res.json();
+  return safeJson<AreaAPI>(res);
 }
 
 export async function deleteArea(id: string): Promise<void> {
@@ -354,7 +391,7 @@ export async function deleteArea(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = await safeJson<{ error?: string }>(res).catch(() => ({}));
     throw new Error(err.error || 'Failed to delete area');
   }
 }

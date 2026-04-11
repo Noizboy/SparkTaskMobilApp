@@ -1,0 +1,179 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e10]: SparkTask
+      - navigation [ref=e11]:
+        - button "Dashboard" [active] [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e17]: Dashboard
+        - button "Orders" [ref=e18]:
+          - img [ref=e19]
+          - generic [ref=e22]: Orders
+        - button "Team Member" [ref=e23]:
+          - img [ref=e24]
+          - generic [ref=e29]: Team Member
+        - button "Services" [ref=e31]:
+          - img [ref=e32]
+          - generic [ref=e36]: Services
+          - img [ref=e37]
+        - button "Settings" [ref=e40]:
+          - img [ref=e41]
+          - generic [ref=e44]: Settings
+          - img [ref=e45]
+      - generic [ref=e179] [cursor=pointer]:
+        - generic [ref=e180]:
+          - generic [ref=e181]: In progress
+          - generic [ref=e182]: "Order #3005"
+        - generic [ref=e183]:
+          - paragraph [ref=e184]: Tasks completed
+          - generic [ref=e185]:
+            - img [ref=e186]
+            - generic [ref=e189]:
+              - generic [ref=e190]: "8"
+              - generic [ref=e191]: /
+              - generic [ref=e192]: "24"
+            - generic [ref=e194]: 33%
+        - progressbar [ref=e196]
+        - generic [ref=e198]: Deep Cleaning
+      - button "A Admin User SparkTask Inc." [ref=e49]:
+        - generic [ref=e51]: A
+        - generic [ref=e52]:
+          - paragraph [ref=e53]: Admin User
+          - paragraph [ref=e54]: SparkTask Inc.
+        - img [ref=e55]
+      - paragraph [ref=e60]: © 2025 SparkTask. All rights reserved.
+    - main [ref=e62]:
+      - generic [ref=e463]:
+        - generic [ref=e464]:
+          - generic [ref=e465]:
+            - heading "Welcome back, Admin" [level=1] [ref=e466]
+            - paragraph [ref=e467]: Here's your cleaning company overview
+          - button "New Order" [ref=e468]:
+            - img
+            - text: New Order
+        - generic [ref=e469]:
+          - generic [ref=e471]:
+            - generic [ref=e472]:
+              - img [ref=e474]
+              - generic [ref=e477]:
+                - generic [ref=e478]: Upcoming Orders
+                - generic [ref=e479]: "25"
+            - paragraph [ref=e481]: Pending to start
+          - generic [ref=e483]:
+            - generic [ref=e484]:
+              - img [ref=e486]
+              - generic [ref=e491]:
+                - generic [ref=e492]: Active Members
+                - generic [ref=e493]: "5"
+            - paragraph [ref=e495]: Available for assignments
+          - generic [ref=e497]:
+            - generic [ref=e498]:
+              - img [ref=e500]
+              - generic [ref=e503]:
+                - generic [ref=e504]: In Progress
+                - generic [ref=e505]: "1"
+            - paragraph [ref=e507]: Active today
+          - generic [ref=e509]:
+            - generic [ref=e510]:
+              - img [ref=e512]
+              - generic [ref=e515]:
+                - generic [ref=e516]: Completed Orders
+                - generic [ref=e517]: "12"
+            - paragraph [ref=e519]: Successfully finished
+        - generic [ref=e520]:
+          - generic [ref=e521]:
+            - generic [ref=e522]:
+              - heading "Recent Orders" [level=4] [ref=e523]
+              - paragraph [ref=e524]: Latest orders from your team
+            - button "View all" [ref=e525]:
+              - text: View all
+              - img
+          - generic [ref=e526]:
+            - generic [ref=e527]:
+              - generic [ref=e528]:
+                - img [ref=e529]
+                - text: Order
+              - generic [ref=e532]:
+                - img [ref=e533]
+                - text: Customer Name
+              - generic [ref=e536]:
+                - img [ref=e537]
+                - text: Service
+              - generic [ref=e541]:
+                - img [ref=e542]
+                - text: Scheduled
+              - generic [ref=e544]:
+                - img [ref=e545]
+                - text: Status
+              - generic [ref=e547]:
+                - img [ref=e548]
+                - text: Actions
+            - generic [ref=e551]:
+              - generic [ref=e552] [cursor=pointer]:
+                - paragraph [ref=e554]: "#3041"
+                - generic [ref=e555]:
+                  - paragraph [ref=e556]: Teresa Hoffman
+                  - paragraph [ref=e557]: 705 Bayview Terrace, Apt 8B
+                - generic [ref=e558]:
+                  - paragraph [ref=e559]: Move-in Cleaning
+                  - paragraph [ref=e560]: 17 tasks
+                - generic [ref=e561]:
+                  - paragraph [ref=e562]: Apr 30, 2026
+                  - paragraph [ref=e563]: 09:00 AM
+                - generic [ref=e565]: Scheduled
+                - button "View" [ref=e567]
+              - generic [ref=e568] [cursor=pointer]:
+                - paragraph [ref=e570]: "#3040"
+                - generic [ref=e571]:
+                  - paragraph [ref=e572]: Irene Castillo
+                  - paragraph [ref=e573]: 115 Linden Avenue, Unit 4D
+                - generic [ref=e574]:
+                  - paragraph [ref=e575]: Regular Cleaning
+                  - paragraph [ref=e576]: 17 tasks
+                - generic [ref=e577]:
+                  - paragraph [ref=e578]: Apr 29, 2026
+                  - paragraph [ref=e579]: 11:00 AM
+                - generic [ref=e581]: Scheduled
+                - button "View" [ref=e583]
+              - generic [ref=e584] [cursor=pointer]:
+                - paragraph [ref=e586]: "#3039"
+                - generic [ref=e587]:
+                  - paragraph [ref=e588]: Philip West
+                  - paragraph [ref=e589]: 54 Maplewood Heights, Apt 12A
+                - generic [ref=e590]:
+                  - paragraph [ref=e591]: Deep Cleaning
+                  - paragraph [ref=e592]: 17 tasks
+                - generic [ref=e593]:
+                  - paragraph [ref=e594]: Apr 28, 2026
+                  - paragraph [ref=e595]: 09:00 AM
+                - generic [ref=e597]: Scheduled
+                - button "View" [ref=e599]
+              - generic [ref=e600] [cursor=pointer]:
+                - paragraph [ref=e602]: "#3038"
+                - generic [ref=e603]:
+                  - paragraph [ref=e604]: Julia Simmons
+                  - paragraph [ref=e605]: 360 Creekview Drive, Suite 6
+                - generic [ref=e606]:
+                  - paragraph [ref=e607]: Office Cleaning
+                  - paragraph [ref=e608]: 16 tasks
+                - generic [ref=e609]:
+                  - paragraph [ref=e610]: Apr 27, 2026
+                  - paragraph [ref=e611]: 01:00 PM
+                - generic [ref=e613]: Scheduled
+                - button "View" [ref=e615]
+              - generic [ref=e616] [cursor=pointer]:
+                - paragraph [ref=e618]: "#3037"
+                - generic [ref=e619]:
+                  - paragraph [ref=e620]: Aaron Woods
+                  - paragraph [ref=e621]: 830 Catalpa Court, Unit 1B
+                - generic [ref=e622]:
+                  - paragraph [ref=e623]: Regular Cleaning
+                  - paragraph [ref=e624]: 12 tasks
+                - generic [ref=e625]:
+                  - paragraph [ref=e626]: Apr 25, 2026
+                  - paragraph [ref=e627]: 10:00 AM
+                - generic [ref=e629]: Scheduled
+                - button "View" [ref=e631]
+  - region "Notifications alt+T"

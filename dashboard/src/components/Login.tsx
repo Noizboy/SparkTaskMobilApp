@@ -11,7 +11,7 @@ interface LoginProps {
   onLogin: (userData: any) => void;
   onSwitchToRegister: () => void;
   onSwitchToForgotPassword: () => void;
-  onSubmit?: (email: string, password: string) => Promise<void>;
+  onSubmit?: (email: string, password: string, rememberMe: boolean) => Promise<void>;
 }
 
 export function Login({ onLogin, onSwitchToRegister, onSwitchToForgotPassword, onSubmit }: LoginProps) {
@@ -29,7 +29,7 @@ export function Login({ onLogin, onSwitchToRegister, onSwitchToForgotPassword, o
     try {
       if (onSubmit) {
         // Use external API
-        await onSubmit(email, password);
+        await onSubmit(email, password, rememberMe);
       } else {
         // Mock login
         onLogin({

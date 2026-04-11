@@ -55,7 +55,7 @@ export function JobInfoScreen() {
 
   const inProgressJob = jobs.find((j) => j.status === 'in-progress' && j.id !== job.id);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (inProgressJob) {
       Alert.alert(
         t('jobInProgress'),
@@ -63,8 +63,12 @@ export function JobInfoScreen() {
       );
       return;
     }
-    startJob(job.id);
-    navigation.replace('Checklist', { jobId: job.id });
+    try {
+      await startJob(job.id);
+      navigation.replace('Checklist', { jobId: job.id });
+    } catch (err: any) {
+      Alert.alert('Cannot Start Job', err.message || 'Failed to start job. Please try again.');
+    }
   };
 
   return (

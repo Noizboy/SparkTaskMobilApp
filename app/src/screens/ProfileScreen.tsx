@@ -19,10 +19,11 @@ import { useLanguage } from '../context/LanguageContext';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { API_BASE } from '../services/api';
 import { storage } from '../utils/storage';
+import { AUTH_CONFIG } from '../config/auth';
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { handleLogout, profileImage, setProfileImage, currentUser, setCurrentUser } = useApp();
+  const { handleLogout, currentUser, updateCurrentUser } = useApp();
   const { language: currentLangCode, setLanguage: setLangFromContext, t } = useLanguage();
 
   const [phone, setPhone] = useState(currentUser?.phone ?? '');
@@ -44,8 +45,6 @@ export function ProfileScreen() {
 
   const currentLang = LANGUAGES.find((l) => l.code === currentLangCode) ?? LANGUAGES[0];
 
-  const displayImage = profileImage ?? currentUser?.avatar_url ?? null;
-
   const pickImage = async () => {
     if (!currentUser) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -61,24 +60,27 @@ export function ProfileScreen() {
     });
     if (result.canceled) return;
     const localUri = result.assets[0].uri;
-    setProfileImage(localUri);
+    // Optimistic update — show local URI immediately while uploading
+    await updateCurrentUser({ avatar_url: localUri });
     try {
       const formData = new FormData();
       formData.append('avatar', { uri: localUri, name: 'avatar.jpg', type: 'image/jpeg' } as any);
-      const res = await fetch(`${API_BASE}/users/${currentUser.id}/avatar`, {
+      const token = await storage.get(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+      const headers: Record<string, string> = {};
+      if (token && token !== 'true') headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/users/me/avatar`, {
         method: 'POST',
+        headers,
         body: formData,
       });
       if (res.ok) {
         const updated = await res.json();
-        const updatedUser = { ...currentUser, avatar_url: updated.avatar_url };
-        setCurrentUser(updatedUser);
-        await storage.setJSON('currentUser', updatedUser);
-        // Use server URL as the canonical image — survives logout/login
-        setProfileImage(updated.avatar_url);
+        // Replace local URI with canonical server URL — auto-persisted to AsyncStorage
+        await updateCurrentUser({ avatar_url: updated.avatar_url });
       }
     } catch (err) {
       console.error('[API] uploadAvatar failed:', err);
+      // Keep optimistic local URI — user still sees their selection
     }
   };
 
@@ -87,16 +89,15 @@ export function ProfileScreen() {
       Alert.alert(t('error'), 'Session expired. Please log out and log back in.');
       return;
     }
-    if (!currentUser.id) {
-      Alert.alert(t('error'), 'User ID missing. Please log out and log back in.');
-      return;
-    }
     try {
-      const url = `${API_BASE}/users/${currentUser.id}`;
+      const token = await storage.get(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token && token !== 'true') headers['Authorization'] = `Bearer ${token}`;
+      const url = `${API_BASE}/users/me`;
       console.log('[API] PATCH phone →', url, { phone });
       const res = await fetch(url, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ phone }),
       });
       console.log('[API] PATCH phone ←', res.status);
@@ -104,9 +105,9 @@ export function ProfileScreen() {
         const body = await res.text();
         throw new Error(`HTTP ${res.status}: ${body}`);
       }
-      const updated = { ...currentUser, phone };
-      setCurrentUser(updated);
-      await storage.setJSON('currentUser', updated);
+      const serverUser = await res.json();
+      const updated = { ...currentUser, phone, id: String(serverUser.id) };
+      await updateCurrentUser(updated);
     } catch (err: any) {
       console.error('[API] updatePhone failed:', err);
       Alert.alert(t('error'), `Could not save phone number.\n\n${err.message}`);
@@ -173,8 +174,8 @@ export function ProfileScreen() {
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={pickImage} activeOpacity={0.85} style={styles.avatarWrap}>
-            {displayImage ? (
-              <Image source={{ uri: displayImage }} style={styles.avatar} />
+            {currentUser?.avatar_url ? (
+              <Image source={{ uri: currentUser.avatar_url }} style={styles.avatar} />
             ) : (
               <View style={[styles.avatar, styles.avatarFallback]}>
                 <User size={44} color={COLORS.white} />

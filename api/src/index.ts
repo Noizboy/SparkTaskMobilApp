@@ -12,7 +12,7 @@ import { sseHandler } from './sse';
 const app = express();
 const PORT = 3001;
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -59,6 +59,17 @@ async function runMigrations() {
     )
   `);
 
+  // Ensure photos table exists — stores before/after photos per section
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS photos (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      section_id UUID NOT NULL REFERENCES sections(id) ON DELETE CASCADE,
+      type       VARCHAR(10) NOT NULL CHECK (type IN ('before', 'after')),
+      url        TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
   // Add company-related columns to users table
   const companyColumns = [
     { name: 'company_phone', type: 'VARCHAR(50)' },
@@ -85,6 +96,11 @@ runMigrations().catch((err) => {
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Public app info — exposes only APP_VERSION, no auth required
+app.get('/api/info', (_req, res) => {
+  res.json({ version: process.env.APP_VERSION ?? '0.1.0' });
 });
 
 // Server-Sent Events stream

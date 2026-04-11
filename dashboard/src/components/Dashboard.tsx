@@ -5,7 +5,8 @@ import { OverviewPage } from './pages/OverviewPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { CreateOrderPage } from './pages/CreateOrderPage';
 import { OrderDetailPage } from './pages/OrderDetailPage';
-import { TeamMembersPage } from './pages/TeamMembersPage';
+import { TeamMembersPage, TeamMember } from './pages/TeamMembersPage';
+import { MemberOverviewPage } from './pages/MemberOverviewPage';
 import { ChecklistManagementPage } from './pages/ChecklistManagementPage';
 import { ServiceTypesPage } from './pages/ServiceTypesPage';
 import { AddonsPage } from './pages/AddonsPage';
@@ -25,13 +26,13 @@ interface DashboardProps {
   onUserUpdate: (updated: any) => void;
 }
 
-export type PageType = 'overview' | 'orders' | 'create-order' | 'order-detail' | 'team' | 'checklist' | 'service-types' | 'addons' | 'settings' | 'settings-account' | 'settings-general' | 'settings-renewal';
+export type PageType = 'overview' | 'orders' | 'create-order' | 'order-detail' | 'team' | 'member-overview' | 'checklist' | 'service-types' | 'addons' | 'settings' | 'settings-account' | 'settings-general' | 'settings-renewal';
 
 export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [currentPage, setCurrentPageState] = useState<PageType>(() => {
     const saved = localStorage.getItem('dashboard_currentPage') as PageType | null;
     // order-detail depends on transient state that won't survive a refresh
-    if (saved && saved !== 'order-detail') return saved;
+    if (saved && saved !== 'order-detail' && saved !== 'member-overview') return saved;
     return 'overview';
   });
   const setCurrentPage = (page: PageType) => {
@@ -46,6 +47,8 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [services, setServices] = useState<api.ServiceAPI[]>([]);
   const [teamMembers, setTeamMembers] = useState<api.TeamMemberAPI[]>([]);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [apiVersion, setApiVersion] = useState<string | null>(null);
 
   // Check API health and load orders
   const loadOrders = useCallback(async () => {
@@ -85,6 +88,12 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
     loadServices();
     loadTeamMembers();
   }, [loadOrders, loadServices, loadTeamMembers]);
+
+  useEffect(() => {
+    api.fetchApiVersion()
+      .then(setApiVersion)
+      .catch(() => setApiVersion(null));
+  }, []);
 
   // Real-time updates via SSE — no polling, no F5 needed
   useSSE({
@@ -170,7 +179,23 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
         }
         return <OrderDetailPage order={selectedOrder} onBack={handleBackFromOrderDetail} onUpdateOrder={handleUpdateOrder} onDeleteOrder={handleDeleteOrder} teamMembers={teamMembers} />;
       case 'team':
-        return <TeamMembersPage user={user} />;
+        return (
+          <TeamMembersPage
+            user={user}
+            onViewMember={(member) => {
+              setSelectedMember(member);
+              setCurrentPage('member-overview');
+            }}
+          />
+        );
+      case 'member-overview':
+        if (!selectedMember) { setCurrentPage('team'); return null; }
+        return (
+          <MemberOverviewPage
+            member={selectedMember}
+            onBack={() => setCurrentPage('team')}
+          />
+        );
       case 'checklist':
         return <ChecklistManagementPage user={user} />;
       case 'service-types':
@@ -241,8 +266,15 @@ export function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
-          {renderPage()}
+        <main className="flex-1 overflow-y-auto flex flex-col">
+          <div className="flex-1">
+            {renderPage()}
+          </div>
+          {/* Page Footer */}
+          <footer className="border-t border-gray-200 bg-white px-4 md:px-6 lg:px-8 py-3 flex items-center justify-between shrink-0">
+            <span className="text-xs text-gray-400">Powered by SparkTask</span>
+            <span className="text-xs text-gray-400">{apiVersion != null ? `v${apiVersion}` : 'v—'}</span>
+          </footer>
         </main>
       </div>
     </div>

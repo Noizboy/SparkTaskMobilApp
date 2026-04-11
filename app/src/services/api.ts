@@ -1,6 +1,15 @@
 import { Job } from '../types';
+import { storage } from '../utils/storage';
+import { AUTH_CONFIG } from '../config/auth';
 
-export const API_BASE = process.env.EXPO_PUBLIC_API_URL as string;
+// EXPO_PUBLIC_API_URL must include the /api path segment, e.g.:
+//   http://192.168.1.221:3001/api
+// Without /api the app calls /orders/... instead of /api/orders/..., which
+// produces a 404 because the Express server mounts all order routes under
+// app.use('/api/orders', ordersRouter).
+export const API_BASE: string =
+  (process.env.EXPO_PUBLIC_API_URL as string | undefined) ??
+  'http://localhost:3001/api';
 
 /** Map API 'scheduled' status to mobile 'upcoming' */
 function mapStatusIn(status: string): Job['status'] {
@@ -87,7 +96,10 @@ export async function apiUpdateStatus(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`updateStatus failed: ${res.status}`);
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || `updateStatus failed: ${res.status}`);
+  }
 }
 
 export async function apiToggleAddOn(orderId: string, addOnId: string): Promise<void> {
@@ -111,4 +123,75 @@ export async function apiUpdateOrder(orderId: string, job: Job): Promise<void> {
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`updateOrder failed: ${res.status}`);
+}
+
+// ─── Photo upload ─────────────────────────────────────────────────────────────
+
+/**
+ * Upload a single before/after photo for a section.
+ * Sends multipart/form-data with field "photo"; type is passed as a query param.
+ * Returns the saved photo record from the server: { id, section_id, type, url }.
+ */
+export async function apiUploadPhoto(
+  orderId: string,
+  sectionId: string,
+  type: 'before' | 'after',
+  localUri: string
+): Promise<{ id: string; section_id: string; type: string; url: string }> {
+  const token = await storage.get(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+
+  const formData = new FormData();
+  const filename = localUri.split('/').pop() ?? `photo-${Date.now()}.jpg`;
+  // React Native FormData accepts the object form for file entries
+  formData.append('photo', {
+    uri: localUri,
+    name: filename,
+    type: 'image/jpeg',
+  } as any);
+
+  const res = await fetch(
+    `${API_BASE}/orders/${orderId}/sections/${sectionId}/photos?type=${type}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token ?? ''}`,
+        // Do NOT set Content-Type — FormData auto-sets multipart/form-data with boundary
+      },
+      body: formData,
+    }
+  );
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({})) as any;
+    throw new Error(errBody.error ?? `uploadPhoto failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Delete a photo by its server URL.
+ * The photo is identified by orderId + sectionId + photoUrl (full server URL).
+ */
+export async function apiDeletePhoto(
+  orderId: string,
+  sectionId: string,
+  photoUrl: string
+): Promise<void> {
+  const token = await storage.get(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+
+  const res = await fetch(
+    `${API_BASE}/orders/${orderId}/sections/${sectionId}/photos?url=${encodeURIComponent(photoUrl)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token ?? ''}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({})) as any;
+    throw new Error(errBody.error ?? `deletePhoto failed: ${res.status}`);
+  }
 }

@@ -10,15 +10,17 @@ import { Toaster } from './components/ui/sonner';
 export default function App() {
   const [user, setUser] = useState<any>(() => {
     try {
-      const stored = localStorage.getItem('sparkTaskUser');
+      // Check localStorage first (remember me), then sessionStorage (session only)
+      const stored = localStorage.getItem('sparkTaskUser') || sessionStorage.getItem('sparkTaskUser');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed?.token) return parsed;
-        // Stale session without token — clear it and require re-login
         localStorage.removeItem('sparkTaskUser');
+        sessionStorage.removeItem('sparkTaskUser');
       }
     } catch {
       localStorage.removeItem('sparkTaskUser');
+      sessionStorage.removeItem('sparkTaskUser');
     }
     return null;
   });
@@ -32,15 +34,21 @@ export default function App() {
     return 'login';
   });
 
-  const handleLogin = (userData: any) => {
+  const handleLogin = (userData: any, rememberMe = false) => {
     setUser(userData);
-    localStorage.setItem('sparkTaskUser', JSON.stringify(userData));
+    const serialized = JSON.stringify(userData);
+    if (rememberMe) {
+      localStorage.setItem('sparkTaskUser', serialized);
+    } else {
+      sessionStorage.setItem('sparkTaskUser', serialized);
+    }
     setCurrentView('dashboard');
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('sparkTaskUser');
+    sessionStorage.removeItem('sparkTaskUser');
     setCurrentView('login');
   };
 
@@ -56,9 +64,9 @@ export default function App() {
         onLogin={handleLogin}
         onSwitchToRegister={() => setCurrentView('register')}
         onSwitchToForgotPassword={() => setCurrentView('forgot-password')}
-        onSubmit={async (email, password) => {
+        onSubmit={async (email, password, rememberMe) => {
           const userData = await api.login(email, password);
-          handleLogin(userData);
+          handleLogin(userData, rememberMe);
         }}
       />
     );
@@ -112,7 +120,12 @@ export default function App() {
 
   const handleUserUpdate = (updated: any) => {
     setUser(updated);
-    localStorage.setItem('sparkTaskUser', JSON.stringify(updated));
+    const serialized = JSON.stringify(updated);
+    if (localStorage.getItem('sparkTaskUser')) {
+      localStorage.setItem('sparkTaskUser', serialized);
+    } else {
+      sessionStorage.setItem('sparkTaskUser', serialized);
+    }
   };
 
   return (

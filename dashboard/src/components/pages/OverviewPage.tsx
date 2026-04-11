@@ -31,7 +31,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
     .slice(0, 5);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-full flex flex-col">
       <div className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -246,11 +246,6 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-sm text-gray-500">Powered by SparkTask</p>
-          <p className="text-sm text-gray-500">Version 1.0.0</p>
-        </div>
       </div>
     </div>
   );

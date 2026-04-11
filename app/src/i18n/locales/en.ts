@@ -205,4 +205,9 @@ export default {
   upcoming: 'Upcoming',
   inProgressStatus: 'In Progress',
   completedStatus: 'Completed',
+
+  // Offline / Sync Banner
+  syncOffline: 'No connection · changes saved locally',
+  syncSyncing: 'Syncing pending changes...',
+  syncDone: 'All changes synced',
 } as const;

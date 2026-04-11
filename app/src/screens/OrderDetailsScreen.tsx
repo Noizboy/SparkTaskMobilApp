@@ -33,7 +33,7 @@ import { formatFullDate } from '../utils/dateUtils';
 type Route = RouteProp<RootStackParamList, 'OrderDetails'>;
 
 export function OrderDetailsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
   const { jobs } = useApp();

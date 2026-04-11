@@ -1,0 +1,17 @@
+[    -175ms] [ERROR] WebSocket connection to 'ws://localhost:3000/?token=kDOXVRhDyG8i' failed:  @ http://localhost:3000/@vite/client:801
+[    -154ms] [ERROR] WebSocket connection to 'ws://localhost:3000/?token=kDOXVRhDyG8i' failed:  @ http://localhost:3000/@vite/client:814
+[    -152ms] [ERROR] [vite] failed to connect to websocket.
+your current setup:
+  (browser) localhost:3000/ <--[HTTP]--> localhost:3000/ (server)
+  (browser) localhost:3000/ <--[WebSocket (failing)]--> localhost:3000/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr . @ http://localhost:3000/@vite/client:829
+[     -52ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/chunk-YFB5YCE7.js?v=cdc11465:21608
+[      -8ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/services?business_id=1:0
+[      -8ms] [WARNING] Failed to load services @ http://localhost:3000/src/components/Dashboard.tsx?t=1775867248148:81
+[      -8ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/users/team:0
+[      -7ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/users/team:0
+[      -7ms] [WARNING] Failed to load team members @ http://localhost:3000/src/components/Dashboard.tsx?t=1775867248148:91
+[      79ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/favicon.ico:0
+[ 1261478ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://localhost:3001/api/events:0
+[ 1264794ms] [ERROR] Access to resource at 'http://localhost:3001/api/events' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3000/:0
+[ 1264794ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:3001/api/events:0

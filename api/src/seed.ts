@@ -141,7 +141,7 @@ async function seed() {
     const cleaners = [
       { email: 'maria@demo.com', name: 'Maria Garcia', phone: '+1 (555) 200-1001' },
       { email: 'carlos@demo.com', name: 'Carlos Lopez', phone: '+1 (555) 200-1002' },
-      { email: 'sofia@demo.com', name: 'Alejandro Gomez', phone: '+1 (555) 200-1003' },
+      { email: 'sofia@demo.com', name: 'Sofia Gomez', phone: '+1 (555) 200-1003' },
       { email: 'diego@demo.com', name: 'Diego Hernandez', phone: '+1 (555) 200-1004' },
     ];
 

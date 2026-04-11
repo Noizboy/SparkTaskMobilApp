@@ -3,8 +3,10 @@ import { Job, AppNotification, Review } from '../types';
 import { mockJobs } from '../data/mockJobs';
 import { storage } from '../utils/storage';
 import { AUTH_CONFIG } from '../config/auth';
-import { fetchJobs, apiToggleTodo, apiToggleAddOn, apiMarkSectionDone, apiMarkSectionUndone, apiUpdateStatus, apiUpdateOrder } from '../services/api';
+import { fetchJobs, apiToggleTodo, apiToggleAddOn, apiMarkSectionDone, apiMarkSectionUndone, apiUpdateStatus, apiUpdateOrder, apiUploadPhoto, apiDeletePhoto } from '../services/api';
 import { useSSE } from '../hooks/useSSE';
+import { enqueue } from '../utils/syncQueue';
+import { useNetworkSync } from '../hooks/useNetworkSync';
 
 const MOCK_NOTIFICATIONS: AppNotification[] = [
   { id: '1', type: 'upcoming', title: 'Job Starting Soon', message: 'Job #2847 will start in 2 hours at 456 Maple Drive', time: '10 min ago', isRead: false },
@@ -46,24 +48,27 @@ interface AppContextType {
   jobsLoaded: boolean;
   isAuthenticated: boolean;
   showOnboarding: boolean;
-  profileImage: string | null;
   isLoading: boolean;
   currentUser: CurrentUser | null;
   setCurrentUser: (user: CurrentUser | null) => void;
-  handleLogin: (user: CurrentUser) => Promise<void>;
+  updateCurrentUser: (updates: Partial<CurrentUser>) => Promise<void>;
+  handleLogin: (user: CurrentUser, token?: string) => Promise<void>;
   handleLogout: () => Promise<void>;
   handleOnboardingComplete: () => Promise<void>;
   toggleTodo: (jobId: string, sectionId: string, todoId: string) => void;
   markAllDone: (jobId: string, sectionId: string) => void;
   toggleAddOn: (jobId: string, addOnId: string) => void;
   photosChange: (jobId: string, sectionId: string, type: 'before' | 'after', photos: string[]) => void;
-  startJob: (jobId: string) => void;
+  startJob: (jobId: string) => Promise<void>;
   completeJob: (jobId: string, skipReasons?: Record<string, string>) => void;
   cancelJob: (jobId: string) => void;
   resetAllJobs: () => void;
   updateSkipReason: (jobId: string, sectionId: string, reason: string) => void;
   clearSkipReason: (jobId: string, sectionId: string) => void;
-  setProfileImage: (image: string | null) => void;
+  /** Network / offline-sync state */
+  isOnline: boolean;
+  isSyncing: boolean;
+  pendingCount: number;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -72,11 +77,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
   const [jobsLoaded, setJobsLoaded] = useState(false);
+
+  // Offline sync queue — must be mounted at provider level so all consumers share state
+  const { isOnline, isSyncing, pendingCount, refreshPendingCount } = useNetworkSync();
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -95,7 +102,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const savedUser = await storage.getJSON<CurrentUser>('currentUser');
         if (savedUser) {
           setCurrentUser(savedUser);
-          if (savedUser.avatar_url) setProfileImage(savedUser.avatar_url);
           setIsAuthenticated(true);
         } else {
           // Stale session — no user data. Force re-login.
@@ -105,7 +111,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       setIsLoading(false);
     };
-    initAuth();
+    // .catch ensures setIsLoading(false) is ALWAYS called even if an unexpected
+    // error escapes the try/catch blocks inside initAuth (e.g. a stalled
+    // AsyncStorage promise under @react-native-async-storage v2 + RN 0.81).
+    initAuth().catch(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -181,11 +190,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
   }, isAuthenticated);
 
-  const handleLogin = async (user: CurrentUser) => {
-    await storage.set(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN, 'true');
+  const updateCurrentUser = useCallback(async (updates: Partial<CurrentUser>) => {
+    const updated = { ...currentUser, ...updates } as CurrentUser;
+    setCurrentUser(updated);
+    await storage.setJSON('currentUser', updated);
+  }, [currentUser]);
+
+  const handleLogin = async (user: CurrentUser, token?: string) => {
+    await storage.set(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN, token || 'true');
     await storage.setJSON('currentUser', user);
     setCurrentUser(user);
-    if (user.avatar_url) setProfileImage(user.avatar_url);
     setIsAuthenticated(true);
     const hasOnboarded = await storage.get(AUTH_CONFIG.STORAGE_KEYS.ONBOARDING_COMPLETED);
     if (!hasOnboarded) setShowOnboarding(true);
@@ -200,7 +214,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setShowOnboarding(false);
     setJobs([]);
     setCurrentUser(null);
-    setProfileImage(null);
   };
 
   const handleOnboardingComplete = async () => {
@@ -226,8 +239,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
     });
     saveJobs(updated);
-    // Sync to API in background
-    apiToggleTodo(jobId, todoId).catch((err) => console.error('[API] toggleTodo failed:', err));
+    // Sync to API in background — enqueue on network failure
+    apiToggleTodo(jobId, todoId).catch(async (err) => {
+      console.error('[API] toggleTodo failed:', err);
+      await enqueue({ type: 'toggleTodo', payload: { orderId: jobId, todoId } });
+      refreshPendingCount();
+    });
   };
 
   const markAllDone = (jobId: string, sectionId: string) => {
@@ -250,10 +267,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
     });
     saveJobs(updated);
+
+    const opType = newCompleted ? ('markSectionDone' as const) : ('markSectionUndone' as const);
     const apiCall = newCompleted
       ? apiMarkSectionDone(jobId, sectionId)
       : apiMarkSectionUndone(jobId, sectionId);
-    apiCall.catch((err) => console.error('[API] markAllDone failed:', err));
+    apiCall.catch(async (err) => {
+      console.error('[API] markAllDone failed:', err);
+      await enqueue({ type: opType, payload: { orderId: jobId, sectionId } });
+      refreshPendingCount();
+    });
   };
 
   const toggleAddOn = (jobId: string, addOnId: string) => {
@@ -267,40 +290,111 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
     });
     saveJobs(updated);
-    apiToggleAddOn(jobId, addOnId).catch((err) => console.error('[API] toggleAddOn failed:', err));
+    apiToggleAddOn(jobId, addOnId).catch(async (err) => {
+      console.error('[API] toggleAddOn failed:', err);
+      await enqueue({ type: 'toggleAddOn', payload: { orderId: jobId, addOnId } });
+      refreshPendingCount();
+    });
   };
 
   const photosChange = (jobId: string, sectionId: string, type: 'before' | 'after', photos: string[]) => {
+    const photoKey = type === 'before' ? 'beforePhotos' : 'afterPhotos';
+
+    // Capture previous photo list BEFORE updating state
+    const prevJob = jobs.find((j) => j.id === jobId);
+    const prevSection = prevJob?.sections.find((s) => s.id === sectionId);
+    const prevPhotos: string[] = prevSection ? prevSection[photoKey] : [];
+
+    // ── 1. Optimistic update — put the new list (with local URIs) into state ──
     const updated = jobs.map((job) => {
       if (job.id !== jobId) return job;
-      const updatedJob = {
+      return {
         ...job,
         sections: job.sections.map((section) => {
           if (section.id !== sectionId) return section;
-          return {
-            ...section,
-            [type === 'before' ? 'beforePhotos' : 'afterPhotos']: photos,
-          };
+          return { ...section, [photoKey]: photos };
         }),
       };
-      // Sync photos to API
-      apiUpdateOrder(jobId, updatedJob).catch((err) => console.error('[API] photosChange failed:', err));
-      return updatedJob;
     });
     saveJobs(updated);
+
+    // ── 2. Upload any newly-added local photos ─────────────────────────────────
+    const newLocalPhotos = photos.filter(
+      (p) => p.startsWith('file://') || p.startsWith('content://')
+    );
+
+    newLocalPhotos.forEach(async (localUri) => {
+      try {
+        const result = await apiUploadPhoto(jobId, sectionId, type, localUri);
+
+        // Replace local URI with server URL in state (functional update for freshness)
+        setJobs((prevJobs) => {
+          const nextJobs = prevJobs.map((j) => {
+            if (j.id !== jobId) return j;
+            return {
+              ...j,
+              sections: j.sections.map((s) => {
+                if (s.id !== sectionId) return s;
+                const photoList: string[] = s[photoKey] as string[];
+                return {
+                  ...s,
+                  [photoKey]: photoList.map((p) => (p === localUri ? result.url : p)),
+                };
+              }),
+            };
+          });
+          // Persist updated URLs to cache (fire-and-forget)
+          storage.setJSON('cleanerJobs', nextJobs);
+          return nextJobs;
+        });
+      } catch (err) {
+        console.error('[API] uploadPhoto failed — keeping local URI:', err);
+        // Keep the local URI in state; enqueue so it is retried when back online
+        await enqueue({
+          type: 'photosChange',
+          payload: { orderId: jobId, sectionId, photoType: type, localUri },
+        });
+        refreshPendingCount();
+      }
+    });
+
+    // ── 3. Delete photos that were removed from the list ──────────────────────
+    const deletedServerPhotos = prevPhotos.filter(
+      (p) => p.startsWith('http') && !photos.includes(p)
+    );
+
+    deletedServerPhotos.forEach(async (photoUrl) => {
+      try {
+        await apiDeletePhoto(jobId, sectionId, photoUrl);
+      } catch (err) {
+        // Deletion failure is non-critical: the photo is already gone from local
+        // state. Log it but do not revert state or block the user.
+        console.error('[API] deletePhoto failed (photo already removed locally):', err);
+      }
+    });
   };
 
-  const startJob = (jobId: string) => {
+  const startJob = async (jobId: string): Promise<void> => {
     const startedAt = Date.now();
+    const previous = jobs;
     const updated = jobs.map((job) =>
       job.id === jobId ? { ...job, status: 'in-progress' as const, startedAt } : job
     );
     saveJobs(updated);
-    apiUpdateStatus(jobId, 'in-progress', { startedAt }).catch((err) => console.error('[API] startJob failed:', err));
+    try {
+      await apiUpdateStatus(jobId, 'in-progress', { startedAt });
+    } catch (err: any) {
+      saveJobs(previous); // revert optimistic update
+      // Enqueue so the operation is retried when back online
+      await enqueue({ type: 'startJob', payload: { orderId: jobId, startedAt } });
+      refreshPendingCount();
+      throw new Error(err?.message ?? 'updateStatus failed');
+    }
   };
 
   const completeJob = (jobId: string, skipReasons?: Record<string, string>) => {
     const completedAt = Date.now();
+    let capturedJob: Job | undefined;
     const updated = jobs.map((job) => {
       if (job.id !== jobId) return job;
       const updatedSections = skipReasons
@@ -316,24 +410,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               skipReason: addon.selected ? undefined : skipReasons['addons'],
             }))
           : job.addOns;
-      const completedJob = {
+      const completedJob: Job = {
         ...job,
         status: 'completed' as const,
         completedAt,
         sections: updatedSections,
         addOns: updatedAddOns,
       };
-      // Sync full order to API (includes sections with skipReasons + completedAt)
-      apiUpdateOrder(jobId, completedJob).catch((err) => console.error('[API] completeJob failed:', err));
+      capturedJob = completedJob;
       return completedJob;
     });
     saveJobs(updated);
+    if (capturedJob) {
+      const jobSnapshot = capturedJob;
+      // Sync full order to API (includes sections with skipReasons + completedAt)
+      apiUpdateOrder(jobId, jobSnapshot).catch(async (err) => {
+        console.error('[API] completeJob failed:', err);
+        await enqueue({ type: 'completeJob', payload: { orderId: jobId, job: jobSnapshot } });
+        refreshPendingCount();
+      });
+    }
   };
 
   const cancelJob = (jobId: string) => {
+    // Check before mutating so we know whether an API call is warranted
+    const targetJob = jobs.find((j) => j.id === jobId);
+    const wasInProgress = targetJob?.status === 'in-progress';
+
     const updated = jobs.map((job) => {
       if (job.id !== jobId || job.status !== 'in-progress') return job;
-      const resetJob = {
+      return {
         ...job,
         status: 'upcoming' as const,
         startedAt: undefined,
@@ -347,11 +453,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })),
         addOns: job.addOns?.map((addon) => ({ ...addon, selected: false })),
       };
-      // Reset to scheduled in API
-      apiUpdateStatus(jobId, 'upcoming').catch((err) => console.error('[API] cancelJob failed:', err));
-      return resetJob;
     });
     saveJobs(updated);
+
+    if (wasInProgress) {
+      // Reset to scheduled in API — enqueue on network failure
+      apiUpdateStatus(jobId, 'upcoming').catch(async (err) => {
+        console.error('[API] cancelJob failed:', err);
+        await enqueue({ type: 'cancelJob', payload: { orderId: jobId } });
+        refreshPendingCount();
+      });
+    }
   };
 
   const resetAllJobs = () => {
@@ -411,10 +523,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         markAllRead,
         isAuthenticated,
         showOnboarding,
-        profileImage,
         isLoading,
         currentUser,
         setCurrentUser,
+        updateCurrentUser,
         handleLogin,
         handleLogout,
         handleOnboardingComplete,
@@ -428,7 +540,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         resetAllJobs,
         updateSkipReason,
         clearSkipReason,
-        setProfileImage,
+        isOnline,
+        isSyncing,
+        pendingCount,
       }}
     >
       {children}

@@ -15,9 +15,12 @@ import { Sparkles } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '../context/AppContext';
+import type { CurrentUser } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../constants/theme';
 import { API_BASE } from '../services/api';
+import { AUTH_CONFIG } from '../config/auth';
+import { storage } from '../utils/storage';
 
 export function LoginScreen() {
   const { handleLogin } = useApp();
@@ -33,17 +36,65 @@ export function LoginScreen() {
     setError('');
     setIsLoading(true);
     try {
+      // Offline-first: check against known demo accounts (no real backend required).
+      const normalizedEmail = email.trim().toLowerCase();
+      const demoMatch = AUTH_CONFIG.DEMO_USERS.find(
+        (u) => u.email === normalizedEmail && u.password === password
+      );
+      if (demoMatch) {
+        // Always attempt the real API first — it returns the full user record
+        // including any avatar_url the cleaner has saved to their profile.
+        try {
+          const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: normalizedEmail, password }),
+          });
+          if (res.ok) {
+            const apiUser = await res.json();
+            await handleLogin(
+              {
+                id: String(apiUser.id),
+                name: apiUser.name,
+                email: apiUser.email,
+                role: apiUser.role,
+                company: apiUser.company,
+                phone: apiUser.phone ?? undefined,
+                avatar_url: apiUser.avatar_url ?? undefined,
+              },
+              apiUser.token,
+            );
+            return;
+          }
+          // Non-2xx (e.g. 401 wrong password for a real account that happens to
+          // share an email) — treat as API unavailable and use the offline path.
+        } catch {
+          // Network error — no connectivity. Fall through to offline demo path.
+        }
+
+        // API unavailable: use the hardcoded demo user but preserve any
+        // avatar_url the user previously saved, identified by matching email
+        // so we never carry over a different account's photo.
+        const { password: _pw, ...demoUser } = demoMatch;
+        const storedUser = await storage.getJSON<CurrentUser>('currentUser');
+        const avatar_url =
+          storedUser?.email === normalizedEmail ? storedUser.avatar_url : undefined;
+        await handleLogin({ ...demoUser, avatar_url });
+        return;
+      }
+
+      // Fall back to real API for non-demo accounts.
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
       if (!res.ok) {
         setError(t('invalidCredentials'));
         return;
       }
       const user = await res.json();
-      await handleLogin({ id: String(user.id), name: user.name, email: user.email, role: user.role, company: user.company, phone: user.phone ?? undefined, avatar_url: user.avatar_url ?? undefined });
+      await handleLogin({ id: String(user.id), name: user.name, email: user.email, role: user.role, company: user.company, phone: user.phone ?? undefined, avatar_url: user.avatar_url ?? undefined }, user.token);
     } catch {
       setError(t('invalidCredentials'));
     } finally {
@@ -145,10 +196,10 @@ export function LoginScreen() {
           <View style={styles.demoBox}>
             <Text style={styles.demoTitle}>{t('demoCredentials')}</Text>
             <Text style={styles.demoText}>
-              Email: <Text style={styles.demoValue}>alejandro@sparktask.com</Text>
+              Email: <Text style={styles.demoValue}>{AUTH_CONFIG.DEMO_CREDENTIALS.email}</Text>
             </Text>
             <Text style={styles.demoText}>
-              Password: <Text style={styles.demoValue}>demo</Text>
+              Password: <Text style={styles.demoValue}>{AUTH_CONFIG.DEMO_CREDENTIALS.password}</Text>
             </Text>
           </View>
         </ScrollView>

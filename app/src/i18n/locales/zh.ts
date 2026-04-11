@@ -205,4 +205,9 @@ export default {
   upcoming: '即将到来',
   inProgressStatus: '进行中',
   completedStatus: '已完成',
+
+  // Offline / Sync Banner
+  syncOffline: '无网络连接 · 更改已本地保存',
+  syncSyncing: '正在同步待处理更改...',
+  syncDone: '所有更改已同步',
 } as const;

@@ -1,4 +1,5 @@
 import { Order, getOrderProgress, getOrderTaskCounts } from '../../data/mockOrders';
+import { ImageWithFallback } from '../figma/ImageWithFallback';
 import * as api from '../../services/api';
 import { getServiceTypes } from '../../data/mockServiceTypes';
 import { getAreas, getAreaByName } from '../../data/mockAreas';
@@ -36,7 +37,8 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconSelector,
-  IconAlertTriangle
+  IconAlertTriangle,
+  IconCamera
 } from '@tabler/icons-react';
 
 interface TeamMember {
@@ -96,6 +98,7 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder, t
   
   // Check if order is in progress (locked state)
   const isInProgress = currentOrder.status === 'in-progress';
+  const isCompleted = currentOrder.status === 'completed';
   
   // Check if order can be edited (only scheduled orders)
   const canEdit = currentOrder.status === 'scheduled';
@@ -111,6 +114,7 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder, t
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [isServiceDetailsOpen, setIsServiceDetailsOpen] = useState(true);
   const [isTaskChecklistOpen, setIsTaskChecklistOpen] = useState(false);
+  const [lightbox, setLightbox] = useState<{ url: string; label: string } | null>(null);
   
   const [conflictError, setConflictError] = useState<string | null>(null);
 
@@ -192,8 +196,24 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder, t
     }
   };
 
+  // ── Photo evidence computed values ───────────────────────────────────────
+  // Completed orders: show all sections (empty ones get a placeholder).
+  // In-progress orders: only show sections that already have at least one photo.
+  const photoSections = isCompleted
+    ? currentOrder.sections
+    : currentOrder.sections.filter(
+        (s) => s.beforePhotos.length > 0 || s.afterPhotos.length > 0
+      );
+  const totalPhotos = currentOrder.sections.reduce(
+    (sum, s) => sum + s.beforePhotos.length + s.afterPhotos.length,
+    0
+  );
+  const showPhotosSection =
+    (isInProgress && photoSections.length > 0) ||
+    (isCompleted && currentOrder.sections.length > 0);
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-full flex flex-col">
       <div className="flex-1 p-4 md:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6 md:mb-8">
@@ -294,6 +314,119 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder, t
               </CollapsibleContent>
             </Card>
           </Collapsible>
+        )}
+
+        {/* ── Before / After Photo Evidence ──────────────────────────────── */}
+        {showPhotosSection && (
+          <Card className="mb-6 shadow-md">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 font-bold">
+                  <IconCamera className="w-5 h-5 text-[#033620]" />
+                  Photo Evidence
+                  {totalPhotos > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="ml-1 text-xs bg-[#033620]/5 text-[#033620]"
+                    >
+                      {totalPhotos} photo{totalPhotos !== 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-0 space-y-6">
+              {photoSections.map((section) => (
+                <div key={section.id} className="space-y-3">
+                  {/* Section header */}
+                  <div className="flex items-center gap-2 border-b pb-2">
+                    <h4 className="font-medium text-gray-900">{section.name}</h4>
+                    {section.completed && (
+                      <Badge className="bg-green-100 text-green-800 text-xs border-0">
+                        Completed
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Before / After two-column layout */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* ── Before ── */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+                        Before
+                      </p>
+                      {section.beforePhotos.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {section.beforePhotos.map((url, i) => (
+                            <button
+                              key={url}
+                              type="button"
+                              onClick={() =>
+                                setLightbox({
+                                  url,
+                                  label: `Before — ${section.name}`,
+                                })
+                              }
+                              className="aspect-square rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-[#033620] hover:ring-offset-1 focus:outline-none focus:ring-2 focus:ring-[#033620] focus:ring-offset-1 transition-all"
+                              aria-label={`View before photo ${i + 1} of ${section.name}`}
+                            >
+                              <ImageWithFallback
+                                src={url}
+                                alt={`Before ${i + 1} — ${section.name}`}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      ) : isCompleted ? (
+                        <p className="text-sm text-gray-400 italic py-3 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                          No photos
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {/* ── After ── */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                        After
+                      </p>
+                      {section.afterPhotos.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {section.afterPhotos.map((url, i) => (
+                            <button
+                              key={url}
+                              type="button"
+                              onClick={() =>
+                                setLightbox({
+                                  url,
+                                  label: `After — ${section.name}`,
+                                })
+                              }
+                              className="aspect-square rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-[#033620] hover:ring-offset-1 focus:outline-none focus:ring-2 focus:ring-[#033620] focus:ring-offset-1 transition-all"
+                              aria-label={`View after photo ${i + 1} of ${section.name}`}
+                            >
+                              <ImageWithFallback
+                                src={url}
+                                alt={`After ${i + 1} — ${section.name}`}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      ) : isCompleted ? (
+                        <p className="text-sm text-gray-400 italic py-3 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                          No photos
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1135,11 +1268,6 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder, t
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-sm text-gray-500">Powered by SparkTask</p>
-          <p className="text-sm text-gray-500">Version 1.0.0</p>
-        </div>
       </div>
 
       {/* Delete Order Dialog */}
@@ -1215,6 +1343,24 @@ export function OrderDetailPage({ order, onBack, onUpdateOrder, onDeleteOrder, t
               OK
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Photo lightbox ────────────────────────────────────────────────── */}
+      <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
+        <DialogContent className="max-w-3xl w-[95vw] p-4 gap-3">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-medium text-gray-600">
+              {lightbox?.label}
+            </DialogTitle>
+          </DialogHeader>
+          {lightbox && (
+            <ImageWithFallback
+              src={lightbox.url}
+              alt={lightbox.label}
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -205,4 +205,9 @@ export default {
   upcoming: 'Próximo',
   inProgressStatus: 'Em Andamento',
   completedStatus: 'Concluído',
+
+  // Offline / Sync Banner
+  syncOffline: 'Sem conexão · alterações salvas localmente',
+  syncSyncing: 'Sincronizando alterações pendentes...',
+  syncDone: 'Alterações sincronizadas',
 } as const;

@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Calendar, CalendarClock, User } from 'lucide-react-native';
+import { Home, Calendar, Package2, User } from 'lucide-react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { useApp } from '../context/AppContext';
-import { COLORS, FONTS, SHADOWS } from '../constants/theme';
+import { useLanguage } from '../context/LanguageContext';
+import { COLORS, FONTS, SHADOWS, SPACING } from '../constants/theme';
 import { RootStackParamList, MainTabParamList } from '../types';
 
 import { LoginScreen } from '../screens/LoginScreen';
@@ -68,7 +69,7 @@ function CustomTabBar({ state, navigation }: CustomTabBarProps) {
   const tabs = [
     { key: 'Home', icon: Home, label: 'Home' },
     { key: 'Calendar', icon: Calendar, label: 'Calendar' },
-    { key: 'Hub', icon: CalendarClock, label: 'Hub' },
+    { key: 'Hub', icon: Package2, label: 'Hub' },
     { key: 'Profile', icon: User, label: 'Profile' },
   ];
 
@@ -98,6 +99,150 @@ function CustomTabBar({ state, navigation }: CustomTabBarProps) {
   );
 }
 
+/** Thin animated status banner displayed at the top of the screen */
+const BANNER_CONTENT_HEIGHT = 40;
+const BANNER_COLLAPSED_HEIGHT = 4;
+
+function OfflineBanner() {
+  const { isOnline, isSyncing } = useApp();
+  const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const height = useSharedValue(0);
+  // Controls text visibility — fades out when the banner collapses to a strip
+  const textOpacity = useSharedValue(1);
+
+  // Track the previous isSyncing value to detect the true → false edge.
+  const prevIsSyncing = useRef(false);
+  // Briefly true for ~2 s right after a sync completes successfully.
+  const [showSyncDone, setShowSyncDone] = useState(false);
+  // True once the offline banner has collapsed down to the 4 px strip.
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Detect the isSyncing true → false transition while online.
+  useEffect(() => {
+    if (prevIsSyncing.current && !isSyncing && isOnline) {
+      setShowSyncDone(true);
+      const timer = setTimeout(() => setShowSyncDone(false), 2000);
+      prevIsSyncing.current = isSyncing;
+      return () => clearTimeout(timer);
+    }
+    prevIsSyncing.current = isSyncing;
+  }, [isSyncing, isOnline]);
+
+  // Banner is visible only while offline, actively syncing, or for the brief
+  // post-sync success flash. The "N pending changes" state while online is
+  // intentionally excluded — it was causing a persistent, noisy banner.
+  const shouldShow = !isOnline || isSyncing || showSyncDone;
+
+  // Derive total animated height including safe-area inset
+  const totalHeight = insets.top + BANNER_CONTENT_HEIGHT;
+
+  // 4-second collapse timer — only fires when the banner is purely offline
+  // (not syncing, not in the post-sync success flash). Resets automatically
+  // whenever connectivity returns or a sync/sync-done state takes over.
+  useEffect(() => {
+    if (!isOnline && !isSyncing && !showSyncDone) {
+      const timer = setTimeout(() => {
+        setIsCollapsed(true);
+        textOpacity.value = withTiming(0, { duration: 300 });
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+    // Back online, syncing, or sync-done — restore full banner immediately
+    setIsCollapsed(false);
+    textOpacity.value = withTiming(1, { duration: 300 });
+    // `textOpacity` is a stable SharedValue ref — intentionally excluded from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, isSyncing, showSyncDone]);
+
+  // Drive banner height:
+  //   hidden        → 0
+  //   collapsed strip → 4 px (offline only, after 4 s)
+  //   full banner   → totalHeight
+  useEffect(() => {
+    if (!shouldShow) {
+      height.value = withTiming(0, { duration: 300 });
+    } else if (isCollapsed) {
+      height.value = withTiming(BANNER_COLLAPSED_HEIGHT, { duration: 300 });
+    } else {
+      height.value = withTiming(totalHeight, { duration: 300 });
+    }
+    // `height` is a stable SharedValue ref — intentionally excluded from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldShow, totalHeight, isCollapsed]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    height: height.value,
+    overflow: 'hidden',
+  }));
+
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+  }));
+
+  // Determine banner appearance — priority: offline > syncing > sync-done
+  let bgColor: string;
+  let textColor: string;
+  let message: string;
+
+  if (!isOnline) {
+    bgColor = COLORS.warning;
+    textColor = COLORS.foreground;
+    message = t('syncOffline');
+  } else if (isSyncing) {
+    bgColor = COLORS.successDark;
+    textColor = COLORS.white;
+    message = t('syncSyncing');
+  } else {
+    // showSyncDone branch — 2-second success flash
+    bgColor = COLORS.successDark;
+    textColor = COLORS.white;
+    message = t('syncDone');
+  }
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 999,
+          backgroundColor: bgColor,
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+        },
+        animatedStyle,
+      ]}
+    >
+      <Animated.View style={textAnimatedStyle}>
+        <View
+          style={{
+            height: BANNER_CONTENT_HEIGHT,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: SPACING.lg,
+          }}
+        >
+          <Text
+            numberOfLines={1}
+            style={{
+              color: textColor,
+              fontFamily: FONTS.medium,
+              fontSize: 12,
+              letterSpacing: 0.1,
+            }}
+          >
+            {message}
+          </Text>
+        </View>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
 function MainTabNavigator() {
   return (
     <Tab.Navigator
@@ -119,57 +264,61 @@ export function RootNavigator() {
   if (isLoading) return null;
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
-      {!isAuthenticated ? (
-        <Stack.Screen name="Login" component={LoginScreen} />
-      ) : showOnboarding ? (
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      ) : (
-        <>
-          <Stack.Screen name="MainTabs" component={MainTabNavigator} />
-          <Stack.Screen
-            name="JobInfo"
-            component={JobInfoScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="Checklist"
-            component={ChecklistScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="OrderDetails"
-            component={OrderDetailsScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="DayJobs"
-            component={DayJobsScreen}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="AllUpcomingJobs"
-            component={AllUpcomingJobsScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="AllCompletedJobs"
-            component={AllCompletedJobsScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="JobCompleted"
-            component={JobCompletedScreen}
-            options={{ animation: 'fade' }}
-          />
-          <Stack.Screen
-            name="PhotoGallery"
-            component={PhotoGalleryScreen}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-        </>
-      )}
-    </Stack.Navigator>
+    <View style={{ flex: 1 }}>
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+        {!isAuthenticated ? (
+          <Stack.Screen name="Login" component={LoginScreen} />
+        ) : showOnboarding ? (
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        ) : (
+          <>
+            <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+            <Stack.Screen
+              name="JobInfo"
+              component={JobInfoScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Checklist"
+              component={ChecklistScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="OrderDetails"
+              component={OrderDetailsScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="DayJobs"
+              component={DayJobsScreen}
+              options={{ animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen
+              name="AllUpcomingJobs"
+              component={AllUpcomingJobsScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="AllCompletedJobs"
+              component={AllCompletedJobsScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="JobCompleted"
+              component={JobCompletedScreen}
+              options={{ animation: 'fade' }}
+            />
+            <Stack.Screen
+              name="PhotoGallery"
+              component={PhotoGalleryScreen}
+              options={{ animation: 'slide_from_bottom' }}
+            />
+          </>
+        )}
+      </Stack.Navigator>
+      {/* Offline / syncing banner rendered above all screens */}
+      <OfflineBanner />
+    </View>
   );
 }
 

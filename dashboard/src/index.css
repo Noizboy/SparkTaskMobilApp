@@ -261,6 +261,10 @@
     border-radius: 0;
   }
 
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
   ::file-selector-button {
     font: inherit;
     font-feature-settings: inherit;

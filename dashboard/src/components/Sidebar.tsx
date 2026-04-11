@@ -1,5 +1,6 @@
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useState, useEffect } from 'react';
+import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from './ui/popover';
 import {
   IconHome,
   IconClipboardList,
@@ -16,6 +17,7 @@ import {
   IconChevronUp,
   IconUser,
   IconBuilding,
+  IconDotsVertical,
 } from '@tabler/icons-react';
 import { PageType } from './Dashboard';
 import { InProgressOrdersCarousel } from './InProgressOrdersCarousel';
@@ -205,25 +207,79 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
 
         {/* User Profile */}
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all hover:shadow-sm">
-            <Avatar>
-              <AvatarFallback className="bg-[#033620] text-white shadow-sm">
-                {user?.name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="truncate font-medium">{user?.name}</p>
-              <p className="text-sm text-gray-500 truncate">{user?.company}</p>
-            </div>
-          </div>
-          <button
-            onClick={onLogout}
-            className="w-full mt-2 flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-all hover:shadow-sm"
-          >
-            <IconLogout className="w-5 h-5" />
-            <span>Sign Out</span>
-          </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all hover:shadow-sm text-left">
+                <Avatar className="w-9 h-9 shrink-0">
+                  {user?.avatar_url && <AvatarImage src={`http://localhost:3001${user.avatar_url}`} alt={user?.name} />}
+                  <AvatarFallback className="bg-[#033620] text-white text-sm">
+                    {user?.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate font-medium text-sm">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.company}</p>
+                </div>
+                <IconDotsVertical className="w-4 h-4 text-gray-400 shrink-0" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="right" align="end" sideOffset={8} className="w-72 p-2">
+              <div className="flex items-center gap-3 px-3 py-2 mb-1">
+                <Avatar className="w-8 h-8 shrink-0">
+                  {user?.avatar_url && <AvatarImage src={`http://localhost:3001${user.avatar_url}`} alt={user?.name} />}
+                  <AvatarFallback className="bg-[#033620] text-white text-xs">
+                    {user?.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.company}</p>
+                </div>
+              </div>
+              <div className="h-px bg-gray-100 mx-1 mb-1" />
+              <PopoverClose asChild>
+                <button
+                  onClick={() => onPageChange('settings-account')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                >
+                  <IconUser className="w-4 h-4 text-gray-500" />
+                  Account
+                </button>
+              </PopoverClose>
+              {!isSupervisor && (
+                <PopoverClose asChild>
+                  <button
+                    onClick={() => onPageChange('settings-renewal')}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                  >
+                    <IconCreditCard className="w-4 h-4 text-gray-500" />
+                    Billing
+                  </button>
+                </PopoverClose>
+              )}
+              <PopoverClose asChild>
+                <button
+                  onClick={() => onPageChange('settings-general')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                >
+                  <IconSettings className="w-4 h-4 text-gray-500" />
+                  Settings
+                </button>
+              </PopoverClose>
+              <div className="h-px bg-gray-100 mx-1 my-1" />
+              <PopoverClose asChild>
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                >
+                  <IconLogout className="w-4 h-4" />
+                  Log out
+                </button>
+              </PopoverClose>
+            </PopoverContent>
+          </Popover>
         </div>
+
       </aside>
 
       {/* Mobile Sidebar */}
@@ -364,25 +420,79 @@ export function Sidebar({ currentPage, onPageChange, user, onLogout, isOpen, onC
 
         {/* User Profile */}
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all hover:shadow-sm">
-            <Avatar>
-              <AvatarFallback className="bg-[#033620] text-white shadow-sm">
-                {user?.name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="truncate font-medium">{user?.name}</p>
-              <p className="text-sm text-gray-500 truncate">{user?.company}</p>
-            </div>
-          </div>
-          <button
-            onClick={onLogout}
-            className="w-full mt-2 flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-all hover:shadow-sm"
-          >
-            <IconLogout className="w-5 h-5" />
-            <span>Sign Out</span>
-          </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-all hover:shadow-sm text-left">
+                <Avatar className="w-9 h-9 shrink-0">
+                  {user?.avatar_url && <AvatarImage src={`http://localhost:3001${user.avatar_url}`} alt={user?.name} />}
+                  <AvatarFallback className="bg-[#033620] text-white text-sm">
+                    {user?.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate font-medium text-sm">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.company}</p>
+                </div>
+                <IconDotsVertical className="w-4 h-4 text-gray-400 shrink-0" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="right" align="end" sideOffset={8} className="w-72 p-2">
+              <div className="flex items-center gap-3 px-3 py-2 mb-1">
+                <Avatar className="w-8 h-8 shrink-0">
+                  {user?.avatar_url && <AvatarImage src={`http://localhost:3001${user.avatar_url}`} alt={user?.name} />}
+                  <AvatarFallback className="bg-[#033620] text-white text-xs">
+                    {user?.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.company}</p>
+                </div>
+              </div>
+              <div className="h-px bg-gray-100 mx-1 mb-1" />
+              <PopoverClose asChild>
+                <button
+                  onClick={() => onPageChange('settings-account')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                >
+                  <IconUser className="w-4 h-4 text-gray-500" />
+                  Account
+                </button>
+              </PopoverClose>
+              {!isSupervisor && (
+                <PopoverClose asChild>
+                  <button
+                    onClick={() => onPageChange('settings-renewal')}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                  >
+                    <IconCreditCard className="w-4 h-4 text-gray-500" />
+                    Billing
+                  </button>
+                </PopoverClose>
+              )}
+              <PopoverClose asChild>
+                <button
+                  onClick={() => onPageChange('settings-general')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                >
+                  <IconSettings className="w-4 h-4 text-gray-500" />
+                  Settings
+                </button>
+              </PopoverClose>
+              <div className="h-px bg-gray-100 mx-1 my-1" />
+              <PopoverClose asChild>
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                >
+                  <IconLogout className="w-4 h-4" />
+                  Log out
+                </button>
+              </PopoverClose>
+            </PopoverContent>
+          </Popover>
         </div>
+
       </aside>
     </>
   );

@@ -151,6 +151,84 @@ usersRouter.get('/', authenticate, async (_req: Request, res: Response) => {
   }
 });
 
+// ─── PATCH /api/users/me ────────────────────────────────────────────────────
+// Authenticated — updates the current user's own profile using the JWT's user ID.
+// This avoids stale-ID issues when the DB is re-seeded.
+usersRouter.patch('/me', authenticate, async (req: Request, res: Response) => {
+  try {
+    const id = (req as any).user.id;
+    const { name, phone, role, company, company_phone, address, city, zip_code } = req.body;
+
+    if (role !== undefined && role !== null) {
+      const allowedRoles = ['cleaner', 'supervisor'];
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({ error: `Invalid role. Allowed values: ${allowedRoles.join(', ')}` });
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET name = COALESCE($1, name),
+           phone = COALESCE($2, phone),
+           role = COALESCE($3, role),
+           company = COALESCE($4, company),
+           company_phone = COALESCE($5, company_phone),
+           address = COALESCE($6, address),
+           city = COALESCE($7, city),
+           zip_code = COALESCE($8, zip_code)
+       WHERE id = $9
+       RETURNING id, email, name, company, role, phone, avatar_url, company_phone, address, city, zip_code`,
+      [name ?? null, phone ?? null, role ?? null, company ?? null, company_phone ?? null, address ?? null, city ?? null, zip_code ?? null, id]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
+  } catch (err: any) {
+    console.error('PATCH /users/me error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/users/me/avatar ──────────────────────────────────────────────
+// Authenticated — uploads avatar for the current user using JWT's user ID.
+usersRouter.post('/me/avatar', authenticate, upload.single('avatar'), async (req: Request, res: Response) => {
+  try {
+    const id = (req as any).user.id;
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const existing = await pool.query(`SELECT avatar_url FROM users WHERE id = $1`, [id]);
+    if (existing.rows.length === 0) {
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldAvatarUrl: string | null = existing.rows[0].avatar_url;
+    if (oldAvatarUrl) {
+      const oldFilename = oldAvatarUrl.split('/uploads/avatars/').pop();
+      if (oldFilename) {
+        const oldPath = path.join(uploadsDir, oldFilename);
+        if (fs.existsSync(oldPath)) {
+          try { fs.unlinkSync(oldPath); } catch { /* ignore if already gone */ }
+        }
+      }
+    }
+
+    const host = req.get('host') || 'localhost:3001';
+    const protocol = req.protocol || 'http';
+    const avatarUrl = `${protocol}://${host}/uploads/avatars/${req.file.filename}`;
+
+    const result = await pool.query(
+      `UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING id, email, name, company, role, phone, avatar_url`,
+      [avatarUrl, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err: any) {
+    console.error('POST /users/me/avatar error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── PATCH /api/users/:id ───────────────────────────────────────────────────
 usersRouter.patch('/:id', async (req: Request, res: Response) => {
   try {

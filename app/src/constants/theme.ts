@@ -12,6 +12,7 @@ export const COLORS = {
   muted: '#E8E8E8',
   border: 'rgba(0, 0, 0, 0.08)',
   success: '#22c55e',
+  successDark: '#15803d',
   successLight: '#dcfce7',
   successText: '#166534',
   warning: '#f59e0b',

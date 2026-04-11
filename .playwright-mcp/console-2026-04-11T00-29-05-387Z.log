@@ -1,0 +1,13 @@
+[      95ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/chunk-YFB5YCE7.js?v=cdc11465:21608
+[     195ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/services?business_id=1:0
+[     195ms] [WARNING] Failed to load services @ http://localhost:3000/src/components/Dashboard.tsx?t=1775867248148:81
+[     195ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/users/team:0
+[     195ms] [WARNING] Failed to load team members @ http://localhost:3000/src/components/Dashboard.tsx?t=1775867248148:91
+[    7487ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/users/team:0
+[   81841ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/users/team:0
+[   83851ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/chunk-YFB5YCE7.js?v=cdc11465:21608
+[   83882ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/users/team:0
+[   83883ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/users/team:0
+[   83883ms] [WARNING] Failed to load team members @ http://localhost:3000/src/components/Dashboard.tsx?t=1775867248148:91
+[   83900ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/services?business_id=1:0
+[   83900ms] [WARNING] Failed to load services @ http://localhost:3000/src/components/Dashboard.tsx?t=1775867248148:81

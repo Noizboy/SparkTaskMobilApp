@@ -1,8 +1,54 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { broadcast } from '../sse';
 
 export const ordersRouter = Router();
+
+// ─── JWT auth (mirrors users.ts — photos require authentication) ─────────────
+const JWT_SECRET = process.env.JWT_SECRET || 'sparktask-dev-secret-change-in-production';
+
+function authenticate(req: Request, res: Response, next: () => void) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    return;
+  }
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    (req as any).user = payload;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// ─── Multer — photo uploads ──────────────────────────────────────────────────
+const photosUploadDir = path.join(__dirname, '../../uploads/photos');
+if (!fs.existsSync(photosUploadDir)) fs.mkdirSync(photosUploadDir, { recursive: true });
+
+const photoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, photosUploadDir),
+  filename: (_req, _file, cb) => {
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
+  },
+});
+
+const photoUpload = multer({
+  storage: photoStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
 
 // ─── Helper: build full order object from DB rows ───────────────────────────
 async function buildFullOrder(orderId: string) {
@@ -133,7 +179,7 @@ ordersRouter.get('/', async (req: Request, res: Response) => {
 // ─── GET /api/orders/:id — single order detail ─────────────────────────────
 ordersRouter.get('/:id', async (req: Request, res: Response) => {
   try {
-    const order = await buildFullOrder(req.params.id);
+    const order = await buildFullOrder(req.params.id as string);
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err: any) {
@@ -238,7 +284,7 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const orderId = req.params.id;
+    const orderId = req.params.id as string;
 
     const {
       orderNumber, clientName, clientEmail, address, phone,
@@ -484,7 +530,7 @@ ordersRouter.patch('/:id/status', async (req: Request, res: Response) => {
 
     // Enforce: a cleaner cannot have more than 1 in-progress order
     if (status === 'in-progress') {
-      const check = await checkCleanerInProgressConflict(req.params.id);
+      const check = await checkCleanerInProgressConflict(req.params.id as string);
       if (check.conflict) {
         return res.status(409).json({
           error: `${check.cleanerName} already has an in-progress order (${check.orderNumber}). A cleaner cannot have more than one in-progress order at a time.`
@@ -509,7 +555,8 @@ ordersRouter.patch('/:id/status', async (req: Request, res: Response) => {
       await pool.query('UPDATE orders SET started_at = NULL WHERE id = $1', [req.params.id]);
     }
 
-    const order = await buildFullOrder(req.params.id);
+    const order = await buildFullOrder(req.params.id as string);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     broadcast('order:updated', order);
     res.json(order);
   } catch (err: any) {
@@ -523,7 +570,7 @@ ordersRouter.patch('/:id/sections/:sectionId/complete', async (req: Request, res
   try {
     await pool.query('UPDATE todos SET completed = true WHERE section_id = $1', [req.params.sectionId]);
     await pool.query('UPDATE sections SET completed = true WHERE id = $1', [req.params.sectionId]);
-    const order = await buildFullOrder(req.params.id);
+    const order = await buildFullOrder(req.params.id as string);
     broadcast('order:updated', order);
     res.json(order);
   } catch (err: any) {
@@ -537,7 +584,7 @@ ordersRouter.patch('/:id/sections/:sectionId/uncomplete', async (req: Request, r
   try {
     await pool.query('UPDATE todos SET completed = false WHERE section_id = $1', [req.params.sectionId]);
     await pool.query('UPDATE sections SET completed = false WHERE id = $1', [req.params.sectionId]);
-    const order = await buildFullOrder(req.params.id);
+    const order = await buildFullOrder(req.params.id as string);
     broadcast('order:updated', order);
     res.json(order);
   } catch (err: any) {
@@ -563,7 +610,7 @@ ordersRouter.patch('/:id/todos/:todoId', async (req: Request, res: Response) => 
       WHERE id = (SELECT section_id FROM todos WHERE id = $1)
     `, [req.params.todoId]);
 
-    const order = await buildFullOrder(req.params.id);
+    const order = await buildFullOrder(req.params.id as string);
     broadcast('order:updated', order);
     res.json(order);
   } catch (err: any) {
@@ -579,7 +626,7 @@ ordersRouter.patch('/:id/addons/:addonId', async (req: Request, res: Response) =
       'UPDATE add_ons SET selected = NOT selected WHERE id = $1',
       [req.params.addonId]
     );
-    const order = await buildFullOrder(req.params.id);
+    const order = await buildFullOrder(req.params.id as string);
     broadcast('order:updated', order);
     res.json(order);
   } catch (err: any) {
@@ -587,6 +634,121 @@ ordersRouter.patch('/:id/addons/:addonId', async (req: Request, res: Response) =
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── POST /api/orders/:id/sections/:sectionId/photos ────────────────────────
+// Authenticated — upload a before/after photo for a section.
+// Accepts multipart/form-data field "photo" + query param "type" ('before'|'after').
+ordersRouter.post(
+  '/:id/sections/:sectionId/photos',
+  authenticate,
+  photoUpload.single('photo'),
+  async (req: Request, res: Response) => {
+    try {
+      const { id: orderId, sectionId } = req.params as { id: string; sectionId: string };
+      const type = (req.query.type ?? req.body?.type) as string | undefined;
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'No photo file uploaded' });
+      }
+      if (type !== 'before' && type !== 'after') {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ error: 'type must be "before" or "after"' });
+      }
+
+      // Verify the section belongs to the given order
+      const sectionCheck = await pool.query(
+        'SELECT id FROM sections WHERE id = $1 AND order_id = $2',
+        [sectionId, orderId]
+      );
+      if (sectionCheck.rows.length === 0) {
+        fs.unlinkSync(req.file.path);
+        return res.status(404).json({ error: 'Section not found for this order' });
+      }
+
+      const host = req.get('host') ?? 'localhost:3001';
+      const protocol = req.protocol ?? 'http';
+      const url = `${protocol}://${host}/uploads/photos/${req.file.filename}`;
+
+      const result = await pool.query(
+        `INSERT INTO photos (section_id, type, url) VALUES ($1, $2, $3)
+         RETURNING id, section_id, type, url`,
+        [sectionId, type, url]
+      );
+
+      const photo = result.rows[0];
+
+      const fullOrder = await buildFullOrder(orderId);
+      broadcast('order:updated', fullOrder);
+
+      res.status(201).json(photo);
+    } catch (err: any) {
+      // Clean up uploaded file on any DB/validation error
+      if (req.file?.path) {
+        try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+      }
+      console.error('POST section photo error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+// ─── DELETE /api/orders/:id/sections/:sectionId/photos ──────────────────────
+// Authenticated — delete a photo by its server URL (passed as ?url= query param).
+// Removes the DB row and the file from disk.
+ordersRouter.delete(
+  '/:id/sections/:sectionId/photos',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const { id: orderId, sectionId } = req.params as { id: string; sectionId: string };
+      const { url } = req.query;
+
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: 'url query param is required' });
+      }
+
+      // Verify section belongs to this order
+      const sectionCheck = await pool.query(
+        'SELECT id FROM sections WHERE id = $1 AND order_id = $2',
+        [sectionId, orderId]
+      );
+      if (sectionCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Section not found for this order' });
+      }
+
+      // Look up photo by section_id + url
+      const photoRes = await pool.query(
+        'SELECT id, url FROM photos WHERE section_id = $1 AND url = $2',
+        [sectionId, url]
+      );
+      if (photoRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Photo not found' });
+      }
+
+      const photo = photoRes.rows[0];
+
+      // Delete DB row
+      await pool.query('DELETE FROM photos WHERE id = $1', [photo.id]);
+
+      // Delete file from disk — extract filename safely
+      const filename = (photo.url as string).split('/uploads/photos/').pop();
+      if (filename) {
+        const filePath = path.join(photosUploadDir, filename);
+        if (fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch { /* ignore stale files */ }
+        }
+      }
+
+      const fullOrder = await buildFullOrder(orderId);
+      broadcast('order:updated', fullOrder);
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('DELETE section photo error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 // ─── DELETE /api/orders/:id — delete an order ───────────────────────────────
 ordersRouter.delete('/:id', async (req: Request, res: Response) => {

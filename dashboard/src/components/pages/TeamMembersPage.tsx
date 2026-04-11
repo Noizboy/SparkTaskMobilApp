@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { fetchTeamMembers, updateTeamMember, deleteTeamMember, inviteTeamMember, linkTeamMember } from '../../services/api';
-import { IconUserPlus, IconCheck, IconCopy, IconSearch, IconPencil, IconTrash, IconLink } from '@tabler/icons-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../ui/table';
+import { fetchTeamMembers, updateTeamMember, deleteTeamMember } from '../../services/api';
+import { mockTeamMembers } from '../../data/mockTeamMembers';
+import {
+  IconUserPlus, IconPencil, IconTrash,
+  IconUsers, IconUserCheck, IconShield,
+  IconChevronLeft, IconChevronRight, IconClipboardList,
+  IconCircleCheck, IconSettings,
+} from '@tabler/icons-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Input } from '../ui/input';
@@ -29,19 +43,52 @@ interface TeamMembersPageProps {
   onInvite?: (email: string) => Promise<void>;
   onUpdateMember?: (id: string, data: Partial<TeamMember>) => Promise<void>;
   onDeleteMember?: (id: string) => Promise<void>;
+  onViewMember?: (member: TeamMember) => void;
 }
 
-export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvite, onUpdateMember, onDeleteMember }: TeamMembersPageProps) {
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
-  const [inviteLink, setInviteLink] = useState('');
-  const [inviteSuccess, setInviteSuccess] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [linkEmail, setLinkEmail] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+// ─── Role badge helper ───────────────────────────────────────────────────────
+function getRoleBadgeClass(role: string): string {
+  const r = role.toLowerCase();
+  if (r === 'supervisor') return 'bg-[#033620] text-white border-transparent';
+  if (r === 'cleaner') return 'bg-blue-100 text-blue-800 border-transparent';
+  return 'bg-gray-100 text-gray-700 border-transparent';
+}
+
+// ─── Status badge helper ─────────────────────────────────────────────────────
+function getStatusBadgeClass(status: string): string {
+  const s = status.toLowerCase();
+  if (s === 'active') return 'bg-green-100 text-green-800 border-transparent';
+  if (s === 'inactive') return 'bg-red-100 text-red-700 border-transparent';
+  return 'bg-gray-100 text-gray-600 border-transparent';
+}
+
+// ─── Avatar initials helper ──────────────────────────────────────────────────
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+export function TeamMembersPage({
+  user,
+  teamMembers: externalTeamMembers,
+  onInvite,
+  onUpdateMember,
+  onDeleteMember,
+  onViewMember,
+}: TeamMembersPageProps) {
+  // ── Dialog / action state ─────────────────────────────────────────────────
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState('Cleaner');
+  const [newMemberStatus, setNewMemberStatus] = useState('active');
+  const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(externalTeamMembers || []);
-  const [editingMember, setEditingMember] = useState<any>(null);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [editRole, setEditRole] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -50,94 +97,122 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
   const [error, setError] = useState<string | null>(null);
   const [fetchLoading, setFetchLoading] = useState(!externalTeamMembers);
 
+  // ── Overview dialog state ──────────────────────────────────────────────────
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
+  const [overviewMember, setOverviewMember] = useState<TeamMember | null>(null);
+  const [overviewRole, setOverviewRole] = useState('');
+  const [overviewStatus, setOverviewStatus] = useState('');
+
+  // ── Table / filter state (new) ─────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // ── Data fetch (preserved) ─────────────────────────────────────────────────
   useEffect(() => {
-    if (externalTeamMembers) { setTeamMembers(externalTeamMembers); setFetchLoading(false); return; }
+    if (externalTeamMembers) {
+      setTeamMembers(externalTeamMembers);
+      setFetchLoading(false);
+      return;
+    }
     setFetchError(null);
     setFetchLoading(true);
-    fetchTeamMembers().then((members) => {
-      setTeamMembers(members.map((u) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role.charAt(0).toUpperCase() + u.role.slice(1),
-        status: 'active',
-        ordersCompleted: u.orders_completed ?? 0,
-        avatar_url: u.avatar_url ?? undefined,
-      })));
-    }).catch((err: Error) => {
-      setFetchError(err.message || 'Failed to load team members');
-      setTeamMembers([]);
-    }).finally(() => {
-      setFetchLoading(false);
-    });
+    fetchTeamMembers()
+      .then((members) => {
+        setTeamMembers(
+          members.map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role.charAt(0).toUpperCase() + u.role.slice(1),
+            status: 'active',
+            ordersCompleted: u.orders_completed ?? 0,
+            avatar_url: u.avatar_url ?? undefined,
+          }))
+        );
+      })
+      .catch((err: Error) => {
+        // Fall back to mock data so the page remains usable when the API is
+        // unavailable (server not running, missing env var, wrong URL, etc.).
+        // The banner informs the user they're seeing demo data.
+        setTeamMembers(
+          mockTeamMembers.map((m) => ({ ...m, avatar_url: undefined }))
+        );
+        setFetchError(
+          `Unable to reach the API — showing demo data. (${err.message})`
+        );
+      })
+      .finally(() => {
+        setFetchLoading(false);
+      });
   }, [externalTeamMembers]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter, pageSize]);
 
-  const handleSendInvite = async () => {
-    if (!inviteEmail) {
-      setError('Please enter an email address');
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    setInviteSuccess('');
-    try {
-      const result = await inviteTeamMember(inviteEmail);
-      setInviteLink(result.inviteLink);
-      setInviteSuccess(`Invite link generated for ${result.email}`);
-      if (onInvite) await onInvite(inviteEmail);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send invite');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ── Stats computed from full list ──────────────────────────────────────────
+  const totalMembers = teamMembers.length;
+  const activeMembers = teamMembers.filter((m) => m.status === 'active').length;
+  const supervisors = teamMembers.filter(
+    (m) => m.role.toLowerCase() === 'supervisor'
+  ).length;
+  const totalOrdersCompleted = teamMembers.reduce(
+    (sum, m) => sum + m.ordersCompleted,
+    0
+  );
 
-  const handleLinkEmployee = async () => {
-    if (!linkEmail) {
-      setError('Please enter a member email');
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const linked = await linkTeamMember(linkEmail);
-      setTeamMembers((prev) => [
-        ...prev,
-        {
-          id: linked.id,
-          name: linked.name,
-          email: linked.email,
-          role: linked.role.charAt(0).toUpperCase() + linked.role.slice(1),
-          status: 'active',
-          ordersCompleted: 0,
-          avatar_url: linked.avatar_url ?? undefined,
-        },
-      ]);
-      setLinkEmail('');
-      setIsLinkDialogOpen(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to link member');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Filter team members by name or email
+  // ── Filtered & paginated list ──────────────────────────────────────────────
   const filteredMembers = teamMembers.filter((member) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      member.name.toLowerCase().includes(query) ||
-      member.email.toLowerCase().includes(query)
-    );
+    const q = searchQuery.toLowerCase();
+    const matchSearch =
+      member.name.toLowerCase().includes(q) ||
+      member.email.toLowerCase().includes(q);
+    const matchRole =
+      roleFilter === 'all' ||
+      member.role.toLowerCase() === roleFilter.toLowerCase();
+    const matchStatus =
+      statusFilter === 'all' ||
+      member.status.toLowerCase() === statusFilter.toLowerCase();
+    return matchSearch && matchRole && matchStatus;
   });
 
-  const handleEditMember = (member: any) => {
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedMembers = filteredMembers.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
+  const firstRow = filteredMembers.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const lastRow = Math.min(safePage * pageSize, filteredMembers.length);
+
+  // ── Add Member handler ────────────────────────────────────────────────────
+  const handleAddMember = () => {
+    if (!newMemberName.trim() || !newMemberEmail.trim()) {
+      setAddMemberError('Name and email are required');
+      return;
+    }
+    const newMember: TeamMember = {
+      id: crypto.randomUUID(),
+      name: newMemberName.trim(),
+      email: newMemberEmail.trim(),
+      role: newMemberRole,
+      status: newMemberStatus,
+      ordersCompleted: 0,
+    };
+    setTeamMembers((prev) => [...prev, newMember]);
+    setIsAddMemberOpen(false);
+    setNewMemberName('');
+    setNewMemberEmail('');
+    setNewMemberRole('Cleaner');
+    setNewMemberStatus('active');
+    setAddMemberError(null);
+  };
+
+  const handleEditMember = (member: TeamMember) => {
     setEditingMember(member);
     setEditRole(member.role);
   };
@@ -153,7 +228,7 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
       ));
       setEditingMember(null);
       setError(null);
-    } catch (err) {
+    } catch {
       setError('Failed to update member');
     } finally {
       setIsLoading(false);
@@ -175,8 +250,44 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
       setDeleteDialogOpen(false);
       setMemberToDelete(null);
       setError(null);
-    } catch (err) {
+    } catch {
       setError('Failed to delete member');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Overview dialog handlers ───────────────────────────────────────────────
+  const openOverviewDialog = (member: TeamMember) => {
+    setOverviewMember(member);
+    setOverviewRole(member.role);
+    setOverviewStatus(member.status);
+    setIsOverviewOpen(true);
+  };
+
+  const handleSaveOverview = async () => {
+    if (!overviewMember) return;
+    setIsLoading(true);
+    try {
+      // API only accepts role updates; status is managed in local state only
+      await updateTeamMember(overviewMember.id, {
+        role: overviewRole.toLowerCase(),
+      });
+      if (onUpdateMember) {
+        await onUpdateMember(overviewMember.id, { role: overviewRole, status: overviewStatus });
+      }
+      setTeamMembers((prev) =>
+        prev.map((m) =>
+          m.id === overviewMember.id
+            ? { ...m, role: overviewRole, status: overviewStatus }
+            : m
+        )
+      );
+      setIsOverviewOpen(false);
+      setOverviewMember(null);
+      setError(null);
+    } catch {
+      setError('Failed to update member');
     } finally {
       setIsLoading(false);
     }
@@ -187,212 +298,447 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6 lg:p-8 min-h-full flex flex-col gap-6">
+
+      {/* ── Page Header ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1>Team Members</h1>
-          <p className="text-gray-600">Manage your team members</p>
+          <h1 className="font-[Poppins] font-bold text-[24px] text-gray-900">
+            Team Members
+          </h1>
+          <p className="text-gray-600 text-sm mt-0.5">
+            Manage your team and their roles
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsInviteDialogOpen(true)} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-            <IconUserPlus className="w-4 h-4 mr-2" />
-            Invite Member
-          </Button>
-          <Button variant="outline" onClick={() => { setError(null); setIsLinkDialogOpen(true); }} className="shadow-md">
-            <IconLink className="w-4 h-4 mr-2" />
-            Link Existing
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={() => { setAddMemberError(null); setIsAddMemberOpen(true); }}
+            className="bg-[#033620] hover:bg-[#033620]/90 shadow-md text-white gap-2"
+          >
+            <IconUserPlus className="w-4 h-4" />
+            Add New Member
           </Button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <IconSearch className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 shadow-sm"
-          />
-        </div>
+      {/* ── Stat Cards ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* Total Members */}
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-[#033620] rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                <IconUsers className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div className="text-right">
+                <span className="text-xs md:text-sm text-gray-600 block mb-1 md:mb-2">Total Members</span>
+                <div className="text-gray-900 font-bold text-[24px] md:text-[32px] font-[Poppins] leading-none">
+                  {totalMembers}
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-2 md:pt-3 mt-2 md:mt-3">
+              <p className="text-xs text-[#033620]">All registered members</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Members */}
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-[#033620] rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                <IconUserCheck className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div className="text-right">
+                <span className="text-xs md:text-sm text-gray-600 block mb-1 md:mb-2">Active Members</span>
+                <div className="text-gray-900 font-bold text-[24px] md:text-[32px] font-[Poppins] leading-none">
+                  {activeMembers}
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-2 md:pt-3 mt-2 md:mt-3">
+              <p className="text-xs text-[#033620]">Available for work</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Supervisors */}
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-[#033620] rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                <IconShield className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div className="text-right">
+                <span className="text-xs md:text-sm text-gray-600 block mb-1 md:mb-2">Supervisors</span>
+                <div className="text-gray-900 font-bold text-[24px] md:text-[32px] font-[Poppins] leading-none">
+                  {supervisors}
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-2 md:pt-3 mt-2 md:mt-3">
+              <p className="text-xs text-[#033620]">Team leads</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Orders Completed */}
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-[#033620] rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                <IconClipboardList className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div className="text-right">
+                <span className="text-xs md:text-sm text-gray-600 block mb-1 md:mb-2">Orders Completed</span>
+                <div className="text-gray-900 font-bold text-[24px] md:text-[32px] font-[Poppins] leading-none">
+                  {totalOrdersCompleted}
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-2 md:pt-3 mt-2 md:mt-3">
+              <p className="text-xs text-[#033620]">Across all members</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* ── Fetch Error ───────────────────────────────────────────────────────── */}
       {fetchError && (
-        <Alert className="mb-6 border-red-300 bg-red-50">
+        <Alert className="border-red-300 bg-red-50">
           <AlertDescription className="text-red-700">{fetchError}</AlertDescription>
         </Alert>
       )}
 
-      {filteredMembers.length === 0 && !fetchError && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <IconUserPlus className="w-8 h-8 text-gray-400" />
+      {/* ── Table Card ───────────────────────────────────────────────────────── */}
+      <Card className="shadow-md">
+        <CardHeader className="flex flex-row flex-wrap items-center gap-3">
+          <CardTitle className="font-[Poppins] font-bold text-base">
+            All Members
+          </CardTitle>
+          {/* ── Toolbar ── */}
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            {/* Search */}
+            <Input
+              placeholder="Search members..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-72 h-9 shadow-sm text-sm"
+            />
+            {/* Role filter */}
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="h-9 w-48 shadow-sm text-sm border border-gray-200 rounded-md">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="Supervisor">Supervisor</SelectItem>
+                <SelectItem value="Cleaner">Cleaner</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">
-            {searchQuery ? 'No members found' : 'No team members yet'}
-          </h3>
-          <p className="text-sm text-gray-500 mb-6 max-w-sm">
-            {searchQuery
-              ? 'Try a different search term.'
-              : 'Invite or link members to start building your team.'}
-          </p>
-          {!searchQuery && (
-            <div className="flex gap-2">
-              <Button onClick={() => setIsInviteDialogOpen(true)} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-                <IconUserPlus className="w-4 h-4 mr-2" />
-                Invite Member
-              </Button>
-              <Button variant="outline" onClick={() => { setError(null); setIsLinkDialogOpen(true); }} className="shadow-md">
-                <IconLink className="w-4 h-4 mr-2" />
-                Link Existing
-              </Button>
+        </CardHeader>
+
+        <CardContent>
+          {/* ── Data Table ── */}
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="pl-4 text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                  <div className="flex items-center gap-1.5"><IconUsers size={14} /><span>Members</span></div>
+                </TableHead>
+                <TableHead className="text-left text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                  <div className="flex items-center gap-1.5"><IconShield size={14} /><span>Role</span></div>
+                </TableHead>
+                <TableHead className="text-left text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                  <div className="flex items-center gap-1.5"><IconCircleCheck size={14} /><span>Status</span></div>
+                </TableHead>
+                <TableHead className="text-center text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                  <div className="flex items-center justify-center gap-1.5"><IconClipboardList size={14} /><span>Orders</span></div>
+                </TableHead>
+                <TableHead className="pr-4 text-right text-xs uppercase text-gray-500 font-semibold tracking-wider w-24">
+                  <div className="flex items-center justify-end gap-1.5"><IconSettings size={14} /><span>Actions</span></div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {paginatedMembers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5}>
+                    <div className="p-16 text-center">
+                      <div className="flex justify-center mb-4">
+                        <IconUsers className="w-16 h-16 text-gray-300" />
+                      </div>
+                      <h3 className="text-gray-900 mb-2">
+                        {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
+                          ? 'No members match your filters'
+                          : 'No team members yet'}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-6">
+                        {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
+                          ? 'Try adjusting your search or filters'
+                          : 'Add members to get started'}
+                      </p>
+                      <Button
+                        onClick={() => setIsAddMemberOpen(true)}
+                        className="bg-[#033620] hover:bg-[#022819] text-white shadow-md"
+                      >
+                        <IconUserPlus className="w-4 h-4 mr-2" />
+                        Add New Member
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedMembers.map((member) => (
+                  <TableRow
+                    key={member.id}
+                    className="hover:bg-gray-50/70 transition-colors"
+                  >
+                    {/* Member */}
+                    <TableCell className="pl-4 py-4">
+                      <div
+                        className="flex items-center gap-3 cursor-pointer group"
+                        onClick={() => openOverviewDialog(member)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`View overview for ${member.name}`}
+                        onKeyDown={(e) => e.key === 'Enter' && openOverviewDialog(member)}
+                      >
+                        <Avatar className="w-9 h-9 shadow-sm flex-shrink-0">
+                          {member.avatar_url && (
+                            <AvatarImage src={member.avatar_url} alt={member.name} />
+                          )}
+                          <AvatarFallback className="bg-[#033620] text-white text-xs font-semibold">
+                            {getInitials(member.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 text-sm leading-tight truncate group-hover:underline">
+                            {member.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">{member.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* Role */}
+                    <TableCell className="py-4">
+                      <Badge className={getRoleBadgeClass(member.role)}>
+                        {member.role}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Status */}
+                    <TableCell>
+                      <span className={`inline-flex items-center gap-1.5 pl-1.5 pr-2 py-0.5 rounded-full text-xs font-medium ${
+                        member.status === 'active'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-600'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          member.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                        }`} />
+                        {member.status === 'active' ? 'Active' : 'Inactive'}
+                      </span>
+                    </TableCell>
+
+                    {/* Orders */}
+                    <TableCell className="text-center py-4">
+                      <span className="font-semibold text-[#033620] font-[Poppins]">
+                        {member.ordersCompleted}
+                      </span>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell className="pr-4 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-[#033620]"
+                          onClick={() => handleEditMember(member)}
+                          aria-label={`Edit ${member.name}`}
+                          title="Edit role"
+                        >
+                          <IconPencil size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-red-600"
+                          onClick={() => handleDeleteMember(member.id)}
+                          aria-label={`Delete ${member.name}`}
+                          title="Delete member"
+                        >
+                          <IconTrash size={16} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* ── Pagination Footer ── */}
+          {filteredMembers.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-200">
+              {/* Rows per page + row count */}
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">Rows per page</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => setPageSize(Number(v))}
+                  >
+                    <SelectTrigger className="h-7 w-[64px] text-xs shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span className="text-xs text-gray-500">
+                  {firstRow}–{lastRow} of {filteredMembers.length} members
+                </span>
+              </div>
+
+              {/* Page controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  Page {safePage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 shadow-sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  aria-label="Previous page"
+                >
+                  <IconChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 shadow-sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  aria-label="Next page"
+                >
+                  <IconChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredMembers.map((member) => (
-          <Card key={member.id} className="shadow-md hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6 relative">
-              {/* Action Buttons - Top Right */}
-              <div className="absolute top-4 right-4 flex gap-2">
-                <button
-                  onClick={() => handleEditMember(member)}
-                  className="p-1.5 hover:bg-gray-100 rounded-md transition-colors border border-gray-300 shadow-sm"
-                >
-                  <IconPencil className="w-4 h-4 text-gray-600" />
-                </button>
-                <button
-                  onClick={() => handleDeleteMember(member.id)}
-                  className="p-1.5 hover:bg-red-50 rounded-md transition-colors border border-red-300 shadow-sm"
-                >
-                  <IconTrash className="w-4 h-4 text-red-600" />
-                </button>
-              </div>
-
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="w-16 h-16 mb-4 shadow-sm">
-                  {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.name} />}
-                  <AvatarFallback className="bg-[#033620] text-white text-lg font-semibold">
-                    {member.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <h3 className="text-gray-900 mb-1 font-medium">{member.name}</h3>
-                <p className="text-sm text-gray-500 mb-3">{member.email}</p>
-                <Badge className={member.role === 'Supervisor' ? 'bg-gray-700 text-white shadow-sm' : 'bg-gray-200 text-gray-700 shadow-sm'}>
-                  {member.role}
-                </Badge>
-                <div className="mt-4 pt-4 border-t border-gray-200 w-full">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Orders completed</span>
-                    <span className="text-[#033620] font-bold font-[Poppins]">{member.ordersCompleted}</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Invite Dialog */}
-      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="shadow-xl" aria-describedby="invite-dialog-description">
+      {/* ── Add New Member Dialog ─────────────────────────────────────────────── */}
+      <Dialog
+        open={isAddMemberOpen}
+        onOpenChange={(open) => {
+          setIsAddMemberOpen(open);
+          if (!open) {
+            setNewMemberName('');
+            setNewMemberEmail('');
+            setNewMemberRole('Cleaner');
+            setNewMemberStatus('active');
+            setAddMemberError(null);
+          }
+        }}
+      >
+        <DialogContent className="shadow-xl !max-w-md !w-auto" aria-describedby="add-member-dialog-description">
           <DialogHeader>
-            <DialogTitle>Invite New Member</DialogTitle>
-            <DialogDescription id="invite-dialog-description">
-              Send an email invitation or share the invitation link
+            <DialogTitle>Add New Member</DialogTitle>
+            <DialogDescription id="add-member-dialog-description">
+              Create a new member account. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
+            {/* Name */}
             <div className="space-y-2">
-              <Label htmlFor="inviteEmail">Member email</Label>
+              <Label htmlFor="newMemberName">Name</Label>
               <Input
-                id="inviteEmail"
-                type="email"
-                placeholder="member@email.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
+                id="newMemberName"
+                placeholder="Enter full name"
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
                 className="shadow-sm"
               />
             </div>
 
-            {inviteSuccess && (
-              <p className="text-sm text-green-700 font-medium">{inviteSuccess}</p>
-            )}
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="newMemberEmail">Email</Label>
+              <Input
+                id="newMemberEmail"
+                type="email"
+                placeholder="Enter email address"
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+                className="shadow-sm"
+              />
+            </div>
 
-            {inviteLink && (
+            {/* Role + Status side-by-side */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Invitation link (share with member)</Label>
-                <div className="flex gap-2">
-                  <Input value={inviteLink} readOnly className="flex-1 shadow-sm text-xs" />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={copyToClipboard}
-                    className="shrink-0 shadow-sm"
-                  >
-                    {copied ? <IconCheck className="w-4 h-4" /> : <IconCopy className="w-4 h-4" />}
-                  </Button>
-                </div>
+                <Label htmlFor="newMemberRole">Role</Label>
+                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+                  <SelectTrigger id="newMemberRole" className="shadow-sm">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cleaner">Cleaner</SelectItem>
+                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsInviteDialogOpen(false); setInviteEmail(''); setInviteLink(''); setInviteSuccess(''); setError(null); }}>
-              Close
-            </Button>
-            <Button onClick={handleSendInvite} disabled={isLoading} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-              {isLoading ? 'Generating…' : 'Generate Invite Link'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Link Existing Member Dialog */}
-      <Dialog open={isLinkDialogOpen} onOpenChange={(open) => { setIsLinkDialogOpen(open); if (!open) { setLinkEmail(''); setError(null); } }}>
-        <DialogContent className="shadow-xl" aria-describedby="link-dialog-description">
-          <DialogHeader>
-            <DialogTitle>Link Existing Member</DialogTitle>
-            <DialogDescription id="link-dialog-description">
-              Link an existing member account to your business by their email address.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="linkEmail">Member email</Label>
-              <Input
-                id="linkEmail"
-                type="email"
-                placeholder="member@email.com"
-                value={linkEmail}
-                onChange={(e) => setLinkEmail(e.target.value)}
-                className="shadow-sm"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="newMemberStatus">Status</Label>
+                <Select value={newMemberStatus} onValueChange={setNewMemberStatus}>
+                  <SelectTrigger id="newMemberStatus" className="shadow-sm">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            {/* Inline validation error */}
+            {addMemberError && (
+              <p className="text-sm text-red-600">{addMemberError}</p>
+            )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsLinkDialogOpen(false); setLinkEmail(''); setError(null); }}>
-              Cancel
-            </Button>
-            <Button onClick={handleLinkEmployee} disabled={isLoading} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-              {isLoading ? 'Linking…' : 'Link Member'}
+            <Button
+              onClick={handleAddMember}
+              className="bg-[#033620] text-white hover:bg-[#033620]/90 shadow-md"
+            >
+              Add Member
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={editingMember !== null} onOpenChange={(open) => !open && setEditingMember(null)}>
+      {/* ── Edit Role Dialog (preserved) ──────────────────────────────────────── */}
+      <Dialog
+        open={editingMember !== null}
+        onOpenChange={(open) => !open && setEditingMember(null)}
+      >
         <DialogContent className="shadow-xl" aria-describedby="edit-dialog-description">
           <DialogHeader>
             <DialogTitle>Edit Member Role</DialogTitle>
@@ -400,7 +746,6 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
               Change the role of {editingMember?.name}
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="editRole">Role</Label>
@@ -415,19 +760,22 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
               </Select>
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingMember(null)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} className="bg-[#033620] hover:bg-[#022819] shadow-md text-white">
-              Save Changes
+            <Button
+              onClick={handleSaveEdit}
+              disabled={isLoading}
+              className="bg-[#033620] hover:bg-[#022819] shadow-md text-white"
+            >
+              {isLoading ? 'Saving…' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {/* ── Delete Confirmation Dialog (preserved) ────────────────────────────── */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="shadow-xl">
           <AlertDialogHeader>
@@ -438,8 +786,8 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
+            <AlertDialogAction
+              onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Delete
@@ -448,9 +796,88 @@ export function TeamMembersPage({ user, teamMembers: externalTeamMembers, onInvi
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert className="mt-4">
+      {/* ── Member Overview Dialog ───────────────────────────────────────────── */}
+      <Dialog
+        open={isOverviewOpen}
+        onOpenChange={(open) => {
+          setIsOverviewOpen(open);
+          if (!open) setOverviewMember(null);
+        }}
+      >
+        <DialogContent className="shadow-xl !max-w-sm" aria-describedby="overview-dialog-description">
+          <DialogHeader>
+            <DialogTitle>Member Overview</DialogTitle>
+            <DialogDescription id="overview-dialog-description">
+              View and update this member&apos;s role and status.
+            </DialogDescription>
+          </DialogHeader>
+
+          {overviewMember && (
+            <div className="space-y-5 py-2">
+              {/* Avatar + name + email */}
+              <div className="flex flex-col items-center gap-2 text-center">
+                <Avatar className="h-16 w-16 shadow-md">
+                  {overviewMember.avatar_url && (
+                    <AvatarImage src={overviewMember.avatar_url} alt={overviewMember.name} />
+                  )}
+                  <AvatarFallback className="bg-[#033620] text-white text-xl font-bold">
+                    {getInitials(overviewMember.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-bold text-gray-900 text-lg leading-tight">{overviewMember.name}</p>
+                  <p className="text-sm text-gray-500">{overviewMember.email}</p>
+                </div>
+              </div>
+
+              {/* Role */}
+              <div className="space-y-2">
+                <Label htmlFor="overviewRole">Role</Label>
+                <Select value={overviewRole} onValueChange={setOverviewRole}>
+                  <SelectTrigger id="overviewRole" className="shadow-sm">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cleaner">Cleaner</SelectItem>
+                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="overviewStatus">Status</Label>
+                <Select value={overviewStatus} onValueChange={setOverviewStatus}>
+                  <SelectTrigger id="overviewStatus" className="shadow-sm">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOverviewOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveOverview}
+              disabled={isLoading}
+              className="bg-[#033620] hover:bg-[#022819] shadow-md text-white"
+            >
+              {isLoading ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Global Error (preserved) ──────────────────────────────────────────── */}
+      {error && !isAddMemberOpen && editingMember === null && (
+        <Alert>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
