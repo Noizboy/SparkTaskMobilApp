@@ -70,6 +70,14 @@ async function runMigrations() {
     )
   `);
 
+  // Add updated_at to orders table for optimistic locking
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE orders ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `);
+
   // Add company-related columns to users table
   const companyColumns = [
     { name: 'company_phone', type: 'VARCHAR(50)' },

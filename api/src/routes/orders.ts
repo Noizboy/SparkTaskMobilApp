@@ -118,6 +118,7 @@ async function buildFullOrder(orderId: string) {
     goal: order.goal,
     startedAt: order.started_at ? Number(order.started_at) : undefined,
     completedAt: order.completed_at ? Number(order.completed_at) : undefined,
+    updatedAt: order.updated_at ? (order.updated_at as Date).toISOString() : null,
     assignedEmployees: employeesRes.rows.map(r => r.employee_name),
     sections,
     addOns: addOnsRes.rows.map(a => ({
@@ -286,20 +287,40 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
     await client.query('BEGIN');
     const orderId = req.params.id as string;
 
+    // Lock the order row and apply optimistic lock check (Fix 3)
+    const lockRes = await client.query(
+      'SELECT id, duration, date, time, updated_at FROM orders WHERE id = $1 FOR UPDATE',
+      [orderId]
+    );
+    if (lockRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
     const {
       orderNumber, clientName, clientEmail, address, phone,
       status, date, time, serviceType,
       specialInstructions, accessInfo, goal,
       startedAt, completedAt,
       sections, addOns, assignedEmployees,
+      clientUpdatedAt,
+      deletedPhotos = [] as string[],
     } = req.body;
 
+    // Optimistic lock check
+    if (clientUpdatedAt != null) {
+      const serverTs = lockRes.rows[0].updated_at as Date | null;
+      if (serverTs && new Date(serverTs) > new Date(clientUpdatedAt)) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'conflict', serverUpdatedAt: serverTs.toISOString() });
+      }
+    }
+
     // Auto-calculate duration from sections if provided, otherwise keep existing
-    const existing = sections ? null : await client.query('SELECT duration FROM orders WHERE id = $1', [orderId]);
     const totalMinutes: number = sections ? sections.reduce((sum: number, s: any) => sum + (Number(s.estimatedTime) || 0), 0) : 0;
     const duration: string = sections
       ? (totalMinutes <= 0 ? '' : (() => { const h = Math.floor(totalMinutes / 60); const m = totalMinutes % 60; return h > 0 && m > 0 ? `${h} ${h === 1 ? 'hour' : 'hours'} ${m} min` : h > 0 ? `${h} ${h === 1 ? 'hour' : 'hours'}` : `${m} min`; })())
-      : (existing?.rows[0]?.duration ?? '');
+      : (lockRes.rows[0].duration ?? '');
 
     // Enforce: a cleaner cannot have more than 1 in-progress order
     if (status === 'in-progress') {
@@ -327,33 +348,63 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
        orderId]
     );
 
-    // Replace sections if provided
+    // Upsert sections (Fix 4) — preserves concurrent work, no destructive DELETE
     if (sections) {
-      await client.query('DELETE FROM sections WHERE order_id = $1', [orderId]);
-
       for (let i = 0; i < sections.length; i++) {
         const s = sections[i];
-        const sectionRes = await client.query(
-          `INSERT INTO sections (order_id, name, icon, completed, skip_reason, estimated_time, sort_order)
-           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-          [orderId, s.name, s.icon || 'Sparkles', s.completed || false, s.skipReason, s.estimatedTime, i]
-        );
-        const sectionId = sectionRes.rows[0].id;
+        let sectionId: string;
 
+        if (s.id) {
+          // UPSERT existing section by stable ID
+          const sectionRes = await client.query(
+            `INSERT INTO sections (id, order_id, name, icon, completed, skip_reason, estimated_time, sort_order)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+             ON CONFLICT (id) DO UPDATE SET
+               name=EXCLUDED.name, icon=EXCLUDED.icon, completed=EXCLUDED.completed,
+               skip_reason=EXCLUDED.skip_reason, estimated_time=EXCLUDED.estimated_time,
+               sort_order=EXCLUDED.sort_order
+             RETURNING id`,
+            [s.id, orderId, s.name, s.icon || 'Sparkles', s.completed || false, s.skipReason ?? null, s.estimatedTime, i]
+          );
+          sectionId = sectionRes.rows[0].id;
+        } else {
+          // New section — INSERT and let DB generate a UUID
+          const sectionRes = await client.query(
+            `INSERT INTO sections (order_id, name, icon, completed, skip_reason, estimated_time, sort_order)
+             VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+            [orderId, s.name, s.icon || 'Sparkles', s.completed || false, s.skipReason ?? null, s.estimatedTime, i]
+          );
+          sectionId = sectionRes.rows[0].id;
+        }
+
+        // Upsert todos for this section
         if (s.todos) {
           for (let j = 0; j < s.todos.length; j++) {
-            await client.query(
-              `INSERT INTO todos (section_id, text, completed, sort_order) VALUES ($1,$2,$3,$4)`,
-              [sectionId, s.todos[j].text, s.todos[j].completed || false, j]
-            );
+            const t = s.todos[j];
+            if (t.id) {
+              await client.query(
+                `INSERT INTO todos (id, section_id, text, completed, sort_order)
+                 VALUES ($1,$2,$3,$4,$5)
+                 ON CONFLICT (id) DO UPDATE SET
+                   text=EXCLUDED.text, completed=EXCLUDED.completed, sort_order=EXCLUDED.sort_order`,
+                [t.id, sectionId, t.text, t.completed || false, j]
+              );
+            } else {
+              await client.query(
+                `INSERT INTO todos (section_id, text, completed, sort_order) VALUES ($1,$2,$3,$4)`,
+                [sectionId, t.text, t.completed || false, j]
+              );
+            }
           }
         }
 
-        // Re-insert photos
+        // Photos: only insert URLs not already present; never bulk-delete (Fix 4)
         if (s.beforePhotos) {
           for (const url of s.beforePhotos) {
             await client.query(
-              `INSERT INTO photos (section_id, type, url) VALUES ($1,'before',$2)`,
+              `INSERT INTO photos (section_id, type, url)
+               SELECT $1, 'before', $2
+               WHERE NOT EXISTS (SELECT 1 FROM photos WHERE section_id = $1 AND url = $2)`,
               [sectionId, url]
             );
           }
@@ -361,9 +412,31 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
         if (s.afterPhotos) {
           for (const url of s.afterPhotos) {
             await client.query(
-              `INSERT INTO photos (section_id, type, url) VALUES ($1,'after',$2)`,
+              `INSERT INTO photos (section_id, type, url)
+               SELECT $1, 'after', $2
+               WHERE NOT EXISTS (SELECT 1 FROM photos WHERE section_id = $1 AND url = $2)`,
               [sectionId, url]
             );
+          }
+        }
+      }
+
+      // Delete only photos explicitly marked for deletion (Fix 4)
+      for (const photoUrl of deletedPhotos) {
+        const delRes = await client.query(
+          `DELETE FROM photos
+           WHERE section_id IN (SELECT id FROM sections WHERE order_id = $1)
+             AND url = $2
+           RETURNING url`,
+          [orderId, photoUrl]
+        );
+        if (delRes.rows.length > 0) {
+          const filename = (photoUrl as string).split('/uploads/photos/').pop();
+          if (filename) {
+            const filePath = path.join(photosUploadDir, filename);
+            if (fs.existsSync(filePath)) {
+              try { fs.unlinkSync(filePath); } catch { /* ignore stale files */ }
+            }
           }
         }
       }
@@ -383,9 +456,9 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
     // Replace employees if provided — check schedule conflicts first
     if (assignedEmployees) {
       // Use updated date/time/duration for conflict check
-      const checkDate = date ?? (await client.query('SELECT date, time, duration FROM orders WHERE id = $1', [orderId])).rows[0]?.date;
-      const checkTime = time ?? (await client.query('SELECT time FROM orders WHERE id = $1', [orderId])).rows[0]?.time;
-      const checkDuration = duration || (await client.query('SELECT duration FROM orders WHERE id = $1', [orderId])).rows[0]?.duration;
+      const checkDate = date ?? lockRes.rows[0].date;
+      const checkTime = time ?? lockRes.rows[0].time;
+      const checkDuration = duration || lockRes.rows[0].duration;
 
       if (assignedEmployees.length > 0) {
         const scheduleCheck = await checkScheduleConflict(orderId, assignedEmployees, checkDate, checkTime, checkDuration, client);
@@ -524,44 +597,73 @@ async function checkCleanerInProgressConflict(
 
 // ─── PATCH /api/orders/:id/status — change status only ─────────────────────
 ordersRouter.patch('/:id/status', async (req: Request, res: Response) => {
+  const client = await pool.connect();
   try {
-    const { status, startedAt, completedAt } = req.body;
+    await client.query('BEGIN');
+
+    // Lock the order row — serializes concurrent status changes on the same order
+    const lockRes = await client.query(
+      'SELECT id, updated_at FROM orders WHERE id = $1 FOR UPDATE',
+      [req.params.id]
+    );
+    if (lockRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const { status, startedAt, completedAt, clientUpdatedAt } = req.body;
+
+    // Optimistic lock check (Fix 3)
+    if (clientUpdatedAt != null) {
+      const serverTs = lockRes.rows[0].updated_at as Date | null;
+      if (serverTs && new Date(serverTs) > new Date(clientUpdatedAt)) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'conflict', serverUpdatedAt: serverTs.toISOString() });
+      }
+    }
+
     const toMs = (v: any) => v == null ? null : typeof v === 'number' ? v : new Date(v).getTime();
 
     // Enforce: a cleaner cannot have more than 1 in-progress order
     if (status === 'in-progress') {
-      const check = await checkCleanerInProgressConflict(req.params.id as string);
+      const check = await checkCleanerInProgressConflict(req.params.id as string, client);
       if (check.conflict) {
+        await client.query('ROLLBACK');
         return res.status(409).json({
           error: `${check.cleanerName} already has an in-progress order (${check.orderNumber}). A cleaner cannot have more than one in-progress order at a time.`
         });
       }
     }
 
-    await pool.query(
+    await client.query(
       `UPDATE orders SET status=$1, started_at=COALESCE($2, started_at), completed_at=COALESCE($3, completed_at), updated_at=NOW() WHERE id=$4`,
       [status, toMs(startedAt), toMs(completedAt), req.params.id]
     );
 
     // Reset all progress when reverting to scheduled
     if (status === 'scheduled') {
-      const sectionsRes = await pool.query('SELECT id FROM sections WHERE order_id = $1', [req.params.id]);
+      const sectionsRes = await client.query('SELECT id FROM sections WHERE order_id = $1', [req.params.id]);
       for (const section of sectionsRes.rows) {
-        await pool.query('UPDATE todos SET completed = false WHERE section_id = $1', [section.id]);
-        await pool.query('DELETE FROM photos WHERE section_id = $1', [section.id]);
+        await client.query('UPDATE todos SET completed = false WHERE section_id = $1', [section.id]);
+        await client.query('DELETE FROM photos WHERE section_id = $1', [section.id]);
       }
-      await pool.query('UPDATE sections SET completed = false, skip_reason = NULL WHERE order_id = $1', [req.params.id]);
-      await pool.query('UPDATE add_ons SET selected = false WHERE order_id = $1', [req.params.id]);
-      await pool.query('UPDATE orders SET started_at = NULL WHERE id = $1', [req.params.id]);
+      await client.query('UPDATE sections SET completed = false, skip_reason = NULL WHERE order_id = $1', [req.params.id]);
+      await client.query('UPDATE add_ons SET selected = false WHERE order_id = $1', [req.params.id]);
+      await client.query('UPDATE orders SET started_at = NULL WHERE id = $1', [req.params.id]);
     }
+
+    await client.query('COMMIT');
 
     const order = await buildFullOrder(req.params.id as string);
     if (!order) return res.status(404).json({ error: 'Order not found' });
     broadcast('order:updated', order);
     res.json(order);
   } catch (err: any) {
+    await client.query('ROLLBACK');
     console.error('PATCH /orders/:id/status error:', err);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -596,11 +698,21 @@ ordersRouter.patch('/:id/sections/:sectionId/uncomplete', async (req: Request, r
 // ─── PATCH /api/orders/:id/todos/:todoId — toggle a single todo ────────────
 ordersRouter.patch('/:id/todos/:todoId', async (req: Request, res: Response) => {
   try {
-    // Toggle in DB — no need to trust the client's value
-    await pool.query(
-      'UPDATE todos SET completed = NOT completed WHERE id = $1',
-      [req.params.todoId]
-    );
+    const { completed } = req.body;
+
+    if (typeof completed === 'boolean') {
+      // Idempotent: client sends the intended final value
+      await pool.query(
+        'UPDATE todos SET completed = $1 WHERE id = $2',
+        [completed, req.params.todoId]
+      );
+    } else {
+      // Backwards-compatible fallback: toggle
+      await pool.query(
+        'UPDATE todos SET completed = NOT completed WHERE id = $1',
+        [req.params.todoId]
+      );
+    }
 
     // Also update section.completed if all todos in that section are done
     await pool.query(`
