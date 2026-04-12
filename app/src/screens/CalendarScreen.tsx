@@ -123,6 +123,11 @@ export function CalendarScreen() {
                 textDayFontSize: 14,
                 textMonthFontSize: 16,
                 textDayHeaderFontSize: 12,
+                'stylesheet.day.basic': {
+                  todayText: {
+                    fontFamily: FONTS.bold,
+                  },
+                },
               }}
             />
           </View>
