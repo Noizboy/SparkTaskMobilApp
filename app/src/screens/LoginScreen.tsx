@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
+  Keyboard,
+  KeyboardEvent,
   Platform,
-  ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { TextInput } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles } from 'lucide-react-native';
@@ -31,6 +32,35 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const cardTranslateY = useSharedValue(0);
+
+  useEffect(() => {
+    const onShow = (e: KeyboardEvent) => {
+      cardTranslateY.value = withTiming(-e.endCoordinates.height, { duration: 250 });
+    };
+    const onHide = () => {
+      cardTranslateY.value = withTiming(0, { duration: 250 });
+    };
+
+    const listeners = [
+      Keyboard.addListener('keyboardDidShow', onShow),
+      Keyboard.addListener('keyboardDidHide', onHide),
+    ];
+
+    if (Platform.OS === 'ios') {
+      listeners.push(
+        Keyboard.addListener('keyboardWillShow', onShow),
+        Keyboard.addListener('keyboardWillHide', onHide),
+      );
+    }
+
+    return () => listeners.forEach((l) => l.remove());
+  }, []);
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: cardTranslateY.value }],
+  }));
 
   const onSubmit = async () => {
     setError('');
@@ -103,15 +133,12 @@ export function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={{ flex: 1 }}>
       <LinearGradient
         colors={[COLORS.primary, COLORS.primaryDark]}
         style={[styles.gradient, { paddingTop: insets.top + 20 }]}
       >
-        {/* Logo */}
+        {/* Logo — fills all space above the form card */}
         <View style={styles.logoSection}>
           <View style={styles.logoWrap}>
             <Sparkles size={40} color={COLORS.primary} />
@@ -120,13 +147,8 @@ export function LoginScreen() {
           <Text style={styles.tagline}>{t('loginTagline')}</Text>
         </View>
 
-        {/* Form card */}
-        <ScrollView
-          style={styles.formCard}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        {/* Form card — anchored to bottom; slides above keyboard on both platforms */}
+        <Animated.View style={[styles.formCard, { paddingBottom: insets.bottom + 24 }, cardAnimStyle]}>
           <Text style={styles.welcomeTitle}>{t('welcomeBack')}</Text>
           <Text style={styles.welcomeSub}>{t('signInSubtitle')}</Text>
 
@@ -192,19 +214,9 @@ export function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Demo hint */}
-          <View style={styles.demoBox}>
-            <Text style={styles.demoTitle}>{t('demoCredentials')}</Text>
-            <Text style={styles.demoText}>
-              Email: <Text style={styles.demoValue}>{AUTH_CONFIG.DEMO_CREDENTIALS.email}</Text>
-            </Text>
-            <Text style={styles.demoText}>
-              Password: <Text style={styles.demoValue}>{AUTH_CONFIG.DEMO_CREDENTIALS.password}</Text>
-            </Text>
-          </View>
-        </ScrollView>
+        </Animated.View>
       </LinearGradient>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -213,7 +225,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoSection: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: SPACING.xxl,
     paddingBottom: 32,
   },
@@ -240,7 +254,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   formCard: {
-    flex: 1,
     backgroundColor: COLORS.white,
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
@@ -311,28 +324,5 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semibold,
     fontSize: 16,
     color: COLORS.white,
-  },
-  demoBox: {
-    marginTop: 24,
-    backgroundColor: COLORS.gray50,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    gap: 3,
-  },
-  demoTitle: {
-    fontFamily: FONTS.semibold,
-    fontSize: 12,
-    color: COLORS.gray500,
-    marginBottom: 4,
-  },
-  demoText: {
-    fontFamily: FONTS.regular,
-    fontSize: 12,
-    color: COLORS.gray400,
-  },
-  demoValue: {
-    fontFamily: FONTS.medium,
-    color: COLORS.gray700,
   },
 });

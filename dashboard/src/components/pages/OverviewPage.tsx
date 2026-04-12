@@ -123,7 +123,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
         </div>
 
         {/* Recent Orders */}
-        <Card className="shadow-md">
+        <Card className="border border-gray-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="font-[Poppins] font-normal font-bold">Recent Orders</CardTitle>
@@ -134,31 +134,31 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
               <IconArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {/* Table Header */}
-            <div className="hidden md:grid grid-cols-[1fr_2fr_1.5fr_1.5fr_1fr_80px] gap-4 px-4 py-3 bg-gray-50 rounded-t-lg border-b border-gray-200">
-              <div className="text-xs text-gray-500 uppercase font-bold flex items-center gap-2">
-                <IconHash className="w-4 h-4" />
+            <div className="hidden md:grid grid-cols-[1fr_2fr_1.5fr_1.5fr_1fr_80px] gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <IconHash className="w-3.5 h-3.5" />
                 Order
               </div>
-              <div className="text-xs text-gray-500 uppercase font-bold flex items-center gap-2">
-                <IconUser className="w-4 h-4" />
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <IconUser className="w-3.5 h-3.5" />
                 Customer Name
               </div>
-              <div className="text-xs text-gray-500 uppercase font-bold flex items-center gap-2">
-                <IconBriefcase className="w-4 h-4" />
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <IconBriefcase className="w-3.5 h-3.5" />
                 Service
               </div>
-              <div className="text-xs text-gray-500 uppercase font-bold flex items-center gap-2">
-                <IconCalendar className="w-4 h-4" />
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <IconCalendar className="w-3.5 h-3.5" />
                 Scheduled
               </div>
-              <div className="text-xs text-gray-500 uppercase font-bold flex items-center gap-2">
-                <IconActivity className="w-4 h-4" />
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <IconActivity className="w-3.5 h-3.5" />
                 Status
               </div>
-              <div className="text-xs text-gray-500 uppercase font-bold flex items-center justify-center gap-2">
-                <IconSettings className="w-4 h-4" />
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center justify-center gap-2">
+                <IconSettings className="w-3.5 h-3.5" />
                 Actions
               </div>
             </div>
@@ -166,7 +166,20 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
             {/* Order Items */}
             <div className="space-y-4 md:space-y-0">
               {recentOrders.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-8">No orders yet</p>
+                <div className="p-16 text-center">
+                  <div className="flex justify-center mb-4">
+                    <IconClipboardList className="w-16 h-16 text-gray-300" />
+                  </div>
+                  <h3 className="text-gray-900 mb-2">No orders found</h3>
+                  <p className="text-sm text-gray-500 mb-6">Try adjusting your filters or create a new order</p>
+                  <Button
+                    className="bg-[#033620] hover:bg-[#022819] text-white shadow-md"
+                    onClick={() => onNavigate?.('create-order')}
+                  >
+                    <IconPlus className="w-4 h-4 mr-2" />
+                    Create Order
+                  </Button>
+                </div>
               )}
               {recentOrders.map((order, index) => {
                 const totalTasks = getOrderTaskCounts(order).total;
@@ -175,33 +188,33 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
                 return (
                   <div
                     key={order.id}
-                    className={`border-gray-200 p-4 md:p-0 md:grid md:grid-cols-[1fr_2fr_1.5fr_1.5fr_1fr_80px] md:gap-4 md:px-4 md:py-4 hover:bg-gray-50 transition-colors cursor-pointer ${index !== recentOrders.length - 1 ? 'border-b' : ''}`}
+                    className={`border-gray-200 p-4 md:p-0 md:grid md:grid-cols-[1fr_2fr_1.5fr_1.5fr_1fr_80px] md:gap-4 md:px-6 md:py-4 hover:bg-gray-50 transition-colors cursor-pointer ${index !== recentOrders.length - 1 ? 'border-b' : ''}`}
                     onClick={() => onViewOrder?.(order.id)}
                   >
                     {/* Mobile Layout */}
                     <div className="flex flex-col gap-3 md:hidden">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-sm text-gray-500 mb-1">Order Code</p>
-                          <p className="font-[Poppins] text-gray-900">#{order.orderNumber.replace(/^#/, '')}</p>
+                          <p className="text-xs text-gray-500 mb-1">Order Code</p>
+                          <p className="font-sans text-gray-900 text-base">#{order.orderNumber.replace(/^#/, '')}</p>
                         </div>
-                        <span className={`px-3 py-1 text-xs rounded-full font-medium ${statusCfg?.className}`}>
+                        <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${statusCfg?.className}`}>
                           {statusCfg?.label}
                         </span>
                       </div>
                       <div className="border-t border-gray-200 pt-3">
-                        <p className="text-sm text-gray-500 mb-1">Customer Name</p>
-                        <p className="text-gray-900">{order.clientName}</p>
+                        <p className="text-xs text-gray-500 mb-1">Customer Name</p>
+                        <p className="text-sm text-gray-900">{order.clientName}</p>
                         <p className="text-xs text-gray-500">{order.address}</p>
                       </div>
                       <div className="border-t border-gray-200 pt-3">
-                        <p className="text-sm text-gray-500 mb-1">Service</p>
-                        <p className="text-gray-900">{order.serviceType}</p>
+                        <p className="text-xs text-gray-500 mb-1">Service</p>
+                        <p className="text-sm text-gray-900">{order.serviceType}</p>
                         <p className="text-xs text-gray-500">{totalTasks} tasks</p>
                       </div>
                       <div className="border-t border-gray-200 pt-3">
-                        <p className="text-sm text-gray-500 mb-1">Scheduled</p>
-                        <p className="text-gray-900">{dateLabel}</p>
+                        <p className="text-xs text-gray-500 mb-1">Scheduled</p>
+                        <p className="text-sm text-gray-900">{dateLabel}</p>
                         <p className="text-xs text-gray-500">{order.time}</p>
                       </div>
                     </div>
@@ -210,19 +223,19 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
                       <p className="font-sans text-gray-900 text-base">#{order.orderNumber.replace(/^#/, '')}</p>
                     </div>
                     <div className="hidden md:flex flex-col justify-center">
-                      <p className="text-gray-900">{order.clientName}</p>
+                      <p className="text-sm text-gray-900">{order.clientName}</p>
                       <p className="text-xs text-gray-500">{order.address}</p>
                     </div>
                     <div className="hidden md:flex flex-col justify-center">
-                      <p className="text-gray-900">{order.serviceType}</p>
+                      <p className="text-sm text-gray-900">{order.serviceType}</p>
                       <p className="text-xs text-gray-500">{totalTasks} tasks</p>
                     </div>
                     <div className="hidden md:flex flex-col justify-center">
-                      <p className="text-gray-900">{dateLabel}</p>
+                      <p className="text-sm text-gray-900">{dateLabel}</p>
                       <p className="text-xs text-gray-500">{order.time}</p>
                     </div>
                     <div className="hidden md:flex items-center">
-                      <span className={`px-3 py-1 text-xs rounded-full font-medium ${statusCfg?.className}`}>
+                      <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${statusCfg?.className}`}>
                         {statusCfg?.label}
                       </span>
                     </div>
@@ -230,7 +243,7 @@ export function OverviewPage({ user, onNavigate, onViewOrder, orders = [] }: { u
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-[#033620] hover:text-[#044d2e] hover:bg-[#033620]/5"
+                        className="text-[#033620] hover:text-[#044d2e] hover:bg-[#033620]/5 text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           onViewOrder?.(order.id);
