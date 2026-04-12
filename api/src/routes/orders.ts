@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db';
-import { broadcast } from '../sse';
+import { broadcast, broadcastToUsers } from '../sse';
 
 export const ordersRouter = Router();
 
@@ -656,7 +656,18 @@ ordersRouter.patch('/:id/status', async (req: Request, res: Response) => {
 
     const order = await buildFullOrder(req.params.id as string);
     if (!order) return res.status(404).json({ error: 'Order not found' });
-    broadcast('order:updated', order);
+
+    // Broadcast to all cleaners assigned to this order so every assigned
+    // device reflects the new status immediately (e.g. in-progress).
+    const assignedRes = await pool.query(
+      `SELECT u.id FROM users u
+       JOIN assigned_employees ae ON ae.employee_name = u.name
+       WHERE ae.order_id = $1`,
+      [req.params.id]
+    );
+    const assignedUserIds: string[] = assignedRes.rows.map((r: any) => r.id as string);
+    broadcastToUsers('order:updated', order, assignedUserIds);
+
     res.json(order);
   } catch (err: any) {
     await client.query('ROLLBACK');
