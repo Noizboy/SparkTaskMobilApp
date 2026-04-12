@@ -91,8 +91,18 @@ export function ProfileScreen() {
     }
     try {
       const token = await storage.get(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token && token !== 'true') headers['Authorization'] = `Bearer ${token}`;
+
+      if (!token || token === 'true') {
+        // Demo / offline mode — no real JWT available; persist the change locally only.
+        await updateCurrentUser({ phone });
+        setIsEditingPhone(false);
+        return;
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
       const url = `${API_BASE}/users/me`;
       console.log('[API] PATCH phone →', url, { phone });
       const res = await fetch(url, {
@@ -106,8 +116,7 @@ export function ProfileScreen() {
         throw new Error(`HTTP ${res.status}: ${body}`);
       }
       const serverUser = await res.json();
-      const updated = { ...currentUser, phone, id: String(serverUser.id) };
-      await updateCurrentUser(updated);
+      await updateCurrentUser({ phone, id: String(serverUser.id) });
     } catch (err: any) {
       console.error('[API] updatePhone failed:', err);
       Alert.alert(t('error'), `Could not save phone number.\n\n${err.message}`);
