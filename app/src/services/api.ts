@@ -43,6 +43,58 @@ function toJob(order: any): Job {
   };
 }
 
+export interface ApiNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  time: string;
+}
+
+export async function apiFetchNotifications(token: string): Promise<ApiNotification[]> {
+  const res = await fetch(`${API_BASE}/notifications`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`fetchNotifications failed: ${res.status}`);
+  return res.json();
+}
+
+export async function apiMarkNotificationRead(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/notifications/${id}/read`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`markNotificationRead failed: ${res.status}`);
+}
+
+export async function apiMarkAllNotificationsRead(token: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/notifications/read-all`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`markAllNotificationsRead failed: ${res.status}`);
+}
+
+export async function apiRegisterPushToken(token: string, pushToken: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/users/me/push-token`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ push_token: pushToken }),
+  });
+  if (!res.ok) throw new Error(`registerPushToken failed: ${res.status}`);
+}
+
+export async function apiGetOrder(orderId: string): Promise<Job> {
+  const res = await fetch(`${API_BASE}/orders/${orderId}`);
+  if (!res.ok) throw new Error(`getOrder failed: ${res.status}`);
+  const order = await res.json();
+  return toJob(order);
+}
+
 export async function fetchJobs(employeeName?: string): Promise<Job[]> {
   const url = new URL(`${API_BASE}/orders`);
   if (employeeName) {
@@ -88,11 +140,12 @@ export async function apiToggleTodo(
 export async function apiUpdateStatus(
   orderId: string,
   status: Job['status'],
-  extra?: { startedAt?: number; completedAt?: number }
+  extra?: { startedAt?: number; completedAt?: number; clientUpdatedAt?: string }
 ): Promise<void> {
   const body: any = { status: mapStatusOut(status) };
   if (extra?.startedAt) body.startedAt = new Date(extra.startedAt).toISOString();
   if (extra?.completedAt) body.completedAt = new Date(extra.completedAt).toISOString();
+  if (extra?.clientUpdatedAt) body.clientUpdatedAt = extra.clientUpdatedAt;
   const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -96,6 +96,11 @@ export default {
   unreadNotifications: 'unread notifications',
   noNotifications: 'No notifications',
   allCaughtUp: "You're all caught up!",
+  notifAssignedTitle: 'New Job Assigned',
+  notifAssignedMessage: 'Order {{orderNumber}} has been added to your schedule.',
+  notifUnassignedTitle: 'Removed from Job',
+  notifUnassignedMessage: 'You have been removed from Order {{orderNumber}}.',
+  justNow: 'Just now',
 
   // Profile
   profile: 'Profile',

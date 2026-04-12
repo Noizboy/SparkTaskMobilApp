@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Bell, Clock, Calendar, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { Bell, Clock, Calendar, CheckCircle2, AlertCircle, UserPlus, UserMinus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppNotification } from '../types';
@@ -15,7 +15,23 @@ function NotifIcon({ type, isRead }: { type: AppNotification['type']; isRead: bo
   if (type === 'new_job') return <Calendar size={size} color={color} />;
   if (type === 'reminder') return <AlertCircle size={size} color={color} />;
   if (type === 'completed') return <CheckCircle2 size={size} color={color} />;
+  if (type === 'assigned') return <UserPlus size={size} color={color} />;
+  if (type === 'removed') return <UserMinus size={size} color={color} />;
   return <Bell size={size} color={color} />;
+}
+
+function formatTime(time: string): string {
+  const date = new Date(time);
+  if (isNaN(date.getTime())) return time; // already a display string
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH} hour${diffH === 1 ? '' : 's'} ago`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 1) return '1 day ago';
+  return `${diffD} days ago`;
 }
 
 export function NotificationsScreen() {
@@ -76,7 +92,7 @@ export function NotificationsScreen() {
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{notif.title}</Text>
                 <Text style={styles.cardMessage}>{notif.message}</Text>
-                <Text style={styles.cardTime}>{notif.time}</Text>
+                <Text style={styles.cardTime}>{formatTime(notif.time)}</Text>
               </View>
             </TouchableOpacity>
           ))

@@ -96,6 +96,11 @@ export default {
   unreadNotifications: 'notificaciones sin leer',
   noNotifications: 'Sin notificaciones',
   allCaughtUp: '¡Estás al día!',
+  notifAssignedTitle: 'Nueva Orden Asignada',
+  notifAssignedMessage: 'La orden {{orderNumber}} ha sido agregada a tu horario.',
+  notifUnassignedTitle: 'Removido de la Orden',
+  notifUnassignedMessage: 'Has sido removido de la orden {{orderNumber}}.',
+  justNow: 'Ahora mismo',
 
   // Profile
   profile: 'Perfil',

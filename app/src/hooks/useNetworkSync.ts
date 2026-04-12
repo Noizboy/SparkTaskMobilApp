@@ -108,22 +108,37 @@ export function useNetworkSync(jobsRef: MutableRefObject<Job[]>): UseNetworkSync
 
     // Process in FIFO order — always reset the sync lock in the finally block so
     // that a mid-flight error can never leave isSyncingRef permanently stuck at true.
-    const mutationOpTypes = ['toggleTodo', 'toggleAddOn', 'markSectionDone', 'markSectionUndone', 'photosChange'];
+    // Operations that are only valid while the order is in-progress
+    const inProgressOpTypes = ['toggleTodo', 'toggleAddOn', 'markSectionDone', 'markSectionUndone', 'photosChange', 'completeJob', 'cancelJob'];
     try {
       for (const op of queue) {
-        // Fix 4: Replay guard — skip stale mutations for jobs no longer in-progress
-        if (mutationOpTypes.includes(op.type) && op.payload.orderId) {
-          const orderId = op.payload.orderId as string;
+        const orderId = op.payload.orderId as string | undefined;
+        if (orderId) {
           const job = jobsRef.current.find((j) => j.id === orderId);
-          if (!job || job.status !== 'in-progress') {
-            console.warn('[SyncQueue] Skipping op — job no longer in-progress:', op.type, orderId);
-            await removeFromQueue(op.id);
-            continue;
+
+          // Skip in-progress mutations if job is no longer in-progress
+          if (inProgressOpTypes.includes(op.type)) {
+            if (!job || job.status !== 'in-progress') {
+              console.warn(`[SyncQueue] Skipping stale op "${op.type}" for order ${orderId} (status: ${job?.status ?? 'not found'})`);
+              await removeFromQueue(op.id);
+              continue;
+            }
           }
-          if (op.payload.sectionId) {
+
+          // Skip startJob if order is no longer upcoming
+          if (op.type === 'startJob') {
+            if (!job || job.status !== 'upcoming') {
+              console.warn(`[SyncQueue] Skipping stale op "startJob" for order ${orderId} (status: ${job?.status ?? 'not found'})`);
+              await removeFromQueue(op.id);
+              continue;
+            }
+          }
+
+          // Skip section-scoped ops if section no longer exists on the job
+          if (op.payload.sectionId && job) {
             const sectionId = op.payload.sectionId as string;
             if (!job.sections.find((s) => s.id === sectionId)) {
-              console.warn('[SyncQueue] Skipping op — section not found in job:', op.type, sectionId);
+              console.warn(`[SyncQueue] Skipping op "${op.type}" — section ${sectionId} not found in job`);
               await removeFromQueue(op.id);
               continue;
             }

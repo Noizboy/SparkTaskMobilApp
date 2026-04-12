@@ -2,12 +2,14 @@ import { useEffect, useRef } from 'react';
 import EventSource from 'react-native-sse';
 import { API_BASE } from '../services/api';
 
-type SSEEventName = 'order:created' | 'order:updated' | 'order:deleted';
+type SSEEventName = 'order:created' | 'order:updated' | 'order:deleted' | 'order:assigned' | 'order:unassigned';
 
 interface SSEHandlers {
   onOrderCreated?: (order: any) => void;
   onOrderUpdated?: (order: any) => void;
   onOrderDeleted?: (payload: { id: string }) => void;
+  onOrderAssigned?: (order: any) => void;
+  onOrderUnassigned?: (payload: { id: string; orderNumber: string }) => void;
 }
 
 /**
@@ -53,6 +55,16 @@ export function useSSE(handlers: SSEHandlers, enabled: boolean, userId?: string)
     es.addEventListener('order:deleted', (e) => {
       const payload = parse(e.data);
       if (payload) handlersRef.current.onOrderDeleted?.(payload);
+    });
+
+    es.addEventListener('order:assigned', (e) => {
+      const order = parse(e.data);
+      if (order) handlersRef.current.onOrderAssigned?.(order);
+    });
+
+    es.addEventListener('order:unassigned', (e) => {
+      const payload = parse(e.data);
+      if (payload) handlersRef.current.onOrderUnassigned?.(payload);
     });
 
     es.addEventListener('error', (e: any) => {

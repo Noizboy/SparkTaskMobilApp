@@ -59,7 +59,7 @@ export interface Review {
 
 export interface AppNotification {
   id: string;
-  type: 'upcoming' | 'new_job' | 'reminder' | 'completed';
+  type: 'upcoming' | 'new_job' | 'reminder' | 'completed' | 'assigned' | 'removed';
   title: string;
   message: string;
   time: string;
