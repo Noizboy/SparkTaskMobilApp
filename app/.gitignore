@@ -11,3 +11,5 @@ ios/
 *.mobileprovision
 *.orig.*
 web-build/
+
+google-services.json

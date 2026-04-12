@@ -21,7 +21,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#044728"
       },
-      "package": "com.sparktask.mobile"
+      "package": "com.sparktask.mobile",
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       [
