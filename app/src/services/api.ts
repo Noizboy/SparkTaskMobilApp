@@ -72,12 +72,14 @@ export async function apiMarkSectionUndone(orderId: string, sectionId: string): 
 
 export async function apiToggleTodo(
   orderId: string,
-  todoId: string
+  todoId: string,
+  completed: boolean
 ): Promise<void> {
   console.log('[API] PATCH', `${API_BASE}/orders/${orderId}/todos/${todoId}`);
   const res = await fetch(`${API_BASE}/orders/${orderId}/todos/${todoId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ completed }),
   });
   console.log('[API] toggleTodo response status:', res.status);
   if (!res.ok) throw new Error(`toggleTodo failed: ${res.status}`);
@@ -110,18 +112,26 @@ export async function apiToggleAddOn(orderId: string, addOnId: string): Promise<
   if (!res.ok) throw new Error(`toggleAddOn failed: ${res.status}`);
 }
 
-export async function apiUpdateOrder(orderId: string, job: Job): Promise<void> {
-  const body = {
+export async function apiUpdateOrder(
+  orderId: string,
+  job: Job,
+  options?: { clientUpdatedAt?: string }
+): Promise<void> {
+  const body: Record<string, unknown> = {
     ...job,
     status: mapStatusOut(job.status),
     startedAt: job.startedAt ? new Date(job.startedAt).toISOString() : undefined,
     completedAt: job.completedAt ? new Date(job.completedAt).toISOString() : undefined,
   };
+  if (options?.clientUpdatedAt) {
+    body.clientUpdatedAt = options.clientUpdatedAt;
+  }
   const res = await fetch(`${API_BASE}/orders/${orderId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  if (res.status === 409) throw new Error('conflict');
   if (!res.ok) throw new Error(`updateOrder failed: ${res.status}`);
 }
 

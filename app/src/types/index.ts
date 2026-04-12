@@ -45,6 +45,7 @@ export interface Job {
   addOns?: AddOn[];
   startedAt?: number;
   completedAt?: number;
+  updatedAt?: string;
 }
 
 export interface Review {

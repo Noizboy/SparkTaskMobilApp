@@ -14,15 +14,25 @@ interface SSEHandlers {
  * Connects to the API SSE stream and dispatches order change events.
  * Should be mounted once while the user is authenticated.
  * Automatically reconnects on disconnect (pollingInterval: 5000).
+ *
+ * @param handlers  Event handler callbacks.
+ * @param enabled   Connect only when true (i.e. user is authenticated).
+ * @param userId    Optional user UUID.  When provided it is passed as
+ *                  ?userId=<id> so the server can route targeted broadcasts
+ *                  (e.g. status changes) to only the assigned cleaners.
  */
-export function useSSE(handlers: SSEHandlers, enabled: boolean) {
+export function useSSE(handlers: SSEHandlers, enabled: boolean, userId?: string) {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
   useEffect(() => {
     if (!enabled) return;
 
-    const es = new EventSource<SSEEventName>(`${API_BASE}/events`, {
+    const url = userId
+      ? `${API_BASE}/events?userId=${encodeURIComponent(userId)}`
+      : `${API_BASE}/events`;
+
+    const es = new EventSource<SSEEventName>(url, {
       pollingInterval: 5000,
     });
 
@@ -53,5 +63,5 @@ export function useSSE(handlers: SSEHandlers, enabled: boolean) {
       es.removeAllEventListeners();
       es.close();
     };
-  }, [enabled]);
+  }, [enabled, userId]);
 }

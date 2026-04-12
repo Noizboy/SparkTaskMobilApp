@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, MutableRefObject } from 'react';
 import * as Network from 'expo-network';
 import {
   getQueue,
@@ -21,7 +21,11 @@ async function dispatchOp(op: SyncOperation): Promise<void> {
   const { type, payload } = op;
   switch (type) {
     case 'toggleTodo':
-      return apiToggleTodo(payload.orderId as string, payload.todoId as string);
+      return apiToggleTodo(
+        payload.orderId as string,
+        payload.todoId as string,
+        payload.completed !== undefined ? (payload.completed as boolean) : true
+      );
 
     case 'toggleAddOn':
       return apiToggleAddOn(payload.orderId as string, payload.addOnId as string);
@@ -64,7 +68,7 @@ interface UseNetworkSyncReturn {
 /** How often (ms) to poll expo-network for connectivity changes */
 const POLL_INTERVAL_MS = 3000;
 
-export function useNetworkSync(): UseNetworkSyncReturn {
+export function useNetworkSync(jobsRef: MutableRefObject<Job[]>): UseNetworkSyncReturn {
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -104,8 +108,27 @@ export function useNetworkSync(): UseNetworkSyncReturn {
 
     // Process in FIFO order — always reset the sync lock in the finally block so
     // that a mid-flight error can never leave isSyncingRef permanently stuck at true.
+    const mutationOpTypes = ['toggleTodo', 'toggleAddOn', 'markSectionDone', 'markSectionUndone', 'photosChange'];
     try {
       for (const op of queue) {
+        // Fix 4: Replay guard — skip stale mutations for jobs no longer in-progress
+        if (mutationOpTypes.includes(op.type) && op.payload.orderId) {
+          const orderId = op.payload.orderId as string;
+          const job = jobsRef.current.find((j) => j.id === orderId);
+          if (!job || job.status !== 'in-progress') {
+            console.warn('[SyncQueue] Skipping op — job no longer in-progress:', op.type, orderId);
+            await removeFromQueue(op.id);
+            continue;
+          }
+          if (op.payload.sectionId) {
+            const sectionId = op.payload.sectionId as string;
+            if (!job.sections.find((s) => s.id === sectionId)) {
+              console.warn('[SyncQueue] Skipping op — section not found in job:', op.type, sectionId);
+              await removeFromQueue(op.id);
+              continue;
+            }
+          }
+        }
         try {
           await dispatchOp(op);
           await removeFromQueue(op.id);

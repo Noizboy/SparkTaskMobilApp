@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { Job, AppNotification, Review } from '../types';
 import { mockJobs } from '../data/mockJobs';
 import { storage } from '../utils/storage';
@@ -82,8 +83,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
   const [jobsLoaded, setJobsLoaded] = useState(false);
 
+  // Keep a stable ref so useNetworkSync can read current jobs without stale closures
+  const jobsRef = useRef<Job[]>(jobs);
+  jobsRef.current = jobs;
+
   // Offline sync queue — must be mounted at provider level so all consumers share state
-  const { isOnline, isSyncing, pendingCount, refreshPendingCount } = useNetworkSync();
+  const { isOnline, isSyncing, pendingCount, refreshPendingCount } = useNetworkSync(jobsRef);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -174,9 +179,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     },
     onOrderUpdated: (order) => {
-      const job = apiOrderToJob(order);
+      const serverJob = apiOrderToJob(order);
       setJobs((prev) => {
-        const updated = prev.map((j) => j.id === job.id ? job : j);
+        const updated = prev.map((localJob) => {
+          if (localJob.id !== serverJob.id) return localJob;
+
+          // Merge sections: use server as base, re-apply local-only unuploaded photos
+          const mergedSections = serverJob.sections.map((serverSection) => {
+            const localSection = localJob.sections.find((s) => s.id === serverSection.id);
+            if (!localSection) return serverSection;
+
+            const mergePhotos = (serverPhotos: string[], localPhotos: string[]): string[] => {
+              const localOnly = localPhotos.filter(
+                (p) => p.startsWith('file://') || p.startsWith('ph://')
+              );
+              return [...serverPhotos, ...localOnly];
+            };
+
+            return {
+              ...serverSection,
+              beforePhotos: mergePhotos(serverSection.beforePhotos, localSection.beforePhotos),
+              afterPhotos: mergePhotos(serverSection.afterPhotos, localSection.afterPhotos),
+            };
+          });
+
+          // Use the server status in all cases EXCEPT when both local and
+          // server are already 'in-progress' (avoids a redundant state flip).
+          // Critically: if local is still 'upcoming' and the server sends
+          // 'in-progress' (another assigned cleaner started the job), the
+          // condition is false and we correctly adopt serverJob.status.
+          const mergedStatus =
+            localJob.status === 'in-progress' && serverJob.status === 'in-progress'
+              ? localJob.status
+              : serverJob.status;
+
+          const merged: Job = { ...serverJob, sections: mergedSections, status: mergedStatus };
+          return merged;
+        });
         storage.setJSON('cleanerJobs', updated);
         return updated;
       });
@@ -188,7 +227,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
     },
-  }, isAuthenticated);
+  }, isAuthenticated, currentUser?.id);
 
   const updateCurrentUser = useCallback(async (updates: Partial<CurrentUser>) => {
     const updated = { ...currentUser, ...updates } as CurrentUser;
@@ -223,6 +262,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleTodo = (jobId: string, sectionId: string, todoId: string) => {
     console.log('[toggleTodo]', { jobId, sectionId, todoId });
+    // Compute the optimistic new value before mutating state
+    const currentJob = jobs.find((j) => j.id === jobId);
+    const currentTodo = currentJob?.sections
+      .find((s) => s.id === sectionId)?.todos
+      .find((t) => t.id === todoId);
+    const newCompleted = !(currentTodo?.completed ?? false);
     const updated = jobs.map((job) => {
       if (job.id !== jobId) return job;
       return {
@@ -232,7 +277,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return {
             ...section,
             todos: section.todos.map((todo) =>
-              todo.id === todoId ? { ...todo, completed: !todo.completed } : todo
+              todo.id === todoId ? { ...todo, completed: newCompleted } : todo
             ),
           };
         }),
@@ -240,9 +285,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     saveJobs(updated);
     // Sync to API in background — enqueue on network failure
-    apiToggleTodo(jobId, todoId).catch(async (err) => {
+    apiToggleTodo(jobId, todoId, newCompleted).catch(async (err) => {
       console.error('[API] toggleTodo failed:', err);
-      await enqueue({ type: 'toggleTodo', payload: { orderId: jobId, todoId } });
+      await enqueue({ type: 'toggleTodo', payload: { orderId: jobId, todoId, completed: newCompleted } });
       refreshPendingCount();
     });
   };
@@ -424,7 +469,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (capturedJob) {
       const jobSnapshot = capturedJob;
       // Sync full order to API (includes sections with skipReasons + completedAt)
-      apiUpdateOrder(jobId, jobSnapshot).catch(async (err) => {
+      apiUpdateOrder(jobId, jobSnapshot, { clientUpdatedAt: jobSnapshot.updatedAt }).catch(async (err) => {
+        if (err.message === 'conflict') {
+          Alert.alert('Conflict', 'This job was updated by another team member. Refreshing...');
+          try {
+            const freshJobs = await fetchJobs(currentUser!.name);
+            setJobs(freshJobs);
+            await storage.setJSON('cleanerJobs', freshJobs);
+          } catch {
+            // stay with current state if re-fetch also fails
+          }
+          return;
+        }
         console.error('[API] completeJob failed:', err);
         await enqueue({ type: 'completeJob', payload: { orderId: jobId, job: jobSnapshot } });
         refreshPendingCount();
