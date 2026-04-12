@@ -6,28 +6,13 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "secrets": {
-          "GOOGLE_SERVICES_JSON": "google-services.json"
-        }
-      }
+      "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "android": {
-        "secrets": {
-          "GOOGLE_SERVICES_JSON": "google-services.json"
-        }
-      }
+      "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true,
-      "android": {
-        "secrets": {
-          "GOOGLE_SERVICES_JSON": "google-services.json"
-        }
-      }
+      "autoIncrement": true
     }
   },
   "submit": {

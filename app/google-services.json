@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "168744217775",
+    "project_id": "sparktask-947f3",
+    "storage_bucket": "sparktask-947f3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:168744217775:android:d850b861cb214a6948f85a",
+        "android_client_info": {
+          "package_name": "com.sparktask.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZqGxRPVcYmNawW05t9TI-E21rh-ZQneY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
