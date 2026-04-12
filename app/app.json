@@ -48,28 +48,3 @@
     }
   }
 }
-    "plugins": [
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Allow Spark Task to access your photos to upload job documentation.",
-          "cameraPermission": "Allow Spark Task to use the camera for job photo documentation."
-        }
-      ],
-      "expo-font",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#044728",
-          "sounds": []
-        }
-      ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "481e8831-a782-4624-bb64-f5ee0542ec58"
-      }
-    }
-  }
-}
