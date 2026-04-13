@@ -1,6 +1,6 @@
 export default {
   // Common
-  order: 'Trabajo',
+  order: 'Servicio',
   cancel: 'Cancelar',
   save: 'Guardar',
   status: 'Estado',
@@ -33,10 +33,10 @@ export default {
   onboardingTitle1: 'Bienvenido a Spark Task',
   onboardingSub1: 'Tu herramienta profesional para gestionar limpiezas. Organizado, eficiente y sin complicaciones.',
   onboardingTitle2: 'Controla tu Agenda',
-  onboardingSub2: 'Visualiza todos tus trabajos de un vistazo. No pierdas ninguna cita con el calendario inteligente.',
+  onboardingSub2: 'Visualiza todos tus servicios de un vistazo. No pierdas ninguna cita con el calendario inteligente.',
   onboardingTitle3: 'Sigue el Checklist',
   onboardingSub3: 'Completa cada tarea paso a paso. Las listas por sección te mantienen organizado.',
-  onboardingTitle4: 'Documenta tu Trabajo',
+  onboardingTitle4: 'Documenta tu Servicio',
   onboardingSub4: 'Toma fotos del antes y después de cada sección. Genera confianza con tus clientes.',
   getStarted: 'Comenzar',
   next: 'Siguiente',
@@ -44,32 +44,32 @@ export default {
   // Home
   welcome: 'Hola',
   inProgress: 'En Curso',
-  upcomingJobs: 'Próximos Trabajos',
+  upcomingJobs: 'Próximos Servicios',
   completed: 'Completado',
   viewAll: 'Ver Todo',
-  noUpcomingJobs: 'No hay trabajos próximos',
+  noUpcomingJobs: 'No hay servicios próximos',
   noUpcomingJobsSub: 'Ya completaste todos los trabajos asignados para hoy.',
 
   // Calendar
   calendar: 'Calendario',
-  todaysJobs: 'Trabajos de Hoy',
-  jobsOn: 'Trabajos del',
+  todaysJobs: 'Servicios de Hoy',
+  jobsOn: 'Servicios del',
   total: 'Total',
-  noJobsScheduled: 'Sin trabajos programados para este día',
-  noJobsScheduledSub: 'Consulta más tarde o revisa los trabajos disponibles.',
+  noJobsScheduled: 'Sin servicios programados para este día',
+  noJobsScheduledSub: 'Consulta más tarde o revisa los servicios disponibles.',
 
   // Hub
   hub: 'Resumen',
-  yourWorkOverview: 'Tu actividad laboral',
+  yourWorkOverview: 'Tu actividad de servicios',
   clockedIn: 'En turno',
   since: 'desde las',
-  nextJob: 'Próximo Trabajo',
+  nextJob: 'Próximo Servicio',
   thisWeek: 'Esta Semana',
   thisMonth: 'Este Mes',
   allTime: 'Histórico',
   jobsDone: 'Realizados',
   hours: 'Horas',
-  avgPerJob: 'Prom. / Trabajo',
+  avgPerJob: 'Prom. / Servicio',
   streak: 'Racha',
   completeRate: 'Completado',
   vsLastWeek: 'vs Semana Anterior',
@@ -85,7 +85,7 @@ export default {
   mostSkippedSections: 'Secciones Más Omitidas',
   clockHistory: 'Historial de Turnos',
   noClockEntries: 'Sin registros aún',
-  noClockEntriesSub: 'Completa un trabajo para ver tu historial',
+  noClockEntriesSub: 'Completa un servicio para ver tu historial',
   today: 'Hoy',
   yesterday: 'Ayer',
 
@@ -96,11 +96,11 @@ export default {
   unreadNotifications: 'notificaciones sin leer',
   noNotifications: 'Aún no hay notificaciones',
   allCaughtUp: '¡Estás al día! Vuelve más tarde.',
-  notifAssignedTitle: '¡Tienes un nuevo trabajo!',
-  notifAssignedMessage: 'El trabajo #{{orderNumber}} ha sido agregado a tu horario.',
-  notifAssignedMessageWithDate: 'El trabajo #{{orderNumber}} está programado para el {{date}} a las {{time}}.',
-  notifUnassignedTitle: 'Trabajo Eliminado',
-  notifUnassignedMessage: 'El trabajo #{{orderNumber}} ha sido eliminado de tu horario.',
+  notifAssignedTitle: '¡Tienes un nuevo servicio!',
+  notifAssignedMessage: 'El servicio #{{orderNumber}} ha sido agregado a tu horario.',
+  notifAssignedMessageWithDate: 'El servicio #{{orderNumber}} está programado para el {{date}} a las {{time}}.',
+  notifUnassignedTitle: 'Servicio Eliminado',
+  notifUnassignedMessage: 'El servicio #{{orderNumber}} ha sido eliminado de tu horario.',
   justNow: 'Ahora mismo',
 
   // Profile
@@ -140,13 +140,13 @@ export default {
   privacyPolicy: 'Política de Privacidad',
 
   // Job Info
-  startJob: 'Iniciar Trabajo',
+  startJob: 'Iniciar Servicio',
   goal: 'Objetivo',
   specialInstructions: 'Notas del Cliente',
   accessInfo: 'Información de Acceso',
   availableAddOns: 'Add-ons',
-  jobInProgress: 'Trabajo en curso',
-  mustCompleteFirst: 'Debes completar el trabajo #{{orderNumber}} antes de iniciar otro trabajo.',
+  jobInProgress: 'Servicio en curso',
+  mustCompleteFirst: 'Debes completar el servicio #{{orderNumber}} antes de iniciar otro servicio.',
 
   // Checklist
   overallProgress: 'Progreso General',
@@ -172,31 +172,31 @@ export default {
   gallery: 'Galería',
   permissionNeededCamera: 'Se necesita acceso a la cámara o galería.',
   swipeRightToCancel: 'Desliza a la derecha para cancelar',
-  cancelJob: 'Cancelar Trabajo',
+  cancelJob: 'Cancelar Servicio',
   canceled: 'Cancelado',
   selected: 'seleccionados',
 
   // Order Details
-  orderDetails: 'Detalles del Trabajo',
+  orderDetails: 'Detalles del Servicio',
 
   // Day Jobs
-  jobScheduled: 'trabajo programado',
-  jobsScheduled: 'trabajos programados',
-  noJobsForDay: 'Sin trabajos para este día',
+  jobScheduled: 'servicio programado',
+  jobsScheduled: 'servicios programados',
+  noJobsForDay: 'Sin servicios para este día',
   nothingScheduledHere: 'Nada programado.',
 
   // All Upcoming/Completed
-  completedJobs: 'Trabajos Completados',
-  jobCompleted_count: 'trabajo completado',
-  jobsCompleted_count: 'trabajos completados',
-  noCompletedJobs: 'Aún no hay trabajos completados',
-  completedJobsWillAppear: 'Los trabajos completados aparecerán aquí.',
+  completedJobs: 'Servicios Completados',
+  jobCompleted_count: 'servicio completado',
+  jobsCompleted_count: 'servicios completados',
+  noCompletedJobs: 'Aún no hay servicios completados',
+  completedJobsWillAppear: 'Los servicios completados aparecerán aquí.',
 
   // Job Completed
   greatJob: '¡Buen trabajo!',
-  youCompletedOrder: 'Completaste el Trabajo',
+  youCompletedOrder: 'Completaste el Servicio',
   inTime: 'en',
-  viewOrderDetails: 'Ver Detalles del Trabajo',
+  viewOrderDetails: 'Ver Detalles del Servicio',
 
   // Photo Gallery
   photosLabel: 'Fotos',
@@ -217,3 +217,4 @@ export default {
   syncSyncing: 'Sincronizando cambios pendientes...',
   syncDone: 'Cambios sincronizados',
 } as const;
+

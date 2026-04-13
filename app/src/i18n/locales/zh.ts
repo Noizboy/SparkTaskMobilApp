@@ -96,11 +96,11 @@ export default {
   unreadNotifications: '条未读通知',
   noNotifications: '暂无通知',
   allCaughtUp: '您已全部看完！稍后再来查看。',
-  notifAssignedTitle: '您有一项新工作！',
-  notifAssignedMessage: '工作 #{{orderNumber}} 已添加到您的日程。',
-  notifAssignedMessageWithDate: '工作 #{{orderNumber}} 已安排在 {{date}} {{time}}。',
-  notifUnassignedTitle: '工作已移除',
-  notifUnassignedMessage: '工作 #{{orderNumber}} 已从您的日程中移除。',
+  notifAssignedTitle: '您有一项新服务！',
+  notifAssignedMessage: '服务 #{{orderNumber}} 已添加到您的日程。',
+  notifAssignedMessageWithDate: '服务 #{{orderNumber}} 已安排在 {{date}} {{time}}。',
+  notifUnassignedTitle: '服务已移除',
+  notifUnassignedMessage: '服务 #{{orderNumber}} 已从您的日程中移除。',
   justNow: '刚刚',
 
   // Profile
@@ -146,7 +146,7 @@ export default {
   accessInfo: '访问信息',
   availableAddOns: 'Add-ons',
   jobInProgress: '工作进行中',
-  mustCompleteFirst: '您必须先完成工作 #{{orderNumber}} 才能开始新工作。',
+  mustCompleteFirst: '您必须先完成服务 #{{orderNumber}} 才能开始新服务。',
 
   // Checklist
   overallProgress: '整体进度',
@@ -177,7 +177,7 @@ export default {
   selected: '已选',
 
   // Order Details
-  orderDetails: '订单详情',
+  orderDetails: '工作详情',
 
   // Day Jobs
   jobScheduled: '项工作已安排',
@@ -194,7 +194,7 @@ export default {
 
   // Job Completed
   greatJob: '干得好！',
-  youCompletedOrder: '您完成了订单',
+  youCompletedOrder: '您完成了工作',
   inTime: '用时',
   viewOrderDetails: '查看订单详情',
 

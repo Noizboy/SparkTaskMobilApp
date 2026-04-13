@@ -99,28 +99,28 @@ const PUSH_STRINGS: Record<LangCode, {
     removedMessage: (n) => `Job #${n} has been removed from your schedule.`,
   },
   es: {
-    assignedTitle: '¡Tienes un nuevo trabajo!',
+    assignedTitle: '¡Tienes un nuevo servicio!',
     assignedMessage: (n, d, t) => d && t
-      ? `El trabajo #${n} está programado para el ${d} a las ${t}.`
-      : `El trabajo #${n} ha sido agregado a tu horario.`,
-    removedTitle: 'Trabajo Eliminado',
-    removedMessage: (n) => `El trabajo #${n} ha sido eliminado de tu horario.`,
+      ? `El servicio #${n} está programado para el ${d} a las ${t}.`
+      : `El servicio #${n} ha sido agregado a tu horario.`,
+    removedTitle: 'Servicio Eliminado',
+    removedMessage: (n) => `El servicio #${n} ha sido eliminado de tu horario.`,
   },
   pt: {
-    assignedTitle: 'Você tem um novo trabalho!',
+    assignedTitle: 'Você tem um novo serviço!',
     assignedMessage: (n, d, t) => d && t
-      ? `O trabalho #${n} está agendado para ${d} às ${t}.`
-      : `O trabalho #${n} foi adicionado à sua agenda.`,
-    removedTitle: 'Trabalho Removido',
-    removedMessage: (n) => `O trabalho #${n} foi removido da sua agenda.`,
+      ? `O serviço #${n} está agendado para ${d} às ${t}.`
+      : `O serviço #${n} foi adicionado à sua agenda.`,
+    removedTitle: 'Serviço Removido',
+    removedMessage: (n) => `O serviço #${n} foi removido da sua agenda.`,
   },
   zh: {
-    assignedTitle: '您有一项新工作！',
+    assignedTitle: '您有一项新服务！',
     assignedMessage: (n, d, t) => d && t
-      ? `工作 #${n} 已安排在 ${d} ${t}。`
-      : `工作 #${n} 已添加到您的日程。`,
-    removedTitle: '工作已移除',
-    removedMessage: (n) => `工作 #${n} 已从您的日程中移除。`,
+      ? `服务 #${n} 已安排在 ${d} ${t}。`
+      : `服务 #${n} 已添加到您的日程。`,
+    removedTitle: '服务已移除',
+    removedMessage: (n) => `服务 #${n} 已从您的日程中移除。`,
   },
 };
 

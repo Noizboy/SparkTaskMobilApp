@@ -1,6 +1,6 @@
 export default {
   // Common
-  order: 'Trabalho',
+  order: 'Serviço',
   cancel: 'Cancelar',
   save: 'Salvar',
   status: 'Status',
@@ -33,10 +33,10 @@ export default {
   onboardingTitle1: 'Bem-vindo ao Spark Task',
   onboardingSub1: 'Seu companheiro profissional de gestão de limpeza. Organizado, eficiente e sem estresse.',
   onboardingTitle2: 'Acompanhe sua Agenda',
-  onboardingSub2: 'Veja todos os seus trabalhos futuros de uma vez. Nunca perca um compromisso com visualizações inteligentes.',
+  onboardingSub2: 'Veja todos os seus serviços futuros de uma vez. Nunca perca um compromisso com visualizações inteligentes.',
   onboardingTitle3: 'Siga o Checklist',
   onboardingSub3: 'Complete cada tarefa sistematicamente. Checklists por seção mantêm você no caminho certo.',
-  onboardingTitle4: 'Documente seu Trabalho',
+  onboardingTitle4: 'Documente seu Serviço',
   onboardingSub4: 'Capture fotos de antes e depois para cada seção. Construa confiança com seus clientes.',
   getStarted: 'Começar',
   next: 'Próximo',
@@ -44,32 +44,32 @@ export default {
   // Home
   welcome: 'Bem-vindo',
   inProgress: 'Em Andamento',
-  upcomingJobs: 'Próximos Trabalhos',
+  upcomingJobs: 'Próximos Serviços',
   completed: 'Concluídos',
   viewAll: 'Ver Tudo',
-  noUpcomingJobs: 'Sem trabalhos próximos no momento',
+  noUpcomingJobs: 'Sem serviços próximos no momento',
   noUpcomingJobsSub: 'Você completou sua agenda para hoje.',
 
   // Calendar
   calendar: 'Calendário',
-  todaysJobs: 'Trabalhos de Hoje',
-  jobsOn: 'Trabalhos em',
+  todaysJobs: 'Serviços de Hoje',
+  jobsOn: 'Serviços em',
   total: 'Total',
-  noJobsScheduled: 'Sem trabalhos agendados para este dia',
+  noJobsScheduled: 'Sem serviços agendados para este dia',
   noJobsScheduledSub: 'Volte mais tarde ou confira as vagas disponíveis.',
 
   // Hub
   hub: 'Central',
-  yourWorkOverview: 'Resumo do seu trabalho',
+  yourWorkOverview: 'Resumo dos seus serviços',
   clockedIn: 'Ponto Registrado',
   since: 'desde',
-  nextJob: 'Próximo Trabalho',
+  nextJob: 'Próximo Serviço',
   thisWeek: 'Esta Semana',
   thisMonth: 'Este Mês',
   allTime: 'Todo o Período',
-  jobsDone: 'Trabalhos',
+  jobsDone: 'Serviços',
   hours: 'Horas',
-  avgPerJob: 'Média / Trabalho',
+  avgPerJob: 'Média / Serviço',
   streak: 'Sequência',
   completeRate: 'Taxa de Conclusão',
   vsLastWeek: 'vs Semana Passada',
@@ -85,7 +85,7 @@ export default {
   mostSkippedSections: 'Seções Mais Puladas',
   clockHistory: 'Histórico de Ponto',
   noClockEntries: 'Sem registros de ponto',
-  noClockEntriesSub: 'Inicie e complete um trabalho para ver seu histórico',
+  noClockEntriesSub: 'Inicie e complete um serviço para ver seu histórico',
   today: 'Hoje',
   yesterday: 'Ontem',
 
@@ -96,11 +96,11 @@ export default {
   unreadNotifications: 'notificações não lidas',
   noNotifications: 'Ainda sem notificações',
   allCaughtUp: 'Você está em dia! Volte mais tarde.',
-  notifAssignedTitle: 'Você tem um novo trabalho!',
-  notifAssignedMessage: 'O trabalho #{{orderNumber}} foi adicionado à sua agenda.',
-  notifAssignedMessageWithDate: 'O trabalho #{{orderNumber}} está agendado para {{date}} às {{time}}.',
-  notifUnassignedTitle: 'Trabalho Removido',
-  notifUnassignedMessage: 'O trabalho #{{orderNumber}} foi removido da sua agenda.',
+  notifAssignedTitle: 'Você tem um novo serviço!',
+  notifAssignedMessage: 'O serviço #{{orderNumber}} foi adicionado à sua agenda.',
+  notifAssignedMessageWithDate: 'O serviço #{{orderNumber}} está agendado para {{date}} às {{time}}.',
+  notifUnassignedTitle: 'Serviço Removido',
+  notifUnassignedMessage: 'O serviço #{{orderNumber}} foi removido da sua agenda.',
   justNow: 'Agora mesmo',
 
   // Profile
@@ -140,13 +140,13 @@ export default {
   privacyPolicy: 'Política de Privacidade',
 
   // Job Info
-  startJob: 'Iniciar Trabalho',
+  startJob: 'Iniciar Serviço',
   goal: 'Objetivo',
   specialInstructions: 'Notas do Cliente',
   accessInfo: 'Informações de Acesso',
   availableAddOns: 'Add-ons',
-  jobInProgress: 'Trabalho em andamento',
-  mustCompleteFirst: 'Você deve completar o trabalho #{{orderNumber}} antes de iniciar um novo trabalho.',
+  jobInProgress: 'Serviço em andamento',
+  mustCompleteFirst: 'Você deve completar o serviço #{{orderNumber}} antes de iniciar um novo serviço.',
 
   // Checklist
   overallProgress: 'Progresso Geral',
@@ -172,31 +172,31 @@ export default {
   gallery: 'Galeria',
   permissionNeededCamera: 'Acesso à câmera ou galeria é necessário.',
   swipeRightToCancel: 'Deslize para a direita para cancelar',
-  cancelJob: 'Cancelar Trabalho',
+  cancelJob: 'Cancelar Serviço',
   canceled: 'Cancelado',
   selected: 'selecionados',
 
   // Order Details
-  orderDetails: 'Detalhes do Trabalho',
+  orderDetails: 'Detalhes do Serviço',
 
   // Day Jobs
-  jobScheduled: 'trabalho agendado',
-  jobsScheduled: 'trabalhos agendados',
-  noJobsForDay: 'Sem trabalhos para este dia',
+  jobScheduled: 'serviço agendado',
+  jobsScheduled: 'serviços agendados',
+  noJobsForDay: 'Sem serviços para este dia',
   nothingScheduledHere: 'Nada agendado aqui.',
 
   // All Upcoming/Completed
-  completedJobs: 'Trabalhos Concluídos',
-  jobCompleted_count: 'trabalho concluído',
-  jobsCompleted_count: 'trabalhos concluídos',
-  noCompletedJobs: 'Nenhum trabalho concluído ainda',
-  completedJobsWillAppear: 'Trabalhos concluídos aparecerão aqui.',
+  completedJobs: 'Serviços Concluídos',
+  jobCompleted_count: 'serviço concluído',
+  jobsCompleted_count: 'serviços concluídos',
+  noCompletedJobs: 'Nenhum serviço concluído ainda',
+  completedJobsWillAppear: 'Serviços concluídos aparecerão aqui.',
 
   // Job Completed
   greatJob: 'Bom trabalho!',
-  youCompletedOrder: 'Você completou o Trabalho',
+  youCompletedOrder: 'Você completou o Serviço',
   inTime: 'em',
-  viewOrderDetails: 'Ver Detalhes do Trabalho',
+  viewOrderDetails: 'Ver Detalhes do Serviço',
 
   // Photo Gallery
   photosLabel: 'Fotos',
@@ -217,3 +217,4 @@ export default {
   syncSyncing: 'Sincronizando alterações pendentes...',
   syncDone: 'Alterações sincronizadas',
 } as const;
+
