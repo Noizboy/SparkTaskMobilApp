@@ -53,7 +53,7 @@ export function InProgressJobCard({ job, onPress }: InProgressJobCardProps) {
         {/* Left column */}
         <View style={styles.left}>
           <Text style={styles.title}>{job.serviceType}</Text>
-          <Text style={styles.status}>ORDER #: {job.orderNumber}</Text>
+          <Text style={styles.status}>JOB #: {job.orderNumber}</Text>
           <Text style={styles.scheduled}>{t('scheduledFor')}: {formatFullDate(job.date)}, {job.time}</Text>
 
           <View style={styles.progressInfo}>

@@ -295,7 +295,7 @@ export function HubScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.nextJobLabel}>{t('nextJob')}</Text>
-              <Text style={s.nextJobTitle}>Order #{nextJob.orderNumber} · {nextJob.time}</Text>
+              <Text style={s.nextJobTitle}>Job #{nextJob.orderNumber} · {nextJob.time}</Text>
               <View style={s.nextJobAddress}>
                 <MapPin size={10} color={COLORS.mutedForeground} />
                 <Text style={s.nextJobAddressText} numberOfLines={1}>{nextJob.address}</Text>

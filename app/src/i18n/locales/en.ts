@@ -1,6 +1,6 @@
 export default {
   // Common
-  order: 'Order',
+  order: 'Job',
   cancel: 'Cancel',
   save: 'Save',
   status: 'Status',
@@ -146,7 +146,7 @@ export default {
   accessInfo: 'Access Info',
   availableAddOns: 'Add-ons',
   jobInProgress: 'Job in progress',
-  mustCompleteFirst: 'You must complete Order #{{orderNumber}} before starting a new job.',
+  mustCompleteFirst: 'You must complete Job #{{orderNumber}} before starting a new job.',
 
   // Checklist
   overallProgress: 'Overall Progress',
@@ -177,7 +177,7 @@ export default {
   selected: 'selected',
 
   // Order Details
-  orderDetails: 'Order Details',
+  orderDetails: 'Job Details',
 
   // Day Jobs
   jobScheduled: 'job scheduled',
@@ -194,9 +194,9 @@ export default {
 
   // Job Completed
   greatJob: 'Great job!',
-  youCompletedOrder: 'You completed Order',
+  youCompletedOrder: 'You completed Job',
   inTime: 'in',
-  viewOrderDetails: 'View Order Details',
+  viewOrderDetails: 'View Job Details',
 
   // Photo Gallery
   photosLabel: 'Photos',

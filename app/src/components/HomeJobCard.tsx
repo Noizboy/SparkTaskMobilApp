@@ -20,7 +20,7 @@ export function HomeJobCard({ job, onPress }: HomeJobCardProps) {
     >
       <View style={styles.row}>
         <View style={styles.content}>
-          <Text style={styles.orderNum}>Order #{job.orderNumber}</Text>
+          <Text style={styles.orderNum}>Job #{job.orderNumber}</Text>
           <View style={styles.metaRow}>
             <Briefcase size={13} color={COLORS.mutedForeground} />
             <Text style={styles.metaText}>{job.serviceType}</Text>

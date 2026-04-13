@@ -87,7 +87,7 @@ export function JobInfoScreen() {
       >
         {/* Title */}
         <View style={[styles.titleSection, job.status === 'completed' && { paddingBottom: 0 }]}>
-          <Text style={styles.orderNum}>Order #{job.orderNumber}</Text>
+          <Text style={styles.orderNum}>Job #{job.orderNumber}</Text>
           {job.status !== 'completed' && (
             <>
               <Text style={styles.clientName}>{job.clientName}</Text>

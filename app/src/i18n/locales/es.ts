@@ -1,6 +1,6 @@
 export default {
   // Common
-  order: 'Orden',
+  order: 'Trabajo',
   cancel: 'Cancelar',
   save: 'Guardar',
   status: 'Estado',
@@ -146,7 +146,7 @@ export default {
   accessInfo: 'Información de Acceso',
   availableAddOns: 'Add-ons',
   jobInProgress: 'Trabajo en curso',
-  mustCompleteFirst: 'Debes completar la Orden #{{orderNumber}} antes de iniciar otro trabajo.',
+  mustCompleteFirst: 'Debes completar el trabajo #{{orderNumber}} antes de iniciar otro trabajo.',
 
   // Checklist
   overallProgress: 'Progreso General',
@@ -177,7 +177,7 @@ export default {
   selected: 'seleccionados',
 
   // Order Details
-  orderDetails: 'Detalles de la Orden',
+  orderDetails: 'Detalles del Trabajo',
 
   // Day Jobs
   jobScheduled: 'trabajo programado',
@@ -194,9 +194,9 @@ export default {
 
   // Job Completed
   greatJob: '¡Buen trabajo!',
-  youCompletedOrder: 'Completaste la Orden',
+  youCompletedOrder: 'Completaste el Trabajo',
   inTime: 'en',
-  viewOrderDetails: 'Ver Detalles de la Orden',
+  viewOrderDetails: 'Ver Detalles del Trabajo',
 
   // Photo Gallery
   photosLabel: 'Fotos',

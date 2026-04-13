@@ -1,6 +1,6 @@
 export default {
   // Common
-  order: '订单',
+  order: '工作',
   cancel: '取消',
   save: '保存',
   status: '状态',
@@ -146,7 +146,7 @@ export default {
   accessInfo: '访问信息',
   availableAddOns: 'Add-ons',
   jobInProgress: '工作进行中',
-  mustCompleteFirst: '您必须先完成订单 #{{orderNumber}} 才能开始新工作。',
+  mustCompleteFirst: '您必须先完成工作 #{{orderNumber}} 才能开始新工作。',
 
   // Checklist
   overallProgress: '整体进度',
