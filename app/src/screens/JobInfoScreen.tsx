@@ -292,6 +292,8 @@ const styles = StyleSheet.create({
     color: COLORS.foreground,
     flex: 1,
     marginLeft: SPACING.md,
+    includeFontPadding: false,
+    lineHeight: 32,
   },
   backBtn: {
     width: 40,
