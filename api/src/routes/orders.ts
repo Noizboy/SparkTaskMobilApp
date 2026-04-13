@@ -5,6 +5,7 @@ import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { broadcast, broadcastToUsers } from '../sse';
+import { createNotificationForUser } from './notifications';
 
 export const ordersRouter = Router();
 
@@ -454,7 +455,15 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
     }
 
     // Replace employees if provided — check schedule conflicts first
+    let previousEmployees: string[] = [];
     if (assignedEmployees) {
+      // Capture current employees before replacing, for assignment diff
+      const prevRes = await client.query(
+        'SELECT employee_name FROM assigned_employees WHERE order_id = $1',
+        [orderId]
+      );
+      previousEmployees = prevRes.rows.map((r: any) => r.employee_name as string);
+
       // Use updated date/time/duration for conflict check
       const checkDate = date ?? lockRes.rows[0].date;
       const checkTime = time ?? lockRes.rows[0].time;
@@ -484,6 +493,59 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
 
     const fullOrder = await buildFullOrder(orderId);
     broadcast('order:updated', fullOrder);
+
+    // Emit targeted assignment notifications if employees changed
+    if (assignedEmployees) {
+      const newSet = new Set<string>(assignedEmployees as string[]);
+      const oldSet = new Set<string>(previousEmployees);
+      const added = (assignedEmployees as string[]).filter((e) => !oldSet.has(e));
+      const removed = previousEmployees.filter((e) => !newSet.has(e));
+
+      if (added.length > 0) {
+        const addedRes = await pool.query(
+          `SELECT id FROM users WHERE name = ANY($1)`,
+          [added]
+        );
+        const addedIds = addedRes.rows.map((r: any) => r.id as string);
+        if (addedIds.length > 0) {
+          broadcastToUsers('order:assigned', fullOrder, addedIds);
+          // Persist notification in DB for each added cleaner
+          await Promise.all(
+            addedIds.map((uid) =>
+              createNotificationForUser(
+                uid,
+                'assigned',
+                'New Job Assigned',
+                `Order ${fullOrder?.orderNumber} has been added to your schedule.`
+              )
+            )
+          );
+        }
+      }
+
+      if (removed.length > 0) {
+        const removedRes = await pool.query(
+          `SELECT id FROM users WHERE name = ANY($1)`,
+          [removed]
+        );
+        const removedIds = removedRes.rows.map((r: any) => r.id as string);
+        if (removedIds.length > 0) {
+          broadcastToUsers('order:unassigned', { id: orderId, orderNumber: fullOrder?.orderNumber }, removedIds);
+          // Persist notification in DB for each removed cleaner
+          await Promise.all(
+            removedIds.map((uid) =>
+              createNotificationForUser(
+                uid,
+                'removed',
+                'Removed from Job',
+                `You have been removed from Order ${fullOrder?.orderNumber}.`
+              )
+            )
+          );
+        }
+      }
+    }
+
     res.json(fullOrder);
   } catch (err: any) {
     await client.query('ROLLBACK');
@@ -711,19 +773,13 @@ ordersRouter.patch('/:id/todos/:todoId', async (req: Request, res: Response) => 
   try {
     const { completed } = req.body;
 
-    if (typeof completed === 'boolean') {
-      // Idempotent: client sends the intended final value
-      await pool.query(
-        'UPDATE todos SET completed = $1 WHERE id = $2',
-        [completed, req.params.todoId]
-      );
-    } else {
-      // Backwards-compatible fallback: toggle
-      await pool.query(
-        'UPDATE todos SET completed = NOT completed WHERE id = $1',
-        [req.params.todoId]
-      );
+    if (typeof completed !== 'boolean') {
+      return res.status(400).json({ error: 'completed (boolean) is required' });
     }
+    await pool.query(
+      'UPDATE todos SET completed = $1 WHERE id = $2',
+      [completed, req.params.todoId]
+    );
 
     // Also update section.completed if all todos in that section are done
     await pool.query(`

@@ -24,10 +24,18 @@
       strictPort: true,
       open: true,
       proxy: {
-        // Forward every /api/* request from the Vite dev server to Express.
-        // This means the browser only ever talks to one origin (Vite on :3000)
-        // and Vite tunnels the API calls to Express on :3001 — no CORS needed,
-        // no hardcoded Express port in the frontend env.
+        // SSE endpoint — needs special config to avoid ECONNRESET
+        '/api/events': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          ws: false,
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('Connection', 'keep-alive');
+            });
+          },
+        },
+        // Forward all other /api/* requests to Express
         '/api': {
           target: 'http://localhost:3001',
           changeOrigin: true,

@@ -151,6 +151,23 @@ usersRouter.get('/', authenticate, async (_req: Request, res: Response) => {
   }
 });
 
+// ─── PATCH /api/users/me/push-token ─────────────────────────────────────────
+// Authenticated — saves the Expo push token for the current user.
+usersRouter.patch('/me/push-token', authenticate, async (req: Request, res: Response) => {
+  try {
+    const id = (req as any).user.id;
+    const { push_token } = req.body;
+    if (!push_token || typeof push_token !== 'string') {
+      return res.status(400).json({ error: 'push_token is required' });
+    }
+    await pool.query('UPDATE users SET push_token = $1 WHERE id = $2', [push_token, id]);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('PATCH /users/me/push-token error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── PATCH /api/users/me ────────────────────────────────────────────────────
 // Authenticated — updates the current user's own profile using the JWT's user ID.
 // This avoids stale-ID issues when the DB is re-seeded.

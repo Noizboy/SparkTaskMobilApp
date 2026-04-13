@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
 import { servicesRouter } from './routes/services';
 import { areasRouter } from './routes/areas';
+import { notificationsRouter } from './routes/notifications';
 import { sseHandler } from './sse';
 
 const app = express();
@@ -94,6 +95,30 @@ async function runMigrations() {
     `);
   }
 
+  // Ensure notifications table exists
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type       VARCHAR(50) NOT NULL,
+      title      TEXT NOT NULL,
+      message    TEXT NOT NULL,
+      is_read    BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications(user_id)
+  `);
+
+  // Add push_token column to users table for Expo push notifications
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN push_token TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `);
+
   console.log('✓ Migrations applied');
 }
 
@@ -119,6 +144,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/services', servicesRouter);
+app.use('/api/notifications', notificationsRouter);
 app.use('/api/areas', areasRouter);
 
 app.listen(PORT, () => {
