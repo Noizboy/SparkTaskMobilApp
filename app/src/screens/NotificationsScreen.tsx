@@ -22,7 +22,7 @@ function NotifIcon({ type, isRead }: { type: AppNotification['type']; isRead: bo
 
 function formatTime(time: string): string {
   const date = new Date(time);
-  if (isNaN(date.getTime())) return time; // already a display string
+  if (isNaN(date.getTime())) return time;
   const diffMs = Date.now() - date.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 1) return 'Just now';
@@ -32,6 +32,57 @@ function formatTime(time: string): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return '1 day ago';
   return `${diffD} days ago`;
+}
+
+function useNotifText(notif: AppNotification, t: ReturnType<typeof useLanguage>['t']) {
+  const m = notif.metadata;
+
+  if (notif.type === 'assigned' && m?.orderNumber) {
+    const title = t('notifAssignedTitle');
+    const message = m.date && m.time
+      ? t('notifAssignedMessageWithDate', { orderNumber: m.orderNumber, date: m.date, time: m.time })
+      : t('notifAssignedMessage', { orderNumber: m.orderNumber });
+    return { title, message };
+  }
+
+  if (notif.type === 'removed' && m?.orderNumber) {
+    return {
+      title: t('notifUnassignedTitle'),
+      message: t('notifUnassignedMessage', { orderNumber: m.orderNumber }),
+    };
+  }
+
+  return { title: notif.title, message: notif.message };
+}
+
+function NotifCard({ notif, onPress }: { notif: AppNotification; onPress: () => void }) {
+  const { t } = useLanguage();
+  const { title, message } = useNotifText(notif, t);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.card, notif.isRead ? styles.cardRead : styles.cardUnread]}
+      activeOpacity={0.85}
+    >
+      {!notif.isRead && <View style={styles.unreadDot} />}
+
+      <View
+        style={[
+          styles.iconWrap,
+          { backgroundColor: notif.isRead ? COLORS.gray100 : COLORS.primary },
+        ]}
+      >
+        <NotifIcon type={notif.type} isRead={notif.isRead} />
+      </View>
+
+      <View style={styles.cardContent}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardMessage}>{message}</Text>
+        <Text style={styles.cardTime}>{formatTime(notif.time)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 }
 
 export function NotificationsScreen() {
@@ -72,29 +123,7 @@ export function NotificationsScreen() {
           </View>
         ) : (
           notifications.map((notif) => (
-            <TouchableOpacity
-              key={notif.id}
-              onPress={() => markAsRead(notif.id)}
-              style={[styles.card, notif.isRead ? styles.cardRead : styles.cardUnread]}
-              activeOpacity={0.85}
-            >
-              {!notif.isRead && <View style={styles.unreadDot} />}
-
-              <View
-                style={[
-                  styles.iconWrap,
-                  { backgroundColor: notif.isRead ? COLORS.gray100 : COLORS.primary },
-                ]}
-              >
-                <NotifIcon type={notif.type} isRead={notif.isRead} />
-              </View>
-
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{notif.title}</Text>
-                <Text style={styles.cardMessage}>{notif.message}</Text>
-                <Text style={styles.cardTime}>{formatTime(notif.time)}</Text>
-              </View>
-            </TouchableOpacity>
+            <NotifCard key={notif.id} notif={notif} onPress={() => markAsRead(notif.id)} />
           ))
         )}
       </ScrollView>

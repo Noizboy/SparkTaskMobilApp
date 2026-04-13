@@ -98,6 +98,7 @@ export default {
   allCaughtUp: '您已全部看完！稍后再来查看。',
   notifAssignedTitle: '新任务已分配',
   notifAssignedMessage: '订单 #{{orderNumber}} 已添加到您的日程。',
+  notifAssignedMessageWithDate: '订单 #{{orderNumber}} — {{date}} {{time}} 已添加到您的日程。',
   notifUnassignedTitle: '日程更新',
   notifUnassignedMessage: '您已从订单 #{{orderNumber}} 中被移除，请查看您的日程以了解变动。',
   justNow: '刚刚',

@@ -48,6 +48,7 @@ export interface ApiNotification {
   type: string;
   title: string;
   message: string;
+  metadata?: Record<string, string> | null;
   isRead: boolean;
   time: string;
 }

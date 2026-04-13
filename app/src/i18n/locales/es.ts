@@ -98,6 +98,7 @@ export default {
   allCaughtUp: '¡Estás al día! Vuelve más tarde.',
   notifAssignedTitle: 'Nueva Orden Asignada',
   notifAssignedMessage: 'La orden #{{orderNumber}} ha sido agregada a tu horario.',
+  notifAssignedMessageWithDate: 'La orden #{{orderNumber}} — {{date}} a las {{time}} ha sido agregada a tu horario.',
   notifUnassignedTitle: 'Actualización de Horario',
   notifUnassignedMessage: 'Has sido removido de la orden #{{orderNumber}}. Revisa tu horario para ver los cambios.',
   justNow: 'Ahora mismo',

@@ -110,6 +110,13 @@ async function runMigrations() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications(user_id)
   `);
+  // Add metadata column for i18n-aware client-side rendering
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE notifications ADD COLUMN metadata JSONB;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `);
 
   // Add push_token column to users table for Expo push notifications
   await pool.query(`

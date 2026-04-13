@@ -509,19 +509,19 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
         const addedIds = addedRes.rows.map((r: any) => r.id as string);
         if (addedIds.length > 0) {
           broadcastToUsers('order:assigned', fullOrder, addedIds);
-          // Persist notification in DB for each added cleaner
-          const assignedDate = fullOrder?.date
-            ? new Date(fullOrder.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-            : null;
-          const assignedTime = fullOrder?.time ?? null;
-          const assignedDetail = [assignedDate, assignedTime].filter(Boolean).join(' at ');
+          const meta: Record<string, string> = {
+            orderNumber: fullOrder?.orderNumber ?? '',
+            ...(fullOrder?.date ? { date: fullOrder.date } : {}),
+            ...(fullOrder?.time ? { time: fullOrder.time } : {}),
+          };
           await Promise.all(
             addedIds.map((uid) =>
               createNotificationForUser(
                 uid,
                 'assigned',
                 'New Job Assigned',
-                `Order #${fullOrder?.orderNumber}${assignedDetail ? ` — ${assignedDetail}` : ''} has been added to your schedule.`
+                `Order #${fullOrder?.orderNumber} has been added to your schedule.`,
+                meta
               )
             )
           );
@@ -536,14 +536,17 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
         const removedIds = removedRes.rows.map((r: any) => r.id as string);
         if (removedIds.length > 0) {
           broadcastToUsers('order:unassigned', { id: orderId, orderNumber: fullOrder?.orderNumber }, removedIds);
-          // Persist notification in DB for each removed cleaner
+          const meta: Record<string, string> = {
+            orderNumber: fullOrder?.orderNumber ?? '',
+          };
           await Promise.all(
             removedIds.map((uid) =>
               createNotificationForUser(
                 uid,
                 'removed',
                 'Schedule Update',
-                `You've been removed from Order #${fullOrder?.orderNumber}. Check your schedule for any changes.`
+                `You've been removed from Order #${fullOrder?.orderNumber}. Check your schedule for any changes.`,
+                meta
               )
             )
           );

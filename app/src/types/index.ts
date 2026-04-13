@@ -62,6 +62,7 @@ export interface AppNotification {
   type: 'upcoming' | 'new_job' | 'reminder' | 'completed' | 'assigned' | 'removed';
   title: string;
   message: string;
+  metadata?: Record<string, string> | null;
   time: string;
   isRead: boolean;
 }

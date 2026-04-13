@@ -101,6 +101,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: n.type as AppNotification['type'],
           title: n.title,
           message: n.message,
+          metadata: n.metadata ?? null,
           isRead: n.isRead,
           time: n.time,
         }))

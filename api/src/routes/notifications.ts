@@ -28,6 +28,7 @@ function toNotif(row: any) {
     type: row.type,
     title: row.title,
     message: row.message,
+    metadata: row.metadata ?? null,
     isRead: row.is_read,
     time: row.created_at,
   };
@@ -85,11 +86,12 @@ export async function createNotificationForUser(
   userId: string,
   type: string,
   title: string,
-  message: string
+  message: string,
+  metadata?: Record<string, string>
 ): Promise<void> {
   await pool.query(
-    'INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
-    [userId, type, title, message]
+    'INSERT INTO notifications (user_id, type, title, message, metadata) VALUES ($1, $2, $3, $4, $5)',
+    [userId, type, title, message, metadata ? JSON.stringify(metadata) : null]
   );
 
   // Send Expo push notification if the user has a registered push token
