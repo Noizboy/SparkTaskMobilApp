@@ -1,6 +1,6 @@
 export default {
   // Common
-  order: '工作',
+  order: '服务',
   cancel: '取消',
   save: '保存',
   status: '状态',
@@ -33,10 +33,10 @@ export default {
   onboardingTitle1: '欢迎使用 Spark Task',
   onboardingSub1: '您的专业清洁管理助手。有序、高效、无忧。',
   onboardingTitle2: '追踪您的日程',
-  onboardingSub2: '一目了然地查看所有即将到来的工作。智能日历视图让您不错过任何预约。',
+  onboardingSub2: '一目了然地查看所有即将到来的服务。智能日历视图让您不错过任何预约。',
   onboardingTitle3: '遵循清单',
   onboardingSub3: '系统地完成每项任务。分区清单让您保持有序。',
-  onboardingTitle4: '记录您的工作',
+  onboardingTitle4: '记录您的服务',
   onboardingSub4: '为每个区域拍摄前后照片。与客户建立信任。',
   getStarted: '开始使用',
   next: '下一步',
@@ -44,32 +44,32 @@ export default {
   // Home
   welcome: '欢迎',
   inProgress: '进行中',
-  upcomingJobs: '即将到来的工作',
+  upcomingJobs: '即将到来的服务',
   completed: '已完成',
   viewAll: '查看全部',
-  noUpcomingJobs: '目前没有即将到来的工作',
+  noUpcomingJobs: '目前没有即将到来的服务',
   noUpcomingJobsSub: '您已完成今天的排定日程。',
 
   // Calendar
   calendar: '日历',
-  todaysJobs: '今日工作',
-  jobsOn: '工作日期',
+  todaysJobs: '今日服务',
+  jobsOn: '服务日期',
   total: '总计',
-  noJobsScheduled: '该日没有安排工作',
+  noJobsScheduled: '该日没有安排服务',
   noJobsScheduledSub: '稍后再来查看或浏览可用的空缺。',
 
   // Hub
   hub: '中心',
-  yourWorkOverview: '您的工作概览',
+  yourWorkOverview: '您的服务概览',
   clockedIn: '已打卡',
   since: '自',
-  nextJob: '下一个工作',
+  nextJob: '下一个服务',
   thisWeek: '本周',
   thisMonth: '本月',
   allTime: '所有时间',
-  jobsDone: '完成工作',
+  jobsDone: '完成服务',
   hours: '小时',
-  avgPerJob: '平均/工作',
+  avgPerJob: '平均/服务',
   streak: '连续',
   completeRate: '完成率',
   vsLastWeek: '对比上周',
@@ -85,7 +85,7 @@ export default {
   mostSkippedSections: '最常跳过的区域',
   clockHistory: '打卡记录',
   noClockEntries: '暂无打卡记录',
-  noClockEntriesSub: '开始并完成一项工作以查看您的记录',
+  noClockEntriesSub: '开始并完成一项服务以查看您的记录',
   today: '今天',
   yesterday: '昨天',
 
@@ -101,6 +101,10 @@ export default {
   notifAssignedMessageWithDate: '服务 #{{orderNumber}} 已安排在 {{date}} {{time}}。',
   notifUnassignedTitle: '服务已移除',
   notifUnassignedMessage: '服务 #{{orderNumber}} 已从您的日程中移除。',
+  notifReminderTitle: '服务即将开始',
+  notifReminderMessage: '服务 #{{orderNumber}} 将在 1 小时后（{{time}}）开始。请做好准备！',
+  notifStartedTitle: '服务进行中',
+  notifStartedMessage: '服务 #{{orderNumber}} 已开始。',
   justNow: '刚刚',
 
   // Profile
@@ -140,12 +144,12 @@ export default {
   privacyPolicy: '隐私政策',
 
   // Job Info
-  startJob: '开始工作',
+  startJob: '开始服务',
   goal: '目标',
   specialInstructions: '客户备注',
   accessInfo: '访问信息',
   availableAddOns: 'Add-ons',
-  jobInProgress: '工作进行中',
+  jobInProgress: '服务进行中',
   mustCompleteFirst: '您必须先完成服务 #{{orderNumber}} 才能开始新服务。',
 
   // Checklist
@@ -171,32 +175,32 @@ export default {
   camera: '相机',
   gallery: '相册',
   permissionNeededCamera: '需要相机或相册访问权限。',
-  swipeRightToCancel: '向右滑动取消工作',
-  cancelJob: '取消工作',
+  swipeRightToCancel: '向右滑动取消服务',
+  cancelJob: '取消服务',
   canceled: '已取消',
   selected: '已选',
 
   // Order Details
-  orderDetails: '工作详情',
+  orderDetails: '服务详情',
 
   // Day Jobs
-  jobScheduled: '项工作已安排',
-  jobsScheduled: '项工作已安排',
-  noJobsForDay: '该日没有工作',
+  jobScheduled: '项服务已安排',
+  jobsScheduled: '项服务已安排',
+  noJobsForDay: '该日没有服务',
   nothingScheduledHere: '这里没有安排。',
 
   // All Upcoming/Completed
-  completedJobs: '已完成的工作',
-  jobCompleted_count: '项工作已完成',
-  jobsCompleted_count: '项工作已完成',
-  noCompletedJobs: '暂无已完成的工作',
-  completedJobsWillAppear: '已完成的工作将显示在这里。',
+  completedJobs: '已完成的服务',
+  jobCompleted_count: '项服务已完成',
+  jobsCompleted_count: '项服务已完成',
+  noCompletedJobs: '暂无已完成的服务',
+  completedJobsWillAppear: '已完成的服务将显示在这里。',
 
   // Job Completed
   greatJob: '干得好！',
-  youCompletedOrder: '您完成了工作',
+  youCompletedOrder: '您完成了服务',
   inTime: '用时',
-  viewOrderDetails: '查看订单详情',
+  viewOrderDetails: '查看服务详情',
 
   // Photo Gallery
   photosLabel: '照片',
@@ -217,3 +221,4 @@ export default {
   syncSyncing: '正在同步待处理更改...',
   syncDone: '所有更改已同步',
 } as const;
+

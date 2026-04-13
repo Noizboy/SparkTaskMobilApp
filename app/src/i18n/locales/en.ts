@@ -101,6 +101,10 @@ export default {
   notifAssignedMessageWithDate: 'Job #{{orderNumber}} is scheduled for {{date}} at {{time}}.',
   notifUnassignedTitle: 'Job Removed',
   notifUnassignedMessage: 'Job #{{orderNumber}} has been removed from your schedule.',
+  notifReminderTitle: 'Job starting soon',
+  notifReminderMessage: 'Job #{{orderNumber}} starts in 1 hour at {{time}}. Get ready!',
+  notifStartedTitle: 'Job in progress',
+  notifStartedMessage: 'Job #{{orderNumber}} has been started.',
   justNow: 'Just now',
 
   // Profile

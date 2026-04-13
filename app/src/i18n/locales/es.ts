@@ -48,7 +48,7 @@ export default {
   completed: 'Completado',
   viewAll: 'Ver Todo',
   noUpcomingJobs: 'No hay servicios próximos',
-  noUpcomingJobsSub: 'Ya completaste todos los trabajos asignados para hoy.',
+  noUpcomingJobsSub: 'Ya completaste todos los servicios asignados para hoy.',
 
   // Calendar
   calendar: 'Calendario',
@@ -101,6 +101,10 @@ export default {
   notifAssignedMessageWithDate: 'El servicio #{{orderNumber}} está programado para el {{date}} a las {{time}}.',
   notifUnassignedTitle: 'Servicio Eliminado',
   notifUnassignedMessage: 'El servicio #{{orderNumber}} ha sido eliminado de tu horario.',
+  notifReminderTitle: 'Servicio próximo',
+  notifReminderMessage: 'El servicio #{{orderNumber}} comienza en 1 hora a las {{time}}. ¡Prepárate!',
+  notifStartedTitle: 'Servicio en curso',
+  notifStartedMessage: 'El servicio #{{orderNumber}} ha comenzado.',
   justNow: 'Ahora mismo',
 
   // Profile

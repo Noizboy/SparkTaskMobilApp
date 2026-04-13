@@ -101,6 +101,10 @@ export default {
   notifAssignedMessageWithDate: 'O serviço #{{orderNumber}} está agendado para {{date}} às {{time}}.',
   notifUnassignedTitle: 'Serviço Removido',
   notifUnassignedMessage: 'O serviço #{{orderNumber}} foi removido da sua agenda.',
+  notifReminderTitle: 'Serviço em breve',
+  notifReminderMessage: 'O serviço #{{orderNumber}} começa em 1 hora às {{time}}. Prepare-se!',
+  notifStartedTitle: 'Serviço em andamento',
+  notifStartedMessage: 'O serviço #{{orderNumber}} foi iniciado.',
   justNow: 'Agora mesmo',
 
   // Profile
