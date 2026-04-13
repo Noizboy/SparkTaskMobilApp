@@ -230,7 +230,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 0.7,
       });
       if (!result.canceled) {
@@ -254,7 +254,7 @@ function SectionCard({ section, jobId, isExpanded, onToggleExpand }: SectionCard
         text: t('gallery'),
         onPress: async () => {
           const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             quality: 0.7,
           });
           if (!result.canceled) {
@@ -649,7 +649,7 @@ export function ChecklistScreen() {
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowProgress((v) => !v)} activeOpacity={0.7} style={styles.topOrderBtn}>
-          <Text style={styles.topOrder}>Job #{job.orderNumber}</Text>
+          <Text style={styles.topOrder}>{t('order')} #{job.orderNumber}</Text>
           {showProgress
             ? <ChevronUp size={14} color={COLORS.mutedForeground} />
             : <ChevronDown size={14} color={COLORS.mutedForeground} />
@@ -777,7 +777,7 @@ export function ChecklistScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={settingsStyles.title}>{job.serviceType}</Text>
-                    <Text style={settingsStyles.subtitle}>Job #{job.orderNumber}</Text>
+                    <Text style={settingsStyles.subtitle}>{t('order')} #{job.orderNumber}</Text>
                   </View>
                   <TouchableOpacity onPress={() => { setSettingsVisible(false); cancelSwipeX.value = 0; }} style={settingsStyles.closeBtn} activeOpacity={0.7}>
                     <X size={18} color={COLORS.mutedForeground} />

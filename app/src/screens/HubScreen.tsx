@@ -51,14 +51,14 @@ function formatDuration(ms: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-function formatDateLabel(dateStr: string, t: (key: any) => string): string {
+function formatDateLabel(dateStr: string, t: (key: any) => string, locale: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const days = Math.round((today.getTime() - date.getTime()) / 86400000);
   if (days === 0) return t('today');
   if (days === 1) return t('yesterday');
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 function getWeekStart(d: Date): Date {
@@ -80,13 +80,15 @@ export function HubScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { jobs, jobsLoaded, reviews } = useApp();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [period, setPeriod] = useState<Period>('week');
 
-  const now = new Date();
-  const weekStart = getWeekStart(now);
-  const monthStart = getMonthStart(now);
-  const lastWeekStart = new Date(weekStart.getTime() - 7 * 86400000);
+  const LANG_LOCALE: Record<string, string> = { en: 'en-US', es: 'es-ES', pt: 'pt-BR', zh: 'zh-CN' };
+  const dateLocale = LANG_LOCALE[language] ?? 'en-US';
+
+  const weekStart = useMemo(() => getWeekStart(new Date()), []);
+  const monthStart = useMemo(() => getMonthStart(new Date()), []);
+  const lastWeekStart = useMemo(() => new Date(weekStart.getTime() - 7 * 86400000), [weekStart]);
 
   const allCompleted = useMemo(
     () => jobs.filter((j) => j.status === 'completed' && j.startedAt && j.completedAt),
@@ -98,11 +100,11 @@ export function HubScreen() {
     if (period === 'all') return allCompleted;
     const start = period === 'week' ? weekStart.getTime() : monthStart.getTime();
     return allCompleted.filter((j) => j.startedAt! >= start);
-  }, [allCompleted, period]);
+  }, [allCompleted, period, weekStart, monthStart]);
 
   const lastWeekJobs = useMemo(
     () => allCompleted.filter((j) => j.startedAt! >= lastWeekStart.getTime() && j.startedAt! < weekStart.getTime()),
-    [allCompleted],
+    [allCompleted, lastWeekStart, weekStart],
   );
 
   // ── Stats ──
@@ -152,7 +154,7 @@ export function HubScreen() {
   const thisWeekMs = useMemo(
     () => filtered.filter((j) => period === 'week' ? true : j.startedAt! >= weekStart.getTime())
       .reduce((a, j) => a + (j.completedAt! - j.startedAt!), 0),
-    [filtered, period],
+    [filtered, period, weekStart],
   );
   const lastWeekMs = lastWeekJobs.reduce((a, j) => a + (j.completedAt! - j.startedAt!), 0);
   const weekDiffPct = lastWeekMs > 0 ? Math.round(((thisWeekMs - lastWeekMs) / lastWeekMs) * 100) : null;
@@ -295,7 +297,7 @@ export function HubScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.nextJobLabel}>{t('nextJob')}</Text>
-              <Text style={s.nextJobTitle}>Job #{nextJob.orderNumber} · {nextJob.time}</Text>
+              <Text style={s.nextJobTitle}>{t('order')} #{nextJob.orderNumber} · {nextJob.time}</Text>
               <View style={s.nextJobAddress}>
                 <MapPin size={10} color={COLORS.mutedForeground} />
                 <Text style={s.nextJobAddressText} numberOfLines={1}>{nextJob.address}</Text>
@@ -443,7 +445,7 @@ export function HubScreen() {
               return (
                 <View key={date} style={s.dayCard}>
                   <View style={s.dayHeader}>
-                    <Text style={s.dayLabel}>{formatDateLabel(date, t)}</Text>
+                    <Text style={s.dayLabel}>{formatDateLabel(date, t, dateLocale)}</Text>
                     <View style={s.dayTotalPill}>
                       <Clock size={11} color={COLORS.white} />
                       <Text style={s.dayTotalText}>{formatDuration(dayTotal)}</Text>
