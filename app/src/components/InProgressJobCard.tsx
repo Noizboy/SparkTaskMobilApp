@@ -29,17 +29,22 @@ export function InProgressJobCard({ job, onPress }: InProgressJobCardProps) {
   const progress = totalTodos > 0 ? completedTodos / totalTodos : 0;
   const percentage = Math.round(progress * 100);
 
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(() =>
+    job.startedAt ? Math.floor((Date.now() - job.startedAt) / 1000) : 0
+  );
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    if (job.startedAt) {
+      setElapsed(Math.floor((Date.now() - job.startedAt) / 1000));
+    }
     intervalRef.current = setInterval(() => {
-      setElapsed((prev) => prev + 1);
+      setElapsed(job.startedAt ? Math.floor((Date.now() - job.startedAt) / 1000) : 0);
     }, 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, []);
+  }, [job.startedAt]);
 
   return (
     <TouchableOpacity onPress={onPress} style={styles.card} activeOpacity={0.88}>
@@ -53,7 +58,7 @@ export function InProgressJobCard({ job, onPress }: InProgressJobCardProps) {
         {/* Left column */}
         <View style={styles.left}>
           <Text style={styles.title}>{job.serviceType}</Text>
-          <Text style={styles.status}>JOB #: {job.orderNumber}</Text>
+          <Text style={styles.status}>{t('order').toUpperCase()} #: {job.orderNumber}</Text>
           <Text style={styles.scheduled}>{t('scheduledFor')}: {formatFullDate(job.date)}, {job.time}</Text>
 
           <View style={styles.progressInfo}>
