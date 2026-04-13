@@ -81,6 +81,74 @@ notificationsRouter.patch('/read-all', authenticate, async (req: Request, res: R
 
 // ─── POST /api/notifications — internal helper used by the orders route ───────
 // Not authenticated — only called server-side by broadcastNotification helper.
+// ─── Server-side translations for push notification text ─────────────────────
+type LangCode = 'en' | 'es' | 'pt' | 'zh';
+
+const PUSH_STRINGS: Record<LangCode, {
+  assignedTitle: string;
+  assignedMessage: (orderNumber: string, date?: string, time?: string) => string;
+  removedTitle: string;
+  removedMessage: (orderNumber: string) => string;
+}> = {
+  en: {
+    assignedTitle: 'New Job Assigned',
+    assignedMessage: (n, d, t) => d && t
+      ? `Order #${n} — ${d} at ${t} has been added to your schedule.`
+      : `Order #${n} has been added to your schedule.`,
+    removedTitle: 'Schedule Update',
+    removedMessage: (n) => `You've been removed from Order #${n}. Check your schedule for any changes.`,
+  },
+  es: {
+    assignedTitle: 'Nueva Orden Asignada',
+    assignedMessage: (n, d, t) => d && t
+      ? `La orden #${n} — ${d} a las ${t} ha sido agregada a tu horario.`
+      : `La orden #${n} ha sido agregada a tu horario.`,
+    removedTitle: 'Actualización de Horario',
+    removedMessage: (n) => `Has sido removido de la orden #${n}. Revisa tu horario para ver los cambios.`,
+  },
+  pt: {
+    assignedTitle: 'Nova Ordem Atribuída',
+    assignedMessage: (n, d, t) => d && t
+      ? `A ordem #${n} — ${d} às ${t} foi adicionada à sua agenda.`
+      : `A ordem #${n} foi adicionada à sua agenda.`,
+    removedTitle: 'Atualização de Agenda',
+    removedMessage: (n) => `Você foi removido da ordem #${n}. Verifique sua agenda para ver as mudanças.`,
+  },
+  zh: {
+    assignedTitle: '新任务已分配',
+    assignedMessage: (n, d, t) => d && t
+      ? `订单 #${n} — ${d} ${t} 已添加到您的日程。`
+      : `订单 #${n} 已添加到您的日程。`,
+    removedTitle: '日程更新',
+    removedMessage: (n) => `您已从订单 #${n} 中被移除，请查看您的日程以了解变动。`,
+  },
+};
+
+function getPushText(
+  type: string,
+  fallbackTitle: string,
+  fallbackMessage: string,
+  lang: LangCode,
+  metadata?: Record<string, string>
+): { title: string; body: string } {
+  const strings = PUSH_STRINGS[lang] ?? PUSH_STRINGS.en;
+  if (type === 'assigned' && metadata?.orderNumber) {
+    return {
+      title: strings.assignedTitle,
+      body: strings.assignedMessage(metadata.orderNumber, metadata.date, metadata.time),
+    };
+  }
+  if (type === 'removed' && metadata?.orderNumber) {
+    return {
+      title: strings.removedTitle,
+      body: strings.removedMessage(metadata.orderNumber),
+    };
+  }
+  return { title: fallbackTitle, body: fallbackMessage };
+}
+
+// ─── POST /api/notifications — internal helper used by the orders route ───────
+// Not authenticated — only called server-side by broadcastNotification helper.
 // We export the helper directly instead of exposing an open HTTP endpoint.
 export async function createNotificationForUser(
   userId: string,
@@ -96,10 +164,12 @@ export async function createNotificationForUser(
 
   // Send Expo push notification if the user has a registered push token
   try {
-    const tokenRes = await pool.query('SELECT push_token FROM users WHERE id = $1', [userId]);
-    const pushToken: string | null = tokenRes.rows[0]?.push_token ?? null;
+    const userRes = await pool.query('SELECT push_token, language FROM users WHERE id = $1', [userId]);
+    const pushToken: string | null = userRes.rows[0]?.push_token ?? null;
+    const lang: LangCode = (userRes.rows[0]?.language as LangCode) ?? 'en';
 
     if (pushToken && pushToken.startsWith('ExponentPushToken[')) {
+      const { title: pushTitle, body: pushBody } = getPushText(type, title, message, lang, metadata);
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: {
@@ -109,8 +179,8 @@ export async function createNotificationForUser(
         },
         body: JSON.stringify({
           to: pushToken,
-          title,
-          body: message,
+          title: pushTitle,
+          body: pushBody,
           sound: 'default',
           data: { type },
         }),

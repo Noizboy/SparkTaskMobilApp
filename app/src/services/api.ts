@@ -89,6 +89,18 @@ export async function apiRegisterPushToken(token: string, pushToken: string): Pr
   if (!res.ok) throw new Error(`registerPushToken failed: ${res.status}`);
 }
 
+export async function apiUpdateLanguage(token: string, language: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/users/me/language`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ language }),
+  });
+  if (!res.ok) throw new Error(`updateLanguage failed: ${res.status}`);
+}
+
 export async function apiGetOrder(orderId: string): Promise<Job> {
   const res = await fetch(`${API_BASE}/orders/${orderId}`);
   if (!res.ok) throw new Error(`getOrder failed: ${res.status}`);

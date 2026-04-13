@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storage } from '../utils/storage';
+import { AUTH_CONFIG } from '../config/auth';
+import { apiUpdateLanguage } from '../services/api';
 import en from '../i18n/locales/en';
 import es from '../i18n/locales/es';
 import pt from '../i18n/locales/pt';
@@ -32,6 +34,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback((lang: LangCode) => {
     setLangState(lang);
     storage.set(STORAGE_KEY, lang);
+    // Sync language preference with the server for i18n-aware push notifications
+    storage.get(AUTH_CONFIG.STORAGE_KEYS.AUTH_TOKEN).then((token) => {
+      if (token && token !== 'true') {
+        apiUpdateLanguage(token, lang).catch(() => {});
+      }
+    });
   }, []);
 
   const t = useCallback(

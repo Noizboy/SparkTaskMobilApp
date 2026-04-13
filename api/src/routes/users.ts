@@ -168,6 +168,24 @@ usersRouter.patch('/me/push-token', authenticate, async (req: Request, res: Resp
   }
 });
 
+// ─── PATCH /api/users/me/language ────────────────────────────────────────────
+// Authenticated — saves the user's preferred language for i18n-aware push notifications.
+usersRouter.patch('/me/language', authenticate, async (req: Request, res: Response) => {
+  try {
+    const id = (req as any).user.id;
+    const { language } = req.body;
+    const allowed = ['en', 'es', 'pt', 'zh'];
+    if (!language || !allowed.includes(language)) {
+      return res.status(400).json({ error: `language must be one of: ${allowed.join(', ')}` });
+    }
+    await pool.query('UPDATE users SET language = $1 WHERE id = $2', [language, id]);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('PATCH /users/me/language error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── PATCH /api/users/me ────────────────────────────────────────────────────
 // Authenticated — updates the current user's own profile using the JWT's user ID.
 // This avoids stale-ID issues when the DB is re-seeded.

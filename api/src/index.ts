@@ -126,6 +126,14 @@ async function runMigrations() {
     END $$
   `);
 
+  // Add language preference column for i18n-aware push notifications
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN language VARCHAR(10) DEFAULT 'en';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `);
+
   console.log('✓ Migrations applied');
 }
 
