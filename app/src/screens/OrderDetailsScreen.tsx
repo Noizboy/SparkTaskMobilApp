@@ -77,7 +77,7 @@ export function OrderDetailsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
-        <Text style={styles.topOrder}>Job #{job.orderNumber}</Text>
+        <Text style={styles.topOrder}>{t('order')} #{job.orderNumber}</Text>
         <View style={{ width: 40 }} />
       </View>
 

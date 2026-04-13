@@ -38,7 +38,7 @@ export function sseHandler(req: Request, res: Response) {
 
   // Send a heartbeat every 30s to prevent connection timeout
   const heartbeat = setInterval(() => {
-    res.write(': heartbeat\n\n');
+    res.write(': heartbeat\r\n\r\n');
   }, 30_000);
 
   req.on('close', () => {
@@ -64,7 +64,7 @@ export function sseHandler(req: Request, res: Response) {
  * @param data   JSON-serializable payload
  */
 export function broadcast(event: string, data: unknown) {
-  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  const payload = `event: ${event}\r\ndata: ${JSON.stringify(data)}\r\n\r\n`;
   for (const client of clients) client.write(payload);
   for (const userSet of userClients.values()) {
     for (const client of userSet) client.write(payload);
@@ -81,7 +81,7 @@ export function broadcast(event: string, data: unknown) {
  * @param userIds  UUIDs of the users to target
  */
 export function broadcastToUsers(event: string, data: unknown, userIds: string[]) {
-  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  const payload = `event: ${event}\r\ndata: ${JSON.stringify(data)}\r\n\r\n`;
   // Anonymous connections (dashboard and any old mobile clients without a userId)
   for (const client of clients) client.write(payload);
   // Identified user connections
@@ -92,3 +92,4 @@ export function broadcastToUsers(event: string, data: unknown, userIds: string[]
     }
   }
 }
+

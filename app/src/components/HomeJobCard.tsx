@@ -5,6 +5,7 @@ import { Job } from '../types';
 import { StatusBadge } from './StatusBadge';
 import { COLORS, FONTS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { formatDate } from '../utils/dateUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 interface HomeJobCardProps {
   job: Job;
@@ -12,6 +13,7 @@ interface HomeJobCardProps {
 }
 
 export function HomeJobCard({ job, onPress }: HomeJobCardProps) {
+  const { t } = useLanguage();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -20,7 +22,7 @@ export function HomeJobCard({ job, onPress }: HomeJobCardProps) {
     >
       <View style={styles.row}>
         <View style={styles.content}>
-          <Text style={styles.orderNum}>Job #{job.orderNumber}</Text>
+          <Text style={styles.orderNum}>{t('order')} #{job.orderNumber}</Text>
           <View style={styles.metaRow}>
             <Briefcase size={13} color={COLORS.mutedForeground} />
             <Text style={styles.metaText}>{job.serviceType}</Text>

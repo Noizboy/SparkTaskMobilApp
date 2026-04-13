@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontFamily: FONTS.bold,
-    fontSize: 24,
+    fontSize: 20,
     color: COLORS.foreground,
     flex: 1,
     marginLeft: SPACING.md,

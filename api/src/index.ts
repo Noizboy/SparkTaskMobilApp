@@ -9,6 +9,7 @@ import { servicesRouter } from './routes/services';
 import { areasRouter } from './routes/areas';
 import { notificationsRouter } from './routes/notifications';
 import { sseHandler } from './sse';
+import { startScheduler } from './scheduler';
 
 const app = express();
 const PORT = 3001;
@@ -166,4 +167,5 @@ app.listen(PORT, () => {
   console.log(`\n🚀 SparkTask API running at http://localhost:${PORT}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
   console.log(`   Orders: http://localhost:${PORT}/api/orders\n`);
+  startScheduler();
 });

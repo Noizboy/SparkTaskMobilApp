@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { broadcast, broadcastToUsers } from '../sse';
 import { createNotificationForUser } from './notifications';
+import { sendJobStartedNotification } from '../scheduler';
 
 export const ordersRouter = Router();
 
@@ -737,6 +738,19 @@ ordersRouter.patch('/:id/status', async (req: Request, res: Response) => {
     );
     const assignedUserIds: string[] = assignedRes.rows.map((r: any) => r.id as string);
     broadcastToUsers('order:updated', order, assignedUserIds);
+
+    // Notify all assigned cleaners when a job is started
+    if (status === 'in-progress' && assignedUserIds.length > 0) {
+      const usersRes = await pool.query(
+        'SELECT id, language FROM users WHERE id = ANY($1)',
+        [assignedUserIds]
+      );
+      await Promise.all(
+        usersRes.rows.map((u: any) =>
+          sendJobStartedNotification(u.id as string, order.orderNumber ?? '', u.language as string)
+        )
+      );
+    }
 
     res.json(order);
   } catch (err: any) {

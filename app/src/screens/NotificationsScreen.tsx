@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Bell, Clock, Calendar, CheckCircle2, AlertCircle, UserPlus, UserMinus } from 'lucide-react-native';
+import { Bell, Clock, Calendar, CheckCircle2, AlertCircle, UserPlus, UserMinus, PlayCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppNotification } from '../types';
@@ -17,6 +17,7 @@ function NotifIcon({ type, isRead }: { type: AppNotification['type']; isRead: bo
   if (type === 'completed') return <CheckCircle2 size={size} color={color} />;
   if (type === 'assigned') return <UserPlus size={size} color={color} />;
   if (type === 'removed') return <UserMinus size={size} color={color} />;
+  if (type === 'started') return <PlayCircle size={size} color={color} />;
   return <Bell size={size} color={color} />;
 }
 
@@ -49,6 +50,20 @@ function useNotifText(notif: AppNotification, t: ReturnType<typeof useLanguage>[
     return {
       title: t('notifUnassignedTitle'),
       message: t('notifUnassignedMessage', { orderNumber: m.orderNumber }),
+    };
+  }
+
+  if (notif.type === 'reminder' && m?.orderNumber) {
+    return {
+      title: t('notifReminderTitle'),
+      message: t('notifReminderMessage', { orderNumber: m.orderNumber, time: m.time ?? '' }),
+    };
+  }
+
+  if (notif.type === 'started' && m?.orderNumber) {
+    return {
+      title: t('notifStartedTitle'),
+      message: t('notifStartedMessage', { orderNumber: m.orderNumber }),
     };
   }
 
