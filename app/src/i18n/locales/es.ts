@@ -96,11 +96,11 @@ export default {
   unreadNotifications: 'notificaciones sin leer',
   noNotifications: 'Aún no hay notificaciones',
   allCaughtUp: '¡Estás al día! Vuelve más tarde.',
-  notifAssignedTitle: 'Nueva Orden Asignada',
+  notifAssignedTitle: '¡Tienes un nuevo trabajo!',
   notifAssignedMessage: 'La orden #{{orderNumber}} ha sido agregada a tu horario.',
-  notifAssignedMessageWithDate: 'La orden #{{orderNumber}} — {{date}} a las {{time}} ha sido agregada a tu horario.',
-  notifUnassignedTitle: 'Actualización de Horario',
-  notifUnassignedMessage: 'Has sido removido de la orden #{{orderNumber}}. Revisa tu horario para ver los cambios.',
+  notifAssignedMessageWithDate: 'La orden #{{orderNumber}} está programada para el {{date}} a las {{time}}.',
+  notifUnassignedTitle: 'Trabajo Eliminado',
+  notifUnassignedMessage: 'La orden #{{orderNumber}} ha sido eliminada de tu horario.',
   justNow: 'Ahora mismo',
 
   // Profile

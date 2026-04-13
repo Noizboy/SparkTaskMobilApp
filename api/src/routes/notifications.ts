@@ -91,36 +91,36 @@ const PUSH_STRINGS: Record<LangCode, {
   removedMessage: (orderNumber: string) => string;
 }> = {
   en: {
-    assignedTitle: 'New Job Assigned',
+    assignedTitle: "You've got a new job!",
     assignedMessage: (n, d, t) => d && t
-      ? `Order #${n} — ${d} at ${t} has been added to your schedule.`
+      ? `Order #${n} is scheduled for ${d} at ${t}.`
       : `Order #${n} has been added to your schedule.`,
-    removedTitle: 'Schedule Update',
-    removedMessage: (n) => `You've been removed from Order #${n}. Check your schedule for any changes.`,
+    removedTitle: 'Job Removed',
+    removedMessage: (n) => `Order #${n} has been removed from your schedule.`,
   },
   es: {
-    assignedTitle: 'Nueva Orden Asignada',
+    assignedTitle: '¡Tienes un nuevo trabajo!',
     assignedMessage: (n, d, t) => d && t
-      ? `La orden #${n} — ${d} a las ${t} ha sido agregada a tu horario.`
+      ? `La orden #${n} está programada para el ${d} a las ${t}.`
       : `La orden #${n} ha sido agregada a tu horario.`,
-    removedTitle: 'Actualización de Horario',
-    removedMessage: (n) => `Has sido removido de la orden #${n}. Revisa tu horario para ver los cambios.`,
+    removedTitle: 'Trabajo Eliminado',
+    removedMessage: (n) => `La orden #${n} ha sido eliminada de tu horario.`,
   },
   pt: {
-    assignedTitle: 'Nova Ordem Atribuída',
+    assignedTitle: 'Você tem um novo trabalho!',
     assignedMessage: (n, d, t) => d && t
-      ? `A ordem #${n} — ${d} às ${t} foi adicionada à sua agenda.`
+      ? `A ordem #${n} está agendada para ${d} às ${t}.`
       : `A ordem #${n} foi adicionada à sua agenda.`,
-    removedTitle: 'Atualização de Agenda',
-    removedMessage: (n) => `Você foi removido da ordem #${n}. Verifique sua agenda para ver as mudanças.`,
+    removedTitle: 'Trabalho Removido',
+    removedMessage: (n) => `A ordem #${n} foi removida da sua agenda.`,
   },
   zh: {
-    assignedTitle: '新任务已分配',
+    assignedTitle: '您有一项新工作！',
     assignedMessage: (n, d, t) => d && t
-      ? `订单 #${n} — ${d} ${t} 已添加到您的日程。`
+      ? `订单 #${n} 已安排在 ${d} ${t}。`
       : `订单 #${n} 已添加到您的日程。`,
-    removedTitle: '日程更新',
-    removedMessage: (n) => `您已从订单 #${n} 中被移除，请查看您的日程以了解变动。`,
+    removedTitle: '工作已移除',
+    removedMessage: (n) => `订单 #${n} 已从您的日程中移除。`,
   },
 };
 
