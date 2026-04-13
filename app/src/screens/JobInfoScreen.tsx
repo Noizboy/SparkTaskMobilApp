@@ -78,6 +78,7 @@ export function JobInfoScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <ArrowLeft size={22} color={COLORS.foreground} />
         </TouchableOpacity>
+        <Text style={styles.topBarTitle}>{t('order')} #{job.orderNumber}</Text>
         <StatusBadge status={job.status} />
       </View>
 
@@ -87,7 +88,6 @@ export function JobInfoScreen() {
       >
         {/* Title */}
         <View style={[styles.titleSection, job.status === 'completed' && { paddingBottom: 0 }]}>
-          <Text style={styles.orderNum}>Job #{job.orderNumber}</Text>
           {job.status !== 'completed' && (
             <>
               <Text style={styles.clientName}>{job.clientName}</Text>
@@ -285,6 +285,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.xxl,
     paddingVertical: SPACING.md,
+  },
+  topBarTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 17,
+    color: COLORS.foreground,
+    flex: 1,
+    marginLeft: SPACING.md,
   },
   backBtn: {
     width: 40,
