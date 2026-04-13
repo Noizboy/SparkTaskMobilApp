@@ -97,10 +97,10 @@ export default {
   noNotifications: 'Ainda sem notificações',
   allCaughtUp: 'Você está em dia! Volte mais tarde.',
   notifAssignedTitle: 'Você tem um novo trabalho!',
-  notifAssignedMessage: 'A ordem #{{orderNumber}} foi adicionada à sua agenda.',
-  notifAssignedMessageWithDate: 'A ordem #{{orderNumber}} está agendada para {{date}} às {{time}}.',
+  notifAssignedMessage: 'O trabalho #{{orderNumber}} foi adicionado à sua agenda.',
+  notifAssignedMessageWithDate: 'O trabalho #{{orderNumber}} está agendado para {{date}} às {{time}}.',
   notifUnassignedTitle: 'Trabalho Removido',
-  notifUnassignedMessage: 'A ordem #{{orderNumber}} foi removida da sua agenda.',
+  notifUnassignedMessage: 'O trabalho #{{orderNumber}} foi removido da sua agenda.',
   justNow: 'Agora mesmo',
 
   // Profile

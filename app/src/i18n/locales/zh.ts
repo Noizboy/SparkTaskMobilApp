@@ -97,10 +97,10 @@ export default {
   noNotifications: '暂无通知',
   allCaughtUp: '您已全部看完！稍后再来查看。',
   notifAssignedTitle: '您有一项新工作！',
-  notifAssignedMessage: '订单 #{{orderNumber}} 已添加到您的日程。',
-  notifAssignedMessageWithDate: '订单 #{{orderNumber}} 已安排在 {{date}} {{time}}。',
+  notifAssignedMessage: '工作 #{{orderNumber}} 已添加到您的日程。',
+  notifAssignedMessageWithDate: '工作 #{{orderNumber}} 已安排在 {{date}} {{time}}。',
   notifUnassignedTitle: '工作已移除',
-  notifUnassignedMessage: '订单 #{{orderNumber}} 已从您的日程中移除。',
+  notifUnassignedMessage: '工作 #{{orderNumber}} 已从您的日程中移除。',
   justNow: '刚刚',
 
   // Profile
