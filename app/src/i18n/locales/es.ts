@@ -96,9 +96,9 @@ export default {
   unreadNotifications: 'notificaciones sin leer',
   noNotifications: 'Aún no hay notificaciones',
   allCaughtUp: '¡Estás al día! Vuelve más tarde.',
-  notifAssignedTitle: '🧹 Nueva Orden Asignada',
+  notifAssignedTitle: 'Nueva Orden Asignada',
   notifAssignedMessage: 'La orden #{{orderNumber}} ha sido agregada a tu horario.',
-  notifUnassignedTitle: '📋 Actualización de Horario',
+  notifUnassignedTitle: 'Actualización de Horario',
   notifUnassignedMessage: 'Has sido removido de la orden #{{orderNumber}}. Revisa tu horario para ver los cambios.',
   justNow: 'Ahora mismo',
 

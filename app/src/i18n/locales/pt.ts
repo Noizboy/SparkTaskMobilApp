@@ -96,9 +96,9 @@ export default {
   unreadNotifications: 'notificações não lidas',
   noNotifications: 'Ainda sem notificações',
   allCaughtUp: 'Você está em dia! Volte mais tarde.',
-  notifAssignedTitle: '🧹 Nova Ordem Atribuída',
+  notifAssignedTitle: 'Nova Ordem Atribuída',
   notifAssignedMessage: 'A ordem #{{orderNumber}} foi adicionada à sua agenda.',
-  notifUnassignedTitle: '📋 Atualização de Agenda',
+  notifUnassignedTitle: 'Atualização de Agenda',
   notifUnassignedMessage: 'Você foi removido da ordem #{{orderNumber}}. Verifique sua agenda para ver as mudanças.',
   justNow: 'Agora mesmo',
 

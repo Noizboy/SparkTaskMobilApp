@@ -520,7 +520,7 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
               createNotificationForUser(
                 uid,
                 'assigned',
-                '🧹 New Job Assigned',
+                'New Job Assigned',
                 `Order #${fullOrder?.orderNumber}${assignedDetail ? ` — ${assignedDetail}` : ''} has been added to your schedule.`
               )
             )
@@ -542,7 +542,7 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
               createNotificationForUser(
                 uid,
                 'removed',
-                '📋 Schedule Update',
+                'Schedule Update',
                 `You've been removed from Order #${fullOrder?.orderNumber}. Check your schedule for any changes.`
               )
             )
