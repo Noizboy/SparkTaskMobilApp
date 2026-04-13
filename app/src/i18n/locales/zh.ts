@@ -94,12 +94,12 @@ export default {
   markAllAsRead: '全部标为已读',
   unreadNotification: '条未读通知',
   unreadNotifications: '条未读通知',
-  noNotifications: '没有通知',
-  allCaughtUp: '您已全部看完！',
-  notifAssignedTitle: '新任务已分配',
-  notifAssignedMessage: '订单 {{orderNumber}} 已添加到您的日程。',
-  notifUnassignedTitle: '已从任务中移除',
-  notifUnassignedMessage: '您已从订单 {{orderNumber}} 中被移除。',
+  noNotifications: '暂无通知',
+  allCaughtUp: '您已全部看完！稍后再来查看。',
+  notifAssignedTitle: '🧹 新任务已分配',
+  notifAssignedMessage: '订单 #{{orderNumber}} 已添加到您的日程。',
+  notifUnassignedTitle: '📋 日程更新',
+  notifUnassignedMessage: '您已从订单 #{{orderNumber}} 中被移除，请查看您的日程以了解变动。',
   justNow: '刚刚',
 
   // Profile

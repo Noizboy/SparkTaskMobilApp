@@ -94,12 +94,12 @@ export default {
   markAllAsRead: 'Mark all as read',
   unreadNotification: 'unread notification',
   unreadNotifications: 'unread notifications',
-  noNotifications: 'No notifications',
-  allCaughtUp: "You're all caught up!",
-  notifAssignedTitle: 'New Job Assigned',
-  notifAssignedMessage: 'Order {{orderNumber}} has been added to your schedule.',
-  notifUnassignedTitle: 'Removed from Job',
-  notifUnassignedMessage: 'You have been removed from Order {{orderNumber}}.',
+  noNotifications: 'No notifications yet',
+  allCaughtUp: "You're all caught up! Check back later.",
+  notifAssignedTitle: '🧹 New Job Assigned',
+  notifAssignedMessage: 'Order #{{orderNumber}} has been added to your schedule.',
+  notifUnassignedTitle: '📋 Schedule Update',
+  notifUnassignedMessage: "You've been removed from Order #{{orderNumber}}. Check your schedule for any changes.",
   justNow: 'Just now',
 
   // Profile

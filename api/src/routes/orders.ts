@@ -510,13 +510,18 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
         if (addedIds.length > 0) {
           broadcastToUsers('order:assigned', fullOrder, addedIds);
           // Persist notification in DB for each added cleaner
+          const assignedDate = fullOrder?.date
+            ? new Date(fullOrder.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+            : null;
+          const assignedTime = fullOrder?.time ?? null;
+          const assignedDetail = [assignedDate, assignedTime].filter(Boolean).join(' at ');
           await Promise.all(
             addedIds.map((uid) =>
               createNotificationForUser(
                 uid,
                 'assigned',
-                'New Job Assigned',
-                `Order ${fullOrder?.orderNumber} has been added to your schedule.`
+                '🧹 New Job Assigned',
+                `Order #${fullOrder?.orderNumber}${assignedDetail ? ` — ${assignedDetail}` : ''} has been added to your schedule.`
               )
             )
           );
@@ -537,8 +542,8 @@ ordersRouter.put('/:id', async (req: Request, res: Response) => {
               createNotificationForUser(
                 uid,
                 'removed',
-                'Removed from Job',
-                `You have been removed from Order ${fullOrder?.orderNumber}.`
+                '📋 Schedule Update',
+                `You've been removed from Order #${fullOrder?.orderNumber}. Check your schedule for any changes.`
               )
             )
           );

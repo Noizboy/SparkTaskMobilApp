@@ -94,12 +94,12 @@ export default {
   markAllAsRead: 'Marcar todo como leído',
   unreadNotification: 'notificación sin leer',
   unreadNotifications: 'notificaciones sin leer',
-  noNotifications: 'Sin notificaciones',
-  allCaughtUp: '¡Estás al día!',
-  notifAssignedTitle: 'Nueva Orden Asignada',
-  notifAssignedMessage: 'La orden {{orderNumber}} ha sido agregada a tu horario.',
-  notifUnassignedTitle: 'Removido de la Orden',
-  notifUnassignedMessage: 'Has sido removido de la orden {{orderNumber}}.',
+  noNotifications: 'Aún no hay notificaciones',
+  allCaughtUp: '¡Estás al día! Vuelve más tarde.',
+  notifAssignedTitle: '🧹 Nueva Orden Asignada',
+  notifAssignedMessage: 'La orden #{{orderNumber}} ha sido agregada a tu horario.',
+  notifUnassignedTitle: '📋 Actualización de Horario',
+  notifUnassignedMessage: 'Has sido removido de la orden #{{orderNumber}}. Revisa tu horario para ver los cambios.',
   justNow: 'Ahora mismo',
 
   // Profile
